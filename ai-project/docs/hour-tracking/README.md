@@ -42,9 +42,14 @@ Uses safe ASCII-only filenames to avoid issues with special characters
     sudo apt-get update && sudo apt-get install python3-tk
     ```
 
-4. **Run the application**:
+4. **Run the application**:  
+    Linux:  
     ```
     python3 hour_tracker_v2.py
+    ```
+    Windows:  
+    ```
+    python hour_tracker_v2.py
     ```
 
 
