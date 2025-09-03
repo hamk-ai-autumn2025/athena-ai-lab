@@ -32,17 +32,19 @@ Uses safe ASCII-only filenames to avoid issues with special characters
     ```
     pip install -r requirements.txt
     ```
-3. **Run the application**:
-    ```
-    python hour_tracker_v2.py
-    ```
-4. **Make sure Tkinter is installed:**:
+
+3. **Make sure Tkinter is installed:**:
     Windows/Mac -> Tkinter is included in Python
 
     Linux (Ubuntu/Debian etc.)
     If you get an error like "ModuleNotFoundError: No module named 'tkinter'" when launching the app, install Tkinter using the command above.
     ```
     sudo apt-get update && sudo apt-get install python3-tk
+    ```
+
+4. **Run the application**:
+    ```
+    python3 hour_tracker_v2.py
     ```
 
 
