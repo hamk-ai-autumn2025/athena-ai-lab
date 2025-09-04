@@ -39,6 +39,7 @@ local_settings.py
 .venv
 env/
 venv/
+aivenv/
 ENV/
 env.bak/
 venv.bak/
