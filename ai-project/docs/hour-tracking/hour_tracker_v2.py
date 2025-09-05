@@ -21,7 +21,7 @@ except ImportError:
     exit()
 
 # --- Configuration & Core Logic ---
-SUBJECT_OPTIONS = ["Technical Work", "Meetings", "Data Annotation", "Documentation", "Training Models"]
+SUBJECT_OPTIONS = ["Technical Work", "Meetings", "Research", "Documentation", "Testing"]
 CSV_HEADER = ['name', 'date', 'hours', 'subject']
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
