@@ -2,16 +2,26 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser
 
+@admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    # Add our custom 'role' field to the display and editing forms
-    # in the admin panel.
-    model = CustomUser
-    list_display = ['username', 'email', 'first_name', 'last_name', 'role']
+    """
+    Show the CustomUser with the extra 'role' field and keep the standard
+    Django auth admin behavior.
+    """
+
+    # Columns in the changelist
+    list_display = ("username", "email", "first_name", "last_name", "role", "is_staff", "is_active")
+    list_filter = ("role", "is_staff", "is_superuser", "is_active")
+
+    search_fields = ("username", "email", "first_name", "last_name")
+    ordering = ("username",)
+
+    # Add the 'role' field into the existing fieldsets (edit page)
     fieldsets = UserAdmin.fieldsets + (
-        (None, {'fields': ('role',)}),
-    )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        (None, {'fields': ('role',)}),
+        ("Role", {"fields": ("role",)}),
     )
 
-admin.site.register(CustomUser, CustomUserAdmin)
+    # Add the 'role' field into the add-user page
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ("Role", {"fields": ("role",)}),
+    )

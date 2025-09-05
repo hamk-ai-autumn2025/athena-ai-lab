@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kirjaudu sisään</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; display: grid; place-items: start; }
+    form { display: grid; gap: 0.75rem; width: min(420px, 100%); }
+    label { display: grid; gap: 0.25rem; }
+    input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; }
+    button { padding: 0.6rem 0.9rem; border: 1px solid #333; border-radius: 6px; background: #fff; }
+    .errorlist { color: #b00020; margin: 0 0 1rem 0; list-style: none; padding: 0; }
+  </style>
+</head>
+<body>
+    {% include "partials/messages.html" %}
+  <h1>Kirjaudu sisään</h1>
+
+  {% if form.errors %}
+    <ul class="errorlist">
+      {% for field, errors in form.errors.items %}
+        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+      {% endfor %}
+      {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="post" action="{% url 'kirjaudu' %}">
+    {% csrf_token %}
+    <label>
+      Käyttäjätunnus
+      {{ form.username }}
+    </label>
+    <label>
+      Salasana
+      {{ form.password }}
+    </label>
+
+    {% if next %}
+      <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+
+    <button type="submit">Kirjaudu</button>
+  </form>
+</body>
+</html>

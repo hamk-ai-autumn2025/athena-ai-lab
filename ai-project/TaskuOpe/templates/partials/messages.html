@@ -1,0 +1,27 @@
+{% if messages %}
+<div aria-live="polite" aria-atomic="true" style="position: relative;">
+  <div class="messages">
+    {% for message in messages %}
+      <div class="alert {{ message.tags|default:'info' }}">
+        <span>{{ message }}</span>
+        <button type="button" class="close" onclick="this.parentElement.remove()" aria-label="Sulje">×</button>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+<style>
+  .messages { display: grid; gap: 0.5rem; margin: 1rem 0; }
+  .alert { border:1px solid #ddd; padding:0.75rem 1rem; border-radius:8px; }
+  .alert.info { background:#f4f8ff; border-color:#cfe2ff; }
+  .alert.success { background:#f6fff4; border-color:#cfe9cf; }
+  .alert.warning { background:#fff8e6; border-color:#ffe8a1; }
+  .alert.error, .alert.danger { background:#fff2f2; border-color:#f5b5b5; }
+  .close { float:right; border:none; background:transparent; font-size:1.1rem; cursor:pointer; }
+</style>
+<script>
+  // Automaattinen piilotus 5 sekunnissa
+  setTimeout(() => {
+    document.querySelectorAll('.messages .alert').forEach(el => el.remove());
+  }, 5000);
+</script>
+{% endif %}

@@ -106,7 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fi'
 
 TIME_ZONE = 'UTC'
 
@@ -127,3 +127,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # In TaskuOpe/settings.py
 AUTH_USER_MODEL = 'users.CustomUser'
+
+# Where to send anonymous users who hit @login_required
+LOGIN_URL = "kirjaudu"
+
+# After login, go to the dashboard
+LOGIN_REDIRECT_URL = "materials:dashboard"
+LOGOUT_REDIRECT_URL = "kirjaudu"
+
+# If you keep project-level templates in /templates:
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
