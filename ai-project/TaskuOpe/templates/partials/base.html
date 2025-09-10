@@ -1,0 +1,76 @@
+<!-- In TaskuOpe/templates/partials/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <!-- This block allows each page to set its own title -->
+    <title>{% block title %}TaskuOpettaja{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; background-color: #f8f9fa; }
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            gap: 1rem; 
+            flex-wrap: wrap;
+            padding: 1rem 2rem;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+        nav { display: flex; gap: 0.75rem; align-items: center;}
+        main { padding: 2rem; }
+        .card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background-color: white; }
+        .muted { color: #555; font-size: 0.9rem; }
+        a.btn { 
+            display: inline-block;
+            padding: 0.5rem 0.75rem; 
+            border: 1px solid #333; 
+            border-radius: 6px; 
+            text-decoration: none; 
+            background-color: white; 
+            color: #333; 
+            transition: background-color 0.2s;
+        }
+        a.btn:hover { background-color: #f0f0f0; }
+        a.btn.primary { background-color: #007bff; color: white; border-color: #007bff; }
+        a.btn.primary:hover { background-color: #0056b3; }
+    </style>
+    <!-- This block allows pages to add extra CSS if needed -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <header>
+        <!-- Link to the main dashboard -->
+        <a href="{% url 'dashboard' %}" style="text-decoration: none; color: black;">
+            <h2>TaskuOpettaja</h2>
+        </a>
+
+        <!-- Navigation shows login/logout and user info -->
+        {% if user.is_authenticated %} <!-- This should be modified so that material creation is only available to teachers -->
+        <nav>
+            <span>Hello, {{ user.get_full_name|default:user.username }}!</span>
+            {% if user.role == 'TEACHER' %}
+                <a class="btn primary" href="{% url 'create_material' %}">Luo uusi materiaali</a>
+            {% endif %}
+            <a class="btn" href="{% url 'ulos' %}">Kirjaudu ulos</a>
+        </nav>
+        {% else %}
+        <nav>
+            <a class="btn" href="{% url 'ulos' %}">Kirjaudu</a>
+        </nav>
+        {% endif %}
+    </header>
+
+    <main>
+        <!-- Any messages from the Django messages framework will appear here -->
+        {% include "partials/messages.html" %}
+
+        {% block content %}
+        <!-- The unique content of each page will be inserted in this block -->
+        {% endblock %}
+    </main>
+
+</body>
+</html>

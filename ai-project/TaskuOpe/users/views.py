@@ -26,4 +26,4 @@ def simple_logout(request):
     """
     logout(request)
     messages.info(request, "Olet kirjautunut ulos.")
-    return redirect("kirjaudu")
+    return redirect("login")

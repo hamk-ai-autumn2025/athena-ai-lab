@@ -132,7 +132,7 @@ AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_URL = "kirjaudu"
 
 # After login, go to the dashboard
-LOGIN_REDIRECT_URL = "materials:dashboard"
+LOGIN_REDIRECT_URL = "dashboard" 
 LOGOUT_REDIRECT_URL = "kirjaudu"
 
 # If you keep project-level templates in /templates:

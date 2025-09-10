@@ -1,0 +1,25 @@
+{% extends 'partials/base.html' %}
+
+{% block title %}Anna tehtäväksi: {{ material.title }}{% endblock %}
+
+{% block content %}
+    <h1>Anna tehtäväksi</h1>
+    <h2 class="muted">{{ material.title }}</h2>
+    <hr>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- LISÄÄ TÄMÄ RIVI NÄHDÄKSESI VIRHEET -->
+        {% if form.errors %}
+            <div style="color: red; border: 1px solid red; padding: 10px; margin-bottom: 15px;">
+                <strong>Lomakkeessa oli virheitä:</strong>
+                {{ form.errors }}
+            </div>
+        {% endif %}
+
+        {{ form.as_p }}
+        <br>
+        <button type="submit" class="btn primary">Anna valituille opiskelijoille</button>
+    </form>
+{% endblock %}

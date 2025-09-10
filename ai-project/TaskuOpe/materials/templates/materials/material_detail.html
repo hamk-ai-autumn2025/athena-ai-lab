@@ -1,0 +1,18 @@
+{% extends 'partials/base.html' %} <!-- Or your base template -->
+
+{% block title %}{{ material.title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ material.title }}</h1>
+    <p><strong>Status:</strong> {{ material.get_status_display }} | <strong>Subject:</strong> {{ material.subject|default:'N/A' }}</p>
+    <hr>
+
+    <h2>AI-Generated Content:</h2>
+    <!-- The 'linebreaksbr' filter makes text with newlines display correctly in HTML -->
+    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; white-space: pre-wrap;">
+        {{ material.content|linebreaksbr }}
+    </div>
+
+    <br>
+    <a href="{% url 'dashboard' %}">Takaisin etusivulle</a>
+{% endblock %}

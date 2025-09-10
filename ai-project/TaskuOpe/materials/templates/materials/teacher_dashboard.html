@@ -1,40 +1,58 @@
-<!DOCTYPE html>
-<html lang="fi">
-<head>
-  <meta charset="UTF-8" />
-  <title>Opettajan kojelauta</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; }
-    header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .materials { margin-top: 1.5rem; display: grid; gap: 0.75rem; }
-    .card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }
-    .muted { color: #555; font-size: 0.9rem; }
-    a.btn { padding: 0.5rem 0.75rem; border: 1px solid #333; border-radius: 6px; text-decoration: none; }
-  </style>
-</head>
-<body>
-    {% include "partials/messages.html" %}
-  <header>
-    <h1>Tervetuloa, {{ user.get_full_name|default:user.username }} (Opettaja)</h1>
-    <nav>
-      <a class="btn" href="{% url 'ulos' %}">Kirjaudu ulos</a>
-    </nav>
-  </header>
+{% extends 'partials/base.html' %}
 
+{% block title %}Opettajan kojelauta{% endblock %}
+
+{% block content %}
+
+  <!-- ====================================================== -->
+  <!-- SECTION 1: YOUR MATERIALS (This is the part you provided) -->
+  <!-- ====================================================== -->
   <section class="materials">
-    <h2>Omat materiaalit</h2>
-    {% if materials %}
-      {% for m in materials %}
-        <article class="card">
-          <h3>{{ m.title }}</h3>
-          <p class="muted">Tekijä: {{ m.author.get_full_name|default:m.author.username }}</p>
-          {% if m.description %}<p>{{ m.description }}</p>{% endif %}
-        </article>
-      {% endfor %}
-    {% else %}
+    <h2>Omat materiaalisi</h2>
+
+    {% for m in materials %}
+      <article class="card">
+        <h3>{{ m.title }} (v{{ m.version }})</h3>
+
+        <!-- Displaying new, relevant fields from your updated database model -->
+        <p class="muted">Tila: {{ m.get_status_display }} | Aihe: {{ m.subject|default:'Ei määritelty' }}</p>
+        
+        <!-- These are the buttons for the next steps in the teacher's workflow -->
+        <div style="margin-top: 10px; display: flex; gap: 0.5rem;">
+            <a class="btn" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
+            <a class="btn primary" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
+        </div>
+      </article>
+    {% empty %}
       <p class="muted">Et ole vielä luonut materiaaleja.</p>
-    {% endif %}
+    {% endfor %}
   </section>
-</body>
-</html>
+
+  <hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;">
+
+  <!-- ====================================================== -->
+  <!-- SECTION 2: ASSIGNMENTS (This is the new part) -->
+  <!-- ====================================================== -->
+  <section class="assignments">
+    <h2>Tekemäsi tehtävänannot</h2>
+
+    {% for assignment in assignments %}
+      <article class="card">
+        <h3>{{ assignment.material.title }}</h3>
+        <p class="muted">Annettu oppilaalle: {{ assignment.student.get_full_name|default:assignment.student.username }}</p>
+        <p class="muted">Tila: {{ assignment.get_status_display }}</p>
+        {% if assignment.due_at %}
+            <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
+        {% endif %}
+        
+        <!-- This link will be used in a future step for grading submissions -->
+        <div style="margin-top: 10px;">
+            <a class="btn" href="#">Tarkastele palautusta</a>
+        </div>
+      </article>
+    {% empty %}
+      <p class="muted">Et ole vielä antanut yhtään tehtävää.</p>
+    {% endfor %}
+  </section>
+
+{% endblock %}

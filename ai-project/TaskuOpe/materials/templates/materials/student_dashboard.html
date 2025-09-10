@@ -1,40 +1,40 @@
-<!DOCTYPE html>
-<html lang="fi">
-<head>
-  <meta charset="UTF-8" />
-  <title>Opiskelijan kojelauta</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; }
-    header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .materials { margin-top: 1.5rem; display: grid; gap: 0.75rem; }
-    .card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }
-    .muted { color: #555; font-size: 0.9rem; }
-    a.btn { padding: 0.5rem 0.75rem; border: 1px solid #333; border-radius: 6px; text-decoration: none; }
-  </style>
-</head>
-<body>
-    {% include "partials/messages.html" %}
-  <header>
-    <h1>Tervetuloa, {{ user.get_full_name|default:user.username }} (Opiskelija)</h1>
-    <nav>
-      <a class="btn" href="{% url 'ulos' %}">Kirjaudu ulos</a>
-    </nav>
-  </header>
+{% extends 'partials/base.html' %}
 
-  <section class="materials">
-    <h2>Kaikki materiaalit</h2>
-    {% if materials %}
-      {% for m in materials %}
-        <article class="card">
-          <h3>{{ m.title }}</h3>
-          <p class="muted">Opettaja: {{ m.author.get_full_name|default:m.author.username }}</p>
-          {% if m.description %}<p>{{ m.description }}</p>{% endif %}
-        </article>
-      {% endfor %}
-    {% else %}
-      <p class="muted">Materiaaleja ei ole vielä saatavilla.</p>
-    {% endif %}
+{% block title %}Opiskelijan kojelauta{% endblock %}
+
+{% block content %}
+  <section class="assignments">
+    <h2>Omat tehtäväsi</h2>
+
+    {% for assignment in assignments %}
+      <article class="card">
+        <h3>{{ assignment.material.title }}</h3>
+        <p class="muted">Opettaja: {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</p>
+        <p class="muted">Tila: {{ assignment.get_status_display }}</p>
+        {% if assignment.due_at %}
+            <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
+        {% endif %}
+        
+        <!-- This link will be for the next step: viewing and completing the assignment -->
+        <div style="margin-top: 10px;">
+            <a class="btn primary" href="#">Aloita tai jatka tehtävää</a>
+        </div>
+      </article>
+    {% empty %}
+      <p class="muted">Sinulla ei ole vielä tehtäviä.</p>
+    {% endfor %}
   </section>
-</body>
-</html>
+{% endblock %}```
+
+**Reminder:** For this student dashboard to work, you must ensure your `dashboard_view` in `materials/views.py` is sending the correct data. Here is the logic for the student part of that view:
+
+```python
+# In materials/views.py, inside the dashboard_view function
+
+# ...
+elif user.role == 'STUDENT':
+    # Students see a list of their assignments.
+    # We use select_related to efficiently fetch the related material and teacher info in one database query.
+    assignments = Assignment.objects.filter(student=user).select_related('material', 'assigned_by')
+    return render(request, 'materials/student_dashboard.html', {'assignments': assignments})
+#...
