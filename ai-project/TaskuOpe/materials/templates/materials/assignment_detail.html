@@ -1,0 +1,77 @@
+{% extends 'partials/base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <!-- Assignment Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">{{ assignment.material.title }}</h2>
+                    <p class="mb-0 small">Määräaika (Due Date): {{ assignment.due_at|date:"d M Y, H:i"|default:"Ei määritetty (Not set)" }}</p>
+                </div>
+                
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Tehtävänanto (Assignment)</h5>
+                    <p class="card-text fs-5">{{ assignment.material.content|linebreaks }}</p>
+                </div>
+            </div>
+
+            <!-- Submission Section -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+
+                    {% if assignment.status == 'PENDING' %}
+                        <!-- SHOW SUBMISSION FORM IF ASSIGNMENT IS PENDING -->
+                        <h4 class="mb-3">Lähetä vastauksesi (Submit Your Response)</h4>
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.response.id_for_label }}" class="form-label">{{ form.response.label }}</label>
+                                <!-- Render the textarea using Django's form field -->
+                                {{ form.response }}
+                                
+                                {% if form.response.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.response.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">Lähetä vastaus (Submit Response)</button>
+                        </form>
+
+                    {% elif assignment.status == 'SUBMITTED' %}
+                        <!-- SHOW A CONFIRMATION MESSAGE AND THE SUBMITTED RESPONSE -->
+                        <h4 class="text-success">Vastaus lähetetty (Response Submitted)</h4>
+                        <div class="alert alert-success mt-3" role="alert">
+                            Olet jo palauttanut tämän tehtävän. (You have already submitted this assignment.)
+                        </div>
+                        
+                        <!-- Optional: Display the student's submission for review -->
+                        {% with submission=assignment.submission_set.first %}
+                            {% if submission %}
+                            <h5 class="mt-4 text-muted">Oma vastauksesi (Your Submission)</h5>
+                            <div class="p-3 bg-light rounded border">
+                                <p class="mb-0" style="white-space: pre-wrap;">{{ submission.response }}</p>
+                            </div>
+                            {% endif %}
+                        {% endwith %}
+                        
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Back to Dashboard Link -->
+            <div class="text-center mt-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">&larr; Takaisin koontinäyttöön (Back to Dashboard)</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}
