@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from .ai_service import ask_llm #lisäys AI-kyselyä varten
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 
 # Import models from the correct apps
 from .models import Material, Assignment
@@ -8,6 +10,7 @@ from users.models import CustomUser
 
 # Import forms for this app
 from .forms import AssignmentForm, MaterialForm
+
 
 # --- Main Dashboard ---
 @login_required
@@ -42,27 +45,84 @@ def dashboard_view(request):
 
 # --- Teacher's Workflow Views ---
 
+# BEGIN disabled 2025-09-11: korvattu AI-paneelin versiolla
+# @login_required
+# def create_material_view(request):
+#     """
+#     Handles the manual creation of a new Material object for testing.
+#     """
+#     if request.user.role != 'TEACHER':
+#         return redirect('dashboard')
+#
+#     if request.method == 'POST':
+#         form = MaterialForm(request.POST)
+#         if form.is_valid():
+#             material = form.save(commit=False)
+#             material.author = request.user
+#             material.status = Material.Status.DRAFT
+#             material.save()
+#             messages.success(request, f"Material '{material.title}' was created successfully.")
+#             return redirect('dashboard')
+#     else:
+#         form = MaterialForm()
+#
+#     return render(request, 'materials/create_material.html', {'form': form})
+# END disabled 2025-09-11
+
+#uusi näkymä AI-kyselyä varten
+
 @login_required
 def create_material_view(request):
     """
-    Handles the manual creation of a new Material object for testing.
+    Manuaalinen materiaalin luonti + AI-testi samalla sivulla.
+    AI-testi EI tallenna eikä täytä kenttiä automaattisesti.
     """
     if request.user.role != 'TEACHER':
         return redirect('dashboard')
 
+    ai_reply = None
+    ai_prompt_val = ""
+
     if request.method == 'POST':
-        form = MaterialForm(request.POST)
-        if form.is_valid():
-            material = form.save(commit=False)
-            material.author = request.user
-            material.status = Material.Status.DRAFT
-            material.save()
-            messages.success(request, f"Material '{material.title}' was created successfully.")
-            return redirect('dashboard')
-    else:
-        form = MaterialForm()
-    
-    return render(request, 'materials/create_material.html', {'form': form})
+        action = request.POST.get('action')
+
+        # --- AI-kysely (ei tallennusta) ---
+        if action == 'ai':
+            ai_prompt_val = (request.POST.get('ai_prompt') or '').strip()
+            if ai_prompt_val:
+                ai_reply = ask_llm(ai_prompt_val, user_id=request.user.id)
+            # Palauta sivu käyttäjän syötteillä
+            form = MaterialForm(request.POST or None)
+            return render(request, 'materials/create_material.html', {
+                'form': form,
+                'ai_prompt': ai_prompt_val,
+                'ai_reply': ai_reply,
+            })
+
+        # --- Normaali tallennus ---
+        if action == 'save' or action is None:
+            form = MaterialForm(request.POST)
+            if form.is_valid():
+                material = form.save(commit=False)
+                material.author = request.user
+                material.status = Material.Status.DRAFT
+                material.save()
+                messages.success(request, f"Material '{material.title}' was created successfully.")
+                return redirect('dashboard')
+            # validointivirhe
+            return render(request, 'materials/create_material.html', {
+                'form': form,
+                'ai_prompt': request.POST.get('ai_prompt', ''),
+                'ai_reply': None,
+            })
+
+    # GET
+    form = MaterialForm()
+    return render(request, 'materials/create_material.html', {
+        'form': form,
+        'ai_prompt': '',
+        'ai_reply': None,
+    })
 
 @login_required
 def material_detail_view(request, material_id):
@@ -112,3 +172,24 @@ def assign_material_view(request, material_id):
         form = AssignmentForm()
             
     return render(request, 'materials/assign_material.html', {'form': form, 'material': material})
+
+# --- Deletion Views ---
+@login_required
+def delete_material_view(request, material_id):
+    material = get_object_or_404(Material, id=material_id, author=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    title = material.title
+    # Jos Assignment FK on on_delete=CASCADE, tämä riittää:
+    material.delete()
+    messages.success(request, f"Materiaali '{title}' poistettu.")
+    return redirect('dashboard')
+
+@login_required
+def delete_assignment_view(request, assignment_id):
+    assignment = get_object_or_404(Assignment, id=assignment_id, assigned_by=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    assignment.delete()
+    messages.success(request, "Tehtävänanto poistettu.")
+    return redirect('dashboard')

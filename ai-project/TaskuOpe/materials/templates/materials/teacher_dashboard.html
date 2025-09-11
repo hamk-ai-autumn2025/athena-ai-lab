@@ -4,11 +4,20 @@
 
 {% block content %}
 
+
+
   <!-- ====================================================== -->
   <!-- SECTION 1: YOUR MATERIALS (This is the part you provided) -->
   <!-- ====================================================== -->
   <section class="materials">
     <h2>Omat materiaalisi</h2>
+
+    <!-- AI NAPPI -->
+    {% if user.is_authenticated and user.role == 'TEACHER' %}
+  <div style="margin-bottom:1rem;">
+    <a class="btn primary" href="{% url 'create_material' %}">Luo uusi materiaali</a>
+  </div>
+  {% endif %} 
 
     {% for m in materials %}
       <article class="card">
@@ -21,6 +30,12 @@
         <div style="margin-top: 10px; display: flex; gap: 0.5rem;">
             <a class="btn" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
             <a class="btn primary" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
+              <form method="post" action="{% url 'delete_material' material_id=m.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button class="btn" style="border-color:#c82333; color:#c82333;"
+            onclick="return confirm('Poistetaanko materiaali: {{ m.title }}? Tämä poistaa myös siihen liittyvät tehtävänannot.')">
+      Poista
+    </button>
         </div>
       </article>
     {% empty %}
@@ -48,6 +63,13 @@
         <!-- This link will be used in a future step for grading submissions -->
         <div style="margin-top: 10px;">
             <a class="btn" href="#">Tarkastele palautusta</a>
+              <form method="post" action="{% url 'delete_assignment' assignment_id=assignment.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button class="btn" style="border-color:#c82333; color:#c82333;"
+            onclick="return confirm('Poistetaanko tämä tehtävänanto oppilaalta {{ assignment.student.get_full_name|default:assignment.student.username }}?')">
+      Poista
+    </button>
+  </form>
         </div>
       </article>
     {% empty %}
