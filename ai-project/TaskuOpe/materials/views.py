@@ -1,10 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-<<<<<<< HEAD
-# KEPT: Your new imports for AI and deletion views
-=======
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
 from .ai_service import ask_llm
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 
@@ -56,10 +52,6 @@ def create_material_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-<<<<<<< HEAD
-
-=======
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
         if action == 'ai':
             ai_prompt_val = (request.POST.get('ai_prompt') or '').strip()
             if ai_prompt_val:
@@ -76,7 +68,6 @@ def create_material_view(request):
                 material.save()
                 messages.success(request, f"Material '{material.title}' was created successfully.")
                 return redirect('dashboard')
-<<<<<<< HEAD
             return render(request, 'materials/create_material.html', {
                 'form': form,
                 'ai_prompt': request.POST.get('ai_prompt', ''),
@@ -89,12 +80,6 @@ def create_material_view(request):
         'ai_prompt': '',
         'ai_reply': None,
     })
-=======
-            return render(request, 'materials/create_material.html', {'form': form, 'ai_prompt': request.POST.get('ai_prompt', ''), 'ai_reply': None})
-
-    form = MaterialForm()
-    return render(request, 'materials/create_material.html', {'form': form, 'ai_prompt': '', 'ai_reply': None})
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
 
 @login_required
 def material_detail_view(request, material_id):
@@ -130,9 +115,7 @@ def assign_material_view(request, material_id):
     return render(request, 'materials/assign_material.html', {'form': form, 'material': material})
 
 
-# ==============================================================================
-# --- NEW AND IMPROVED STUDENT WORKFLOW VIEW ---
-# ==============================================================================
+# --- Students workflow view ---
 @login_required
 def assignment_detail_view(request, assignment_id):
     """
@@ -140,33 +123,16 @@ def assignment_detail_view(request, assignment_id):
     """
     assignment = get_object_or_404(Assignment, id=assignment_id)
 
-<<<<<<< HEAD
-=======
-    # Security check
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
     if assignment.student != request.user:
         messages.error(request, "You are not authorized to view this assignment.")
         return redirect('dashboard')
 
-<<<<<<< HEAD
     if assignment.status in ['SUBMITTED', 'GRADED']:
         form = SubmissionForm()
         return render(request, 'materials/assignment_detail.html', {'assignment': assignment, 'form': form})
 
     if request.method == 'POST':
         form = SubmissionForm(request.POST)
-=======
-    # Prevent action if already submitted or graded
-    if assignment.status in ['SUBMITTED', 'GRADED']:
-        form = SubmissionForm() # Show an empty form, but it won't be used
-        return render(request, 'materials/assignment_detail.html', {'assignment': assignment, 'form': form})
-
-    # Handle POST requests (saving or submitting)
-    if request.method == 'POST':
-        form = SubmissionForm(request.POST)
-
-        # --- Handle SAVE DRAFT action ---
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
         if 'save_draft' in request.POST:
             draft_text = request.POST.get('response', '')
             assignment.draft_response = draft_text
@@ -175,17 +141,12 @@ def assignment_detail_view(request, assignment_id):
             messages.info(request, "Luonnos tallennettu onnistuneesti!")
             return redirect('assignment_detail', assignment_id=assignment.id)
 
-<<<<<<< HEAD
-=======
-        # --- Handle FINAL SUBMIT action ---
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
         elif 'submit_final' in request.POST:
             if form.is_valid():
                 submission = form.save(commit=False)
                 submission.student = request.user
                 submission.assignment = assignment
                 submission.save()
-<<<<<<< HEAD
                 assignment.status = Assignment.Status.SUBMITTED
                 assignment.draft_response = ""
                 assignment.save()
@@ -193,20 +154,6 @@ def assignment_detail_view(request, assignment_id):
                 return redirect('dashboard')
     
     else:
-=======
-
-                assignment.status = Assignment.Status.SUBMITTED
-                assignment.draft_response = "" # Clear the draft after submission
-                assignment.save()
-
-                messages.success(request, "Vastauksesi on lähetetty onnistuneesti!")
-                return redirect('dashboard')
-            # If form is not valid, it will fall through and re-render the page with errors
-    
-    # Handle GET requests (loading the page)
-    else:
-        # If a draft exists, pre-populate the form with it. Otherwise, it's an empty form.
->>>>>>> 6afc765 (Käyttöliittymän ja oppillaiden ominaisuuksien luontia ja hiomista -IK)
         form = SubmissionForm(initial={'response': assignment.draft_response})
 
     context = {
@@ -215,7 +162,6 @@ def assignment_detail_view(request, assignment_id):
     }
     return render(request, 'materials/assignment_detail.html', context)
     
-
 # --- Deletion Views ---
 @login_required
 def delete_material_view(request, material_id):
