@@ -1,0 +1,64 @@
+{% extends "partials/base.html" %}
+{% block title %}Arvioi palautus – {{ material.title }}{% endblock %}
+
+{% block content %}
+<h1>Arvioi palautus</h1>
+<p><a href="{% url 'view_submissions' material_id=material.id %}">← Takaisin palautuslistaan</a></p>
+
+<div class="grid" style="display:grid; gap:1rem; grid-template-columns: 2fr 1fr;">
+  <section class="card">
+    <h2>{{ material.title }}</h2>
+    {% if material.content %}
+      <article class="prose">{{ material.content|linebreaks }}</article>
+    {% endif %}
+
+    <hr>
+    <h3>Opiskelijan vastaus – {{ assignment.student.get_full_name|default:assignment.student.username }}</h3>
+    <article class="prose">{{ submission.response|linebreaks }}</article>
+
+    {% if submission.grade or submission.points_obtained or submission.feedback %}
+      <hr>
+      <h4>Nykyinen arviointi</h4>
+      <p class="muted">
+        Arvosana: {{ submission.grade|default:"—" }}<br>
+        Pisteet:
+        {% if submission.points_obtained %}
+          {{ submission.points_obtained }}{% if submission.points_max %} / {{ submission.points_max }}{% endif %}
+        {% else %}—{% endif %}<br>
+        Palaute:<br>
+        {{ submission.feedback|default:"Ei palautetta."|linebreaks }}
+      </p>
+    {% endif %}
+  </section>
+
+  <aside class="card">
+    <h3>Arviointi</h3>
+<form method="post">
+  {% csrf_token %}
+
+    <div class="form-field">
+        <label for="{{ form.grade.id_for_label }}">Arvosana (4–10) – valinnainen</label>
+        {{ form.grade }}
+        {{ form.grade.errors }}
+    </div>
+
+  <div class="form-field">
+    <label for="{{ form.score.id_for_label }}">Saadut pisteet</label>
+    {{ form.score }} {{ form.score.errors }}
+  </div>
+
+  <div class="form-field">
+    <label for="{{ form.max_score.id_for_label }}">Maksimipisteet</label>
+    {{ form.max_score }} {{ form.max_score.errors }}
+  </div>
+
+  <div class="form-field">
+    <label for="{{ form.feedback.id_for_label }}">Palaute</label>
+    {{ form.feedback }} {{ form.feedback.errors }}
+  </div>
+
+  <button class="btn" type="submit">Tallenna arviointi</button>
+</form>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "partials/base.html" %}
+{% load tz %}
+{% block title %}Palautukset – {{ material.title }}{% endblock %}
+
+{% block content %}
+<h1>Palautukset: {{ material.title }}</h1>
+<p><a href="{% url 'dashboard' %}">← Takaisin kojelautaan</a></p>
+
+{% if assignments %}
+  <div class="list">
+
+    {# Varmista näkymässä:
+       assignments = (Assignment.objects
+         .filter(material=material, status__in=[Assignment.Status.SUBMITTED, Assignment.Status.GRADED])
+         .select_related('student')
+         .prefetch_related('submissions')
+         .order_by('-created_at')) #}
+
+    {% for a in assignments %}
+      <div class="card">
+        <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <div>
+            <strong>{{ a.student.get_full_name|default:a.student.username }}</strong>
+            {% if a.due_at %}
+              <span class="muted" style="margin-left:0.5rem;">
+                (Määräaika: {{ a.due_at|date:"d.m.Y H:i" }})
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="badges" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            {% if a.status == a.Status.GRADED %}
+              <span class="badge badge-success">Arvioitu</span>
+            {% elif a.status == a.Status.SUBMITTED %}
+              <span class="badge badge-info">Palautettu</span>
+            {% endif %}
+
+            {# Uusin submission (jos useita) #}
+            {% with sub=a.submissions.last %}
+              {% if sub %}
+                {% if sub.grade %}
+                  <span class="badge badge-success">Arvosana: {{ sub.grade }}</span>
+                {% endif %}
+                {% if sub.score or sub.max_score %}
+                  <span class="badge">
+                    Pisteet:
+                    {% if sub.score %}{{ sub.score|floatformat:"-2" }}{% else %}0{% endif %}
+                    {% if sub.max_score %}/{{ sub.max_score|floatformat:"-2" }}{% endif %}
+                  </span>
+                {% endif %}
+              {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+
+        <div class="card-body">
+            {% with sub=a.submissions.last %}
+                {% if sub %}
+                <p class="muted" style="margin:0 0 0.5rem 0;">
+                    {% if sub.submitted_at %}Palautettu: {{ sub.submitted_at|localtime|date:"d.m.Y H:i" }}{% endif %}
+                    {% if sub.graded_at %} • Arvioitu: {{ sub.graded_at|localtime|date:"d.m.Y H:i" }}{% endif %}
+                </p>
+
+                <!-- 🔹 BADGE-ALUE (Arvosana + Pisteet) -->
+                <div class="badges" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+                    {% if sub.grade %}
+                    <span class="badge badge-success">Arvosana: {{ sub.grade }}</span>
+                    {% else %}
+                    <span class="badge">Ei arvosanaa</span>
+                    {% endif %}
+
+                    {% if sub.score %}
+                    <span class="badge">
+                        Pisteet: {{ sub.score }}{% if sub.max_score %}/{{ sub.max_score }}{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+                <!-- 🔹 END BADGE-ALUE -->
+
+                {% if sub.feedback %}
+                    <div class="alert">
+                    <strong>Palaute:</strong><br>
+                    {{ sub.feedback|linebreaks }}
+                    </div>
+                {% endif %}
+
+                {% if sub.response %}
+                    <details>
+                    <summary>Näytä opiskelijan vastaus</summary>
+                    <article class="prose" style="margin-top:0.5rem;">
+                        {{ sub.response|linebreaks }}
+                    </article>
+                    </details>
+                {% endif %}
+
+                <div class="card-actions" style="margin-top:0.75rem;">
+                    <a class="btn" href="{% url 'grade_submission' submission_id=sub.id %}">Arvioi / muokkaa</a>
+                </div>
+                {% else %}
+                <p class="muted">Ei palautusta (vielä).</p>
+                {% endif %}
+            {% endwith %}
+         </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">Tälle materiaalille ei ole vielä palautuksia.</p>
+{% endif %}
+{% endblock %}

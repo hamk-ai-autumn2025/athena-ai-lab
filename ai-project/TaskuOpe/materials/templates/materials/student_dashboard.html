@@ -3,54 +3,68 @@
 {% block title %}Opiskelijan etusivu{% endblock %}
 
 {% block content %}
-
   <section class="assignments-list">
-    <!-- NEW: Added a page-header div for consistency with the teacher dashboard -->
     <div class="page-header">
       <h2>Omat tehtäväsi</h2>
-      <!-- The "Create Material" button is intentionally not here, as students cannot create materials -->
     </div>
 
     {% for assignment in assignments %}
       <article class="card">
         <h3>{{ assignment.material.title }}</h3>
-        <!-- All your existing logic and variables are preserved -->
-        <p class="muted">Opettaja: {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</p>
-        <p class="muted">Tila: {{ assignment.get_status_display }}</p>
+
+        <p class="muted">
+          Opettaja: {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}
+        </p>
+
         {% if assignment.due_at %}
-            <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
+          <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
         {% endif %}
-        
-        <!-- UPDATED: Replaced the div with the "card-actions" class for consistent spacing -->
+
+        <!-- TILA: näytetään kerran -->
+        <p class="muted">
+          Tila: {{ assignment.get_status_display }}
+          {% if assignment.status == 'GRADED' %}
+            <span class="badge badge-success">Arvioitu</span>
+          {% elif assignment.status == 'SUBMITTED' %}
+            <span class="badge badge-info">Palautettu</span>
+          {% elif assignment.status == 'IN_PROGRESS' %}
+            <span class="badge">Kesken</span>
+          {% elif assignment.status == 'ASSIGNED' %}
+            <span class="badge">Uusi</span>
+          {% endif %}
+        </p>
+
+        {# 5) Näytä arviointitiedot jos arvioitu #}
+        {% if assignment.status == 'GRADED' and assignment.submissions.last %}
+          {% with sub=assignment.submissions.last %}
+            <div class="evaluation-box" style="margin:0.75rem 0;">
+              {% if sub.grade %}
+                <p><strong>Arvosana:</strong> {{ sub.grade }}</p>
+              {% endif %}
+              {% if sub.score %}
+                <p><strong>Pisteet:</strong> {{ sub.score }}{% if sub.max_score %}/{{ sub.max_score }}{% endif %}</p>
+              {% endif %}
+              {% if sub.feedback %}
+                <p><strong>Palaute:</strong><br>{{ sub.feedback|linebreaks }}</p>
+              {% endif %}
+            </div>
+          {% endwith %}
+        {% endif %}
+
         <div class="card-actions">
-            <a class="btn primary" href="{% url 'assignment_detail' assignment_id=assignment.id %}">
-                {% if assignment.status == 'PENDING' %}
-                    Aloita tai jatka tehtävää
-                {% else %}
-                    Näytä palautus
-                {% endif %}
-            </a>
+          <a class="btn primary" href="{% url 'assignment_detail' assignment_id=assignment.id %}">
+            {% if assignment.status == 'ASSIGNED' or assignment.status == 'IN_PROGRESS' %}
+              Aloita tai jatka tehtävää
+            {% else %}
+              Näytä palautus
+            {% endif %}
+          </a>
         </div>
       </article>
     {% empty %}
-      <!-- UPDATED: Wrapped the "empty" message in a card for better visual appearance -->
       <div class="card">
         <p class="muted">Sinulla ei ole vielä tehtäviä.</p>
       </div>
     {% endfor %}
   </section>
-
 {% endblock %}
-
-**Reminder:** For this student dashboard to work, you must ensure your `dashboard_view` in `materials/views.py` is sending the correct data. Here is the logic for the student part of that view:
-
-```python
-# In materials/views.py, inside the dashboard_view function
-
-# ...
-elif user.role == 'STUDENT':
-    # Students see a list of their assignments.
-    # We use select_related to efficiently fetch the related material and teacher info in one database query.
-    assignments = Assignment.objects.filter(student=user).select_related('material', 'assigned_by')
-    return render(request, 'materials/student_dashboard.html', {'assignments': assignments})
-#...

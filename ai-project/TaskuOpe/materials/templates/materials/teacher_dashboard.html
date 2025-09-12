@@ -9,10 +9,8 @@
   <!-- SECTION 1: YOUR MATERIALS -->
   <!-- ====================================================== -->
   <section class="materials-list">
-    <!-- IMPROVEMENT: Using the consistent page-header component. -->
     <div class="page-header">
       <h2>Omat materiaalisi</h2>
-      <!-- IMPROVEMENT: The primary action button is now part of the header for better UX. -->
       <a class="btn primary" href="{% url 'create_material' %}">Luo uusi materiaali</a>
     </div>
 
@@ -20,30 +18,27 @@
       <article class="card">
         <h3>{{ m.title }} (v{{ m.version }})</h3>
         <p class="muted">Tila: {{ m.get_status_display }} | Aihe: {{ m.subject|default:'Ei määritelty' }}</p>
-        
-        <!-- IMPROVEMENT: Replaced inline styles with the consistent "card-actions" class. -->
+
         <div class="card-actions">
-            <a class="btn" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
-            <a class="btn primary" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
-            <form method="post" action="{% url 'delete_material' material_id=m.id %}" style="margin:0;">
-                {% csrf_token %}
-                <!-- IMPROVEMENT: Replaced inline styles with the standard "btn danger" class from our CSS. -->
-                <button type="submit" class="btn danger"
-                        onclick="return confirm('Poistetaanko materiaali: {{ m.title }}? Tämä poistaa myös siihen liittyvät tehtävänannot.')">
-                    Poista
-                </button>
-            </form>
+          <a class="btn" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
+          <a class="btn primary" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
+          <a class="btn" href="{% url 'view_submissions' material_id=m.id %}">Tarkastele palautuksia</a>
+          <form method="post" action="{% url 'delete_material' material_id=m.id %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="btn danger"
+                    onclick="return confirm('Poistetaanko materiaali: {{ m.title }}? Tämä poistaa myös siihen liittyvät tehtävänannot.')">
+              Poista
+            </button>
+          </form>
         </div>
       </article>
     {% empty %}
-      <!-- IMPROVEMENT: Wrapped the empty message in a card for better visual consistency. -->
       <div class="card">
         <p class="muted">Et ole vielä luonut materiaaleja.</p>
       </div>
     {% endfor %}
   </section>
 
-  <!-- IMPROVEMENT: Using our theme-aware horizontal rule. -->
   <hr style="margin: 3rem 0; border: none; border-top: 1px solid var(--border-color);">
 
   <!-- ====================================================== -->
@@ -51,7 +46,7 @@
   <!-- ====================================================== -->
   <section class="assignments-list">
     <div class="page-header">
-        <h2>Tekemäsi tehtävänannot</h2>
+      <h2>Tekemäsi tehtävänannot</h2>
     </div>
 
     {% for assignment in assignments %}
@@ -60,18 +55,31 @@
         <p class="muted">Annettu oppilaalle: {{ assignment.student.get_full_name|default:assignment.student.username }}</p>
         <p class="muted">Tila: {{ assignment.get_status_display }}</p>
         {% if assignment.due_at %}
-            <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
+          <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
         {% endif %}
-        
+
         <div class="card-actions">
-            <a class="btn" href="#">Tarkastele palautusta</a>
-            <form method="post" action="{% url 'delete_assignment' assignment_id=assignment.id %}" style="margin:0;">
-                {% csrf_token %}
-                <button type="submit" class="btn danger"
-                        onclick="return confirm('Poistetaanko tämä tehtävänanto oppilaalta {{ assignment.student.get_full_name|default:assignment.student.username }}?')">
-                  Poista
-                </button>
-            </form>
+          {% with sub=assignment.submissions.last %}
+            {% if sub %}
+              <a class="btn" href="{% url 'grade_submission' submission_id=sub.id %}">
+                Tarkastele palautusta
+              </a>
+            {% else %}
+              <button class="btn" disabled>Ei palautusta vielä</button>
+            {% endif %}
+          {% endwith %}
+
+          <a class="btn" href="{% url 'view_submissions' material_id=assignment.material.id %}">
+            Kaikki palautukset
+          </a>
+
+          <form method="post" action="{% url 'delete_assignment' assignment_id=assignment.id %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="btn danger"
+                    onclick="return confirm('Poistetaanko tämä tehtävänanto oppilaalta {{ assignment.student.get_full_name|default:assignment.student.username }}?')">
+              Poista
+            </button>
+          </form>
         </div>
       </article>
     {% empty %}

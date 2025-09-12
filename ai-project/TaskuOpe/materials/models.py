@@ -2,6 +2,9 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+import uuid
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Prompt(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -19,11 +22,11 @@ class Prompt(models.Model):
 
 class Material(models.Model):
     class MaterialType(models.TextChoices):
-        QUIZ = 'QUIZ', 'Quiz'
-        GAME = 'GAME', 'Game'
-        IMAGE = 'IMAGE', 'Image'
+        QUIZ = 'QUIZ', 'Kysely'
+        GAME = 'GAME', 'Peli'
+        IMAGE = 'IMAGE', 'Kuva'
         VIDEO = 'VIDEO', 'Video'
-        LESSON = 'LESSON', 'Lesson'
+        LESSON = 'LESSON', 'Oppitunti'
 
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
@@ -72,11 +75,16 @@ class MaterialRevision(models.Model):
 # ==========================================================
 class Assignment(models.Model):
     class Status(models.TextChoices):
-        ASSIGNED = 'ASSIGNED', 'Assigned'
-        IN_PROGRESS = 'IN_PROGRESS', 'In Progress' # <-- 1. ADD THIS NEW STATUS
-        SUBMITTED = 'SUBMITTED', 'Submitted'
-        GRADED = 'GRADED', 'Graded'
-        RETURNED = 'RETURNED', 'Returned'
+        ASSIGNED     = "ASSIGNED",     _("Annettu")
+        IN_PROGRESS  = "IN_PROGRESS",  _("Kesken")
+        SUBMITTED    = "SUBMITTED",    _("Palautettu")
+        GRADED       = "GRADED",       _("Arvioitu")
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ASSIGNED,
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
@@ -108,19 +116,69 @@ class Assignment(models.Model):
 
 class Submission(models.Model):
     class Status(models.TextChoices):
-        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
-        SUBMITTED = 'SUBMITTED', 'Submitted'
+        IN_PROGRESS = 'IN_PROGRESS', 'Kesken'
+        SUBMITTED   = 'SUBMITTED',   'Palautettu'
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='submissions')
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    assignment = models.ForeignKey(
+        'materials.Assignment',
+        on_delete=models.CASCADE,
+        related_name='submissions'
+    )
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'role': 'STUDENT'}
     )
-    response = models.JSONField(null=True, blank=True)
-    score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    feedback = models.TextField(blank=True)
-    status = models.CharField(max_length=50, choices=Status.choices, default=Status.IN_PROGRESS)
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SUBMITTED
+    )
+
+    # Numeroarvosana 4–10 (suomalainen asteikko)
+    grade = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(4), MaxValueValidator(10)],
+        help_text="Numeroarvosana 4–10"
+    )
+
+    # Pisteet (esim. 17.0 / 20.0)
+    score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Saadut pisteet"
+    )
+    max_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Maksimipisteet"
+    )
+
+    feedback = models.TextField(
+        blank=True,
+        help_text="Opettajan palaute"
+    )
+
+    # Oppilaan kirjoittama vastaus
+    response = models.TextField(blank=True)
+
+    # Aikaleimat
+    created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(auto_now_add=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+    graded_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.student} → {self.assignment} ({self.get_status_display()})"

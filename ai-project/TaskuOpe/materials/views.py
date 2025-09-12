@@ -3,17 +3,22 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .ai_service import ask_llm
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
+from django.utils import timezone
 
 # Import models from the correct apps
 from .models import Material, Assignment, Submission
 from users.models import CustomUser
+from django.db import transaction
+from django import forms
+
 
 # Import forms for this app
-from .forms import AssignmentForm, MaterialForm, SubmissionForm
+from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
+from .forms import GradingForm  # varmista että tämä on lisätty forms.py:hin aiemmin
 
 
 # --- Main Dashboard ---
-@login_required
+@login_required(login_url='kirjaudu')
 def dashboard_view(request):
     """
     Checks the user's role and renders the appropriate dashboard
@@ -127,7 +132,7 @@ def assignment_detail_view(request, assignment_id):
         messages.error(request, "You are not authorized to view this assignment.")
         return redirect('dashboard')
 
-    if assignment.status in ['SUBMITTED', 'GRADED']:
+    if assignment.status in [Assignment.Status.SUBMITTED, Assignment.Status.GRADED]:
         form = SubmissionForm()
         return render(request, 'materials/assignment_detail.html', {'assignment': assignment, 'form': form})
 
@@ -181,3 +186,67 @@ def delete_assignment_view(request, assignment_id):
     assignment.delete()
     messages.success(request, "Tehtävänanto poistettu.")
     return redirect('dashboard')
+
+@login_required(login_url='kirjaudu')
+def view_submissions(request, material_id):
+    """
+    Opettaja: listaa tietyn materiaalin palautukset/arvioinnit.
+    Turva: vain materiaalin tekijä näkee.
+    """
+    material = get_object_or_404(Material, id=material_id)
+    if getattr(request.user, "role", None) != "TEACHER" or material.author_id != request.user.id:
+        messages.error(request, "Sinulla ei ole oikeuksia tarkastella tätä sivua.")
+        return redirect('dashboard')
+
+    assignments = (
+        Assignment.objects
+        .select_related('student', 'material')
+        .filter(material=material, status__in=[Assignment.Status.SUBMITTED, Assignment.Status.GRADED])
+        .order_by('-created_at')
+    )
+
+    return render(request, 'materials/view_submissions.html', {
+        'material': material,
+        'assignments': assignments,
+    })
+
+
+@login_required(login_url='kirjaudu')
+@transaction.atomic
+def grade_submission_view(request, submission_id):
+    """
+    Opettaja arvioi yksittäisen palautuksen.
+    """
+    submission = get_object_or_404(
+        Submission.objects.select_related('assignment__student', 'assignment__material'),
+        id=submission_id
+    )
+    assignment = submission.assignment
+    material = assignment.material
+
+    # Turvatarkistus: vain materiaalin tekijä (opettaja) saa arvioida
+    if getattr(request.user, "role", None) != "TEACHER" or material.author_id != request.user.id:
+        messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = GradingForm(request.POST, instance=submission)
+        if form.is_valid():
+            sub = form.save(commit=False)         # ota instanssi muokattavaksi
+            sub.graded_at = timezone.now()        # leimaa arviointihetki
+            sub.save()                            # tallenna arvosana/pisteet/palaute
+
+            assignment.status = Assignment.Status.GRADED
+            assignment.save(update_fields=['status'])
+
+            messages.success(request, "Arviointi tallennettu.")
+            return redirect('view_submissions', material_id=material.id)
+    else:
+        form = GradingForm(instance=submission)
+
+    return render(request, 'materials/grade_submission.html', {
+        'material': material,
+        'assignment': assignment,
+        'submission': submission,
+        'form': form,
+    })
