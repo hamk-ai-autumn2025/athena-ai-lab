@@ -1,76 +1,118 @@
-<!-- In TaskuOpe/templates/partials/base.html -->
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fi" data-theme="system"> 
 <head>
-    <meta charset="UTF-8" />
-    <!-- This block allows each page to set its own title -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TaskuOpettaja{% endblock %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-        body { font-family: system-ui, sans-serif; margin: 0; background-color: #f8f9fa; }
-        header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            gap: 1rem; 
-            flex-wrap: wrap;
-            padding: 1rem 2rem;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-        nav { display: flex; gap: 0.75rem; align-items: center;}
-        main { padding: 2rem; }
-        .card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background-color: white; }
-        .muted { color: #555; font-size: 0.9rem; }
-        a.btn { 
-            display: inline-block;
-            padding: 0.5rem 0.75rem; 
-            border: 1px solid #333; 
-            border-radius: 6px; 
-            text-decoration: none; 
-            background-color: white; 
-            color: #333; 
-            transition: background-color 0.2s;
-        }
-        a.btn:hover { background-color: #f0f0f0; }
-        a.btn.primary { background-color: #007bff; color: white; border-color: #007bff; }
-        a.btn.primary:hover { background-color: #0056b3; }
-    </style>
-    <!-- This block allows pages to add extra CSS if needed -->
+
+    <!-- Anti-flash script -->
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem('theme');
+                if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { /* Fails gracefully */ }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-    <header>
-        <!-- Link to the main dashboard -->
-        <a href="{% url 'dashboard' %}" style="text-decoration: none; color: black;">
-            <h2>TaskuOpettaja</h2>
-        </a>
+    <div class="app-container">
+        <!-- Sidebar layout -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="{% url 'dashboard' %}" style="text-decoration: none; color: inherit;"><h3>TaskuOpe</h3></a>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'dashboard' %}" class="nav-link active"><span class="nav-icon">&#127968;</span><span class="nav-text">Etusivu</span></a>
+                <a href="#" class="nav-link"><span class="nav-icon">&#128101;</span><span class="nav-text">Oppilaat</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="theme-switcher">
+                    <button id="theme-light" title="Vaalea tila">&#9728;</button>
+                    <button id="theme-dark" title="Tumma tila">&#127769;</button>
+                    <button id="theme-system" title="Järjestelmän oletus">&#128187;</button>
+                </div>
+            </div>
+        </aside>
 
-        <!-- Navigation shows login/logout and user info -->
-        {% if user.is_authenticated %} <!-- This should be modified so that material creation is only available to teachers -->
-        <nav>
-            <span>Hello, {{ user.get_full_name|default:user.username }}!</span>
-            {% if user.role == 'TEACHER' %}
-                <a class="btn primary" href="{% url 'create_material' %}">Luo uusi materiaali</a>
-            {% endif %}
-            <a class="btn" href="{% url 'ulos' %}">Kirjaudu ulos</a>
-        </nav>
-        {% else %}
-        <nav>
-            <a class="btn" href="{% url 'ulos' %}">Kirjaudu</a>
-        </nav>
-        {% endif %}
-    </header>
+        <!-- Content wrapper and header -->
+        <div class="content-wrapper">
+            <header class="main-header">
+                <div class="user-info">
+                    {% if user.is_authenticated %}
+                        <span>Hei, {{ user.get_full_name|default:user.username }}!</span>
+                        <a href="{% url 'ulos' %}">Kirjaudu ulos</a>
+                    {% else %}
+                        <a href="{% url 'kirjaudu' %}">Kirjaudu</a>
+                    {% endif %}
+                </div>
+            </header>
+            
+            <main class="main-content">
+                {% include "partials/messages.html" %}
+                {% block content %}
+                {% endblock %}
+            </main>
+        </div>
+    </div>
 
-    <main>
-        <!-- Any messages from the Django messages framework will appear here -->
-        {% include "partials/messages.html" %}
+    <!-- ================================================= -->
+    <!--    CORRECT, COMBINED SCRIPT                     -->
+    <!-- ================================================= -->
+    <script>
+        // A single listener that runs once the entire HTML page is loaded.
+        document.addEventListener('DOMContentLoaded', () => {
 
-        {% block content %}
-        <!-- The unique content of each page will be inserted in this block -->
-        {% endblock %}
-    </main>
+            // --- Block 1: Theme Switcher Logic ---
+            const htmlElement = document.documentElement;
+            const lightBtn = document.getElementById('theme-light');
+            const darkBtn = document.getElementById('theme-dark');
+            const systemBtn = document.getElementById('theme-system');
 
+            const setThemeOnClick = (theme) => {
+                localStorage.setItem('theme', theme);
+                if (theme === 'system') {
+                    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    htmlElement.setAttribute('data-theme', systemTheme);
+                } else {
+                    htmlElement.setAttribute('data-theme', theme);
+                }
+            };
+
+            // Make sure the buttons exist before adding listeners to them
+            if (lightBtn && darkBtn && systemBtn) {
+                lightBtn.addEventListener('click', () => setThemeOnClick('light'));
+                darkBtn.addEventListener('click', () => setThemeOnClick('dark'));
+                systemBtn.addEventListener('click', () => setThemeOnClick('system'));
+            }
+
+
+            // --- Block 2: Auto-hiding Messages Logic ---
+            const messageAlerts = document.querySelectorAll('.messages .alert');
+            if (messageAlerts.length > 0) {
+                setTimeout(() => {
+                    messageAlerts.forEach(alert => {
+                        // Add a fade-out effect for a smoother disappearance
+                        alert.style.transition = 'opacity 0.5s ease';
+                        alert.style.opacity = '0';
+                        setTimeout(() => alert.remove(), 500); // Remove from DOM after the fade animation
+                    });
+                }, 5000); // Disappear after 5 seconds
+            }
+            
+        });
+    </script>
 </body>
 </html>

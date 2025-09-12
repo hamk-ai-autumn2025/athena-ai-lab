@@ -1,7 +1,7 @@
 from django import forms
 
 # Import the models we need to build forms from
-from .models import Material, Submission
+from .models import Material, Submission, Assignment
 from users.models import CustomUser
 
 
@@ -44,4 +44,24 @@ class AssignmentForm(forms.Form):
         required=False,
         widget=forms.DateTimeInput(attrs={'type': 'datetime-local'})
     )
+
+
+class SubmissionForm(forms.ModelForm):
+    """
+    A form for a student to submit their response to an assignment.
+    """
+    class Meta:
+        model = Submission
+        # The student only needs to fill out the 'response' field
+        fields = ['response']
+        widgets = {
+            'response': forms.Textarea(attrs={
+                'rows': 10, 
+                'class': 'form-control', 
+                'placeholder': 'Kirjoita vastauksesi tähän...'
+            }),
+        }
+        labels = {
+            'response': 'Vastauksesi (Your Response)'
+        }
 

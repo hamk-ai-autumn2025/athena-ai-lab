@@ -14,6 +14,5 @@ urlpatterns = [
     path('ulos/', simple_logout, name='ulos'),
 
     # Include the materials app URLs
-    path('', include('materials.urls')), 
-
+    path('', include('materials.urls')),  # Changed to include materials.urls as the main app
 ]

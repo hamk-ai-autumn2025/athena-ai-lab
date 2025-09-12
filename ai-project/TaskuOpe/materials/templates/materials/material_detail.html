@@ -1,18 +1,26 @@
-{% extends 'partials/base.html' %} <!-- Or your base template -->
+{% extends 'partials/base.html' %}
 
 {% block title %}{{ material.title }}{% endblock %}
 
 {% block content %}
-    <h1>{{ material.title }}</h1>
-    <p><strong>Status:</strong> {{ material.get_status_display }} | <strong>Subject:</strong> {{ material.subject|default:'N/A' }}</p>
-    <hr>
 
-    <h2>AI-Generated Content:</h2>
-    <!-- The 'linebreaksbr' filter makes text with newlines display correctly in HTML -->
-    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; white-space: pre-wrap;">
+  <!-- Using the consistent page header for the title and navigation -->
+  <div class="page-header">
+    <div>
+      <h2>{{ material.title }}</h2>
+      <!-- Translated "Status" and "Subject" to Finnish -->
+      <p class="muted">Tila: {{ material.get_status_display }} | Aihe: {{ material.subject|default:'Ei määritelty' }}</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn">&larr; Takaisin etusivulle</a>
+  </div>
+
+  <!-- Using the card component to display the main content -->
+  <article class="card">
+    <h3>Materiaalin sisältö</h3>
+    <!-- This new div uses a class instead of inline styles and will preserve formatting -->
+    <div class="material-content-box">
         {{ material.content|linebreaksbr }}
     </div>
+  </article>
 
-    <br>
-    <a href="{% url 'dashboard' %}">Takaisin etusivulle</a>
 {% endblock %}

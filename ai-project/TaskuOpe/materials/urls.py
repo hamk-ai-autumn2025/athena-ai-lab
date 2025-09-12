@@ -7,6 +7,7 @@ urlpatterns = [
     # Example URL: /
     path('', views.dashboard_view, name='dashboard'),
 
+    # Example URL: /create/
     path('create/', views.create_material_view, name='create_material'),
     
     # Example URL: /material/a1b2c3d4-e5f6-..../
@@ -18,4 +19,8 @@ urlpatterns = [
     # Poistot
     path("material/<uuid:material_id>/delete/", views.delete_material_view, name="delete_material"),
     path("assignment/<uuid:assignment_id>/delete/", views.delete_assignment_view, name="delete_assignment"),
+    
+    # --- ADD THIS NEW LINE FOR THE STUDENT'S ASSIGNMENT VIEW ---
+    # Example URL: /assignment/f7g8h9i0-j1k2-..../
+    path('assignment/<uuid:assignment_id>/', views.assignment_detail_view, name='assignment_detail'),
 ]

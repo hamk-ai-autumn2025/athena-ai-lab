@@ -1,47 +1,72 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="fi" data-theme="system">
 <head>
-  <meta charset="UTF-8" />
-  <title>Kirjaudu sisään</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; display: grid; place-items: start; }
-    form { display: grid; gap: 0.75rem; width: min(420px, 100%); }
-    label { display: grid; gap: 0.25rem; }
-    input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; }
-    button { padding: 0.6rem 0.9rem; border: 1px solid #333; border-radius: 6px; background: #fff; }
-    .errorlist { color: #b00020; margin: 0 0 1rem 0; list-style: none; padding: 0; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Kirjaudu sisään</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Link to our main stylesheet to get all the variables and base styles -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <!-- The anti-flash script is important here too, for users with a saved dark theme preference -->
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem('theme');
+                if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { /* Fails gracefully */ }
+        })();
+    </script>
 </head>
-<body>
-    {% include "partials/messages.html" %}
-  <h1>Kirjaudu sisään</h1>
+<body class="login-page-body">
 
-  {% if form.errors %}
-    <ul class="errorlist">
-      {% for field, errors in form.errors.items %}
-        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
-      {% endfor %}
-      {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-    </ul>
-  {% endif %}
+    <div class="login-container">
+        <!-- App Title -->
+        <h2 class="login-title">TaskuOpe</h2>
 
-  <form method="post" action="{% url 'kirjaudu' %}">
-    {% csrf_token %}
-    <label>
-      Käyttäjätunnus
-      {{ form.username }}
-    </label>
-    <label>
-      Salasana
-      {{ form.password }}
-    </label>
+        <!-- The login form is now inside our standard card component -->
+        <article class="card">
+            <h3 style="text-align: center; margin-bottom: 1.5rem;">Kirjaudu sisään</h3>
 
-    {% if next %}
-      <input type="hidden" name="next" value="{{ next }}">
-    {% endif %}
+            <!-- KEPT: Messages framework include -->
+            {% include "partials/messages.html" %}
 
-    <button type="submit">Kirjaudu</button>
-  </form>
+            <!-- KEPT: Form error logic, now styled with our .form-errors class -->
+            {% if form.errors %}
+                <div class="form-errors">
+                    {% for error in form.non_field_errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'kirjaudu' %}" class="login-form">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">Käyttäjätunnus</label>
+                    {{ form.username }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}">Salasana</label>
+                    {{ form.password }}
+                </div>
+
+                <!-- KEPT: The hidden 'next' field for redirects -->
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <button type="submit" class="btn primary">Kirjaudu</button>
+            </form>
+        </article>
+    </div>
+
 </body>
 </html>

@@ -1,55 +1,58 @@
 {% extends 'partials/base.html' %}
+{% load static %}
 
-{% block title %}Opettajan kojelauta{% endblock %}
+{% block title %}Opettajan etusivu{% endblock %}
 
 {% block content %}
 
-
-
   <!-- ====================================================== -->
-  <!-- SECTION 1: YOUR MATERIALS (This is the part you provided) -->
+  <!-- SECTION 1: YOUR MATERIALS -->
   <!-- ====================================================== -->
-  <section class="materials">
-    <h2>Omat materiaalisi</h2>
-
-    <!-- AI NAPPI -->
-    {% if user.is_authenticated and user.role == 'TEACHER' %}
-  <div style="margin-bottom:1rem;">
-    <a class="btn primary" href="{% url 'create_material' %}">Luo uusi materiaali</a>
-  </div>
-  {% endif %} 
+  <section class="materials-list">
+    <!-- IMPROVEMENT: Using the consistent page-header component. -->
+    <div class="page-header">
+      <h2>Omat materiaalisi</h2>
+      <!-- IMPROVEMENT: The primary action button is now part of the header for better UX. -->
+      <a class="btn primary" href="{% url 'create_material' %}">Luo uusi materiaali</a>
+    </div>
 
     {% for m in materials %}
       <article class="card">
         <h3>{{ m.title }} (v{{ m.version }})</h3>
-
-        <!-- Displaying new, relevant fields from your updated database model -->
         <p class="muted">Tila: {{ m.get_status_display }} | Aihe: {{ m.subject|default:'Ei määritelty' }}</p>
         
-        <!-- These are the buttons for the next steps in the teacher's workflow -->
-        <div style="margin-top: 10px; display: flex; gap: 0.5rem;">
+        <!-- IMPROVEMENT: Replaced inline styles with the consistent "card-actions" class. -->
+        <div class="card-actions">
             <a class="btn" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
             <a class="btn primary" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
-              <form method="post" action="{% url 'delete_material' material_id=m.id %}" style="display:inline;">
-          {% csrf_token %}
-          <button class="btn" style="border-color:#c82333; color:#c82333;"
-            onclick="return confirm('Poistetaanko materiaali: {{ m.title }}? Tämä poistaa myös siihen liittyvät tehtävänannot.')">
-      Poista
-    </button>
+            <form method="post" action="{% url 'delete_material' material_id=m.id %}" style="margin:0;">
+                {% csrf_token %}
+                <!-- IMPROVEMENT: Replaced inline styles with the standard "btn danger" class from our CSS. -->
+                <button type="submit" class="btn danger"
+                        onclick="return confirm('Poistetaanko materiaali: {{ m.title }}? Tämä poistaa myös siihen liittyvät tehtävänannot.')">
+                    Poista
+                </button>
+            </form>
         </div>
       </article>
     {% empty %}
-      <p class="muted">Et ole vielä luonut materiaaleja.</p>
+      <!-- IMPROVEMENT: Wrapped the empty message in a card for better visual consistency. -->
+      <div class="card">
+        <p class="muted">Et ole vielä luonut materiaaleja.</p>
+      </div>
     {% endfor %}
   </section>
 
-  <hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;">
+  <!-- IMPROVEMENT: Using our theme-aware horizontal rule. -->
+  <hr style="margin: 3rem 0; border: none; border-top: 1px solid var(--border-color);">
 
   <!-- ====================================================== -->
-  <!-- SECTION 2: ASSIGNMENTS (This is the new part) -->
+  <!-- SECTION 2: ASSIGNMENTS GIVEN -->
   <!-- ====================================================== -->
-  <section class="assignments">
-    <h2>Tekemäsi tehtävänannot</h2>
+  <section class="assignments-list">
+    <div class="page-header">
+        <h2>Tekemäsi tehtävänannot</h2>
+    </div>
 
     {% for assignment in assignments %}
       <article class="card">
@@ -60,20 +63,21 @@
             <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
         {% endif %}
         
-        <!-- This link will be used in a future step for grading submissions -->
-        <div style="margin-top: 10px;">
+        <div class="card-actions">
             <a class="btn" href="#">Tarkastele palautusta</a>
-              <form method="post" action="{% url 'delete_assignment' assignment_id=assignment.id %}" style="display:inline;">
-    {% csrf_token %}
-    <button class="btn" style="border-color:#c82333; color:#c82333;"
-            onclick="return confirm('Poistetaanko tämä tehtävänanto oppilaalta {{ assignment.student.get_full_name|default:assignment.student.username }}?')">
-      Poista
-    </button>
-  </form>
+            <form method="post" action="{% url 'delete_assignment' assignment_id=assignment.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn danger"
+                        onclick="return confirm('Poistetaanko tämä tehtävänanto oppilaalta {{ assignment.student.get_full_name|default:assignment.student.username }}?')">
+                  Poista
+                </button>
+            </form>
         </div>
       </article>
     {% empty %}
-      <p class="muted">Et ole vielä antanut yhtään tehtävää.</p>
+      <div class="card">
+        <p class="muted">Et ole vielä antanut yhtään tehtävää.</p>
+      </div>
     {% endfor %}
   </section>
 

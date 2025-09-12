@@ -1,52 +1,82 @@
 {% extends 'partials/base.html' %}
+
 {% block title %}Luo uusi materiaali{% endblock %}
 
 {% block content %}
-<h1>Luo uusi materiaali</h1>
 
-{% if messages %}
-  <ul class="messages">
-    {% for message in messages %}
-      <li class="{{ message.tags }}">{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+  <div class="page-header">
+    <div>
+      <h2>Luo uusi materiaali</h2>
+      <p class.muted>Käytä tekoälyä apunasi tai kirjoita sisältö itse.</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn">&larr; Takaisin etusivulle</a>
+  </div>
 
-<form method="post">
-  {% csrf_token %}
+  <!-- Use a form tag to wrap the entire page's functionality -->
+  <form method="post" novalidate>
+    {% csrf_token %}
 
-  <!-- AI-paneeli -->
-  <fieldset style="margin-bottom:1rem;">
-    <legend>AI-testi (täyttää Content-kentän, ei tallenna)</legend>
-    <label for="id_ai_prompt">Aihe/ohje AI:lle</label>
-    <textarea id="id_ai_prompt" name="ai_prompt" rows="4"
-      placeholder="Esim. 'Johdanto prosenttilaskentaan 7.-luokalle, 45 min, 3 harjoitusta.'">{{ ai_prompt }}</textarea>
-    <p>
-      <!-- Estä HTML5-validointi AI-painikkeella -->
-      <button type="submit" name="action" value="ai" class="btn" formnovalidate>Kysy AI:lta</button>
-    </p>
-  </fieldset>
+    <!-- Card 1: The AI Generation Tool -->
+    <article class="card">
+      <h3>1. Luo sisältö tekoälyllä (valinnainen)</h3>
+      <div class="form-group">
+        <label for="id_ai_prompt">Kirjoita aihe tai ohje tekoälylle</label>
+        <textarea id="id_ai_prompt" name="ai_prompt" rows="4"
+          placeholder="Esim. 'Johdanto prosenttilaskentaan 7.-luokalle, 45 min, 3 harjoitusta.'">{{ ai_prompt }}</textarea>
+      </div>
+      <!-- KEPT: The AI submit button with formnovalidate to bypass required fields -->
+      <button type="submit" name="action" value="ai" class="btn" formnovalidate>Luo sisältöehdotus</button>
+    
+      <!--This block only appears after the AI has responded -->
+      {% if ai_reply %}
+        <div class="ai-reply-container">
+            <h4>Tekoälyn vastaus</h4>
+            <pre id="ai_reply_box">{{ ai_reply }}</pre>
+            <!--The "Copy" button with its original JavaScript -->
+            <button type="button" class="btn" onclick="
+              const t=document.getElementById('ai_reply_box').innerText;
+              const field=document.getElementById('id_content');
+              if(field){ field.value = (field.value ? field.value + '\n\n' : '') + t; }
+            ">Kopioi alla olevaan sisältökenttään &darr;</button>
+        </div>
+      {% endif %}
+    </article>
 
-  {% if ai_reply %}
-    <details open class="mb-4" style="margin-bottom:1rem;">
-      <summary>AI:n raakavastaus</summary>
-      <pre id="ai_reply_box" class="p-3 border rounded bg-light" style="white-space:pre-wrap">{{ ai_reply }}</pre>
-      <!-- Valinnainen apu: kopioi vastaus Content-kenttään -->
-      <button type="button" class="btn" onclick="
-        const t=document.getElementById('ai_reply_box').innerText;
-        const field=document.getElementById('id_content');
-        if(field){ field.value = (field.value ? field.value + '\n\n' : '') + t; }
-      ">Kopioi sisällöksi</button>
-    </details>
-  {% endif %}
 
-  <hr>
+    <!-- Card 2: The Final Material Form -->
+    <article class="card" style="margin-top: 2rem;">
+      <h3>2. Viimeistele ja tallenna materiaali</h3>
+      
+      <!-- Rendering each form field manually for better styling control -->
+      <div class="form-group">
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.content.id_for_label }}">{{ form.content.label }}</label>
+        {{ form.content }}
+      </div>
 
-  <!-- Materiaalin varsinainen lomake -->
-  {{ form.as_p }}
+      <div class="form-group">
+        <label for="{{ form.subject.id_for_label }}">{{ form.subject.label }}</label>
+        {{ form.subject }}
+      </div>
+      
+      <div class="form-group">
+        <label for="{{ form.grade_level.id_for_label }}">{{ form.grade_level.label }}</label>
+        {{ form.grade_level }}
+      </div>
 
-  <br>
-  <!-- Tallennuksessa validointi kuuluu toimia normaalisti -->
-  <button type="submit" name="action" value="save" class="btn primary">Tallenna materiaali</button>
-</form>
+      <div class="form-group">
+        <label for="{{ form.material_type.id_for_label }}">{{ form.material_type.label }}</label>
+        {{ form.material_type }}
+      </div>
+
+      <!-- KEPT: The final save button -->
+      <button type="submit" name="action" value="save" class="btn primary">Tallenna materiaali</button>
+    </article>
+
+  </form>
+
 {% endblock %}

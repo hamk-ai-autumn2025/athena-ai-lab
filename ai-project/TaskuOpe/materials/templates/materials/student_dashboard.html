@@ -1,30 +1,46 @@
 {% extends 'partials/base.html' %}
 
-{% block title %}Opiskelijan kojelauta{% endblock %}
+{% block title %}Opiskelijan etusivu{% endblock %}
 
 {% block content %}
-  <section class="assignments">
-    <h2>Omat tehtäväsi</h2>
+
+  <section class="assignments-list">
+    <!-- NEW: Added a page-header div for consistency with the teacher dashboard -->
+    <div class="page-header">
+      <h2>Omat tehtäväsi</h2>
+      <!-- The "Create Material" button is intentionally not here, as students cannot create materials -->
+    </div>
 
     {% for assignment in assignments %}
       <article class="card">
         <h3>{{ assignment.material.title }}</h3>
+        <!-- All your existing logic and variables are preserved -->
         <p class="muted">Opettaja: {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</p>
         <p class="muted">Tila: {{ assignment.get_status_display }}</p>
         {% if assignment.due_at %}
             <p class="muted">Määräaika: {{ assignment.due_at|date:"d.m.Y H:i" }}</p>
         {% endif %}
         
-        <!-- This link will be for the next step: viewing and completing the assignment -->
-        <div style="margin-top: 10px;">
-            <a class="btn primary" href="#">Aloita tai jatka tehtävää</a>
+        <!-- UPDATED: Replaced the div with the "card-actions" class for consistent spacing -->
+        <div class="card-actions">
+            <a class="btn primary" href="{% url 'assignment_detail' assignment_id=assignment.id %}">
+                {% if assignment.status == 'PENDING' %}
+                    Aloita tai jatka tehtävää
+                {% else %}
+                    Näytä palautus
+                {% endif %}
+            </a>
         </div>
       </article>
     {% empty %}
-      <p class="muted">Sinulla ei ole vielä tehtäviä.</p>
+      <!-- UPDATED: Wrapped the "empty" message in a card for better visual appearance -->
+      <div class="card">
+        <p class="muted">Sinulla ei ole vielä tehtäviä.</p>
+      </div>
     {% endfor %}
   </section>
-{% endblock %}```
+
+{% endblock %}
 
 **Reminder:** For this student dashboard to work, you must ensure your `dashboard_view` in `materials/views.py` is sending the correct data. Here is the logic for the student part of that view:
 

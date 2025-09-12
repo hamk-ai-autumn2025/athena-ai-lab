@@ -38,8 +38,6 @@ class Material(models.Model):
     material_type = models.CharField(max_length=50, choices=MaterialType.choices)
     subject = models.CharField(max_length=100, null=True, blank=True)
     grade_level = models.IntegerField(null=True, blank=True)
-    
-    # --- FIX 1: Added the missing 'audience' field from the diagram ---
     audience = models.JSONField(null=True, blank=True, help_text="e.g., {'learning_styles': ['visual'], 'languages': ['en', 'fi']}")
     
     author = models.ForeignKey(
@@ -49,11 +47,9 @@ class Material(models.Model):
         limit_choices_to={'role': 'TEACHER'}
     )
     prompt = models.ForeignKey(Prompt, on_delete=models.SET_NULL, null=True, blank=True)
-    
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.DRAFT)
     version = models.IntegerField(default=1)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='versions')
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -71,9 +67,13 @@ class MaterialRevision(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+# ==========================================================
+# --- MODIFICATIONS START HERE ---
+# ==========================================================
 class Assignment(models.Model):
     class Status(models.TextChoices):
         ASSIGNED = 'ASSIGNED', 'Assigned'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress' # <-- 1. ADD THIS NEW STATUS
         SUBMITTED = 'SUBMITTED', 'Submitted'
         GRADED = 'GRADED', 'Graded'
         RETURNED = 'RETURNED', 'Returned'
@@ -94,10 +94,17 @@ class Assignment(models.Model):
     )
     due_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.ASSIGNED)
+    
+    # This new field will store the student's saved work before final submission.
+    draft_response = models.TextField(blank=True, null=True) # <-- 2. ADD THIS NEW FIELD
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"'{self.material.title}' for {self.student.username}"
+# ==========================================================
+# --- MODIFICATIONS END HERE ---
+# ==========================================================
 
 class Submission(models.Model):
     class Status(models.TextChoices):
@@ -105,10 +112,7 @@ class Submission(models.Model):
         SUBMITTED = 'SUBMITTED', 'Submitted'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # --- FIX 2: Changed from OneToOneField to ForeignKey to match diagram and allow resubmissions ---
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='submissions')
-
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

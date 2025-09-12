@@ -1,0 +1,555 @@
+/* ================================= */
+/*          1. THEME VARIABLES       */
+/* ================================= */
+:root {
+    --bg-color: #f4f7fe;
+    --card-bg-color: #ffffff;
+    --text-color: #1a1a1a;
+    --text-muted-color: #6c757d;
+    --primary-color: #4a6cfd;
+    --primary-hover-color: #2d4edf;
+    --danger-color: #dc3545;
+    --danger-hover-color: #c82333;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --primary-focus-shadow: rgba(74, 108, 253, 0.25);
+}
+
+[data-theme="dark"] {
+    --bg-color: #0d1117;
+    --card-bg-color: #161b22;
+    --text-color: #c9d1d9;
+    --text-muted-color: #8b949e;
+    --primary-color: #58a6ff;
+    --primary-hover-color: #388bfd;
+    --danger-color: #f87171;
+    --danger-hover-color: #ef4444;
+    --border-color: #30363d;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --primary-focus-shadow: rgba(88, 166, 255, 0.25);
+}
+
+/* ================================= */
+/*          2. GLOBAL STYLES         */
+/* ================================= */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+/* ================================= */
+/*          3. LAYOUT                */
+/* ================================= */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 240px;
+    background-color: var(--card-bg-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.sidebar-header h3 {
+    font-weight: 600;
+}
+
+.sidebar-nav {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: var(--text-muted-color);
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-link:hover {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.nav-link.active {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.nav-icon {
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+}
+
+.theme-switcher {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.theme-switcher button {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    font-size: 1rem;
+}
+
+.user-info {
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.main-content {
+    flex-grow: 1;
+    padding: 2rem 3rem;
+}
+
+/* ================================= */
+/*          4. COMPONENTS            */
+/* ================================= */
+
+/* ----- Page Header ----- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.page-header h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+/* ----- Cards ----- */
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.card h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.muted {
+    color: var(--text-muted-color);
+    font-size: 0.9rem;
+}
+
+.card-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* ----- Buttons ----- */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    border-color: var(--text-muted-color);
+}
+
+.btn.primary {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+.btn.primary:hover {
+    background-color: var(--primary-hover-color);
+    border-color: var(--primary-hover-color);
+}
+
+.btn.danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn.danger:hover {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
+/* ----- Forms ----- */
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted-color);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"],
+select,
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+}
+
+input:focus, 
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-focus-shadow);
+}
+
+textarea {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.checkbox-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 400;
+}
+
+.checkbox-list input[type="checkbox"] {
+    width: 1.25em;
+    height: 1.25em;
+    accent-color: var(--primary-color);
+}
+
+.form-errors {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--danger-color);
+}
+
+/* ----- Alerts & Content Boxes ----- */
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+}
+
+.alert.alert-success {
+    background-color: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #16a34a;
+}
+
+[data-theme="dark"] .alert.alert-success {
+    color: #4ade80;
+}
+
+.submitted-response,
+.material-content-box,
+#ai_reply_box {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+.material-content-box, #ai_reply_box {
+    font-family: monospace;
+}
+
+.ai-reply-container {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.ai-reply-container h4 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* ================================= */
+/*       5. PAGE-SPECIFIC LAYOUTS    */
+/* ================================= */
+.assignment-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+@media (min-width: 992px) {
+    .assignment-layout {
+        grid-template-columns: 2fr 1fr; 
+    }
+}
+/* ================================= */
+/*       MAIN HEADER STYLES          */
+/* (Add this to the end of style.css)*/
+/* ================================= */
+
+.content-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    /* This ensures the wrapper takes up the remaining width */
+    flex: 1; 
+}
+
+.main-header {
+    display: flex;
+    justify-content: flex-end; /* Pushes content to the right */
+    align-items: center;
+    padding: 1rem 3rem; /* Matches main-content horizontal padding */
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+}
+
+/* We reuse the .user-info class from the sidebar, but add specific alignment for the header */
+.main-header .user-info {
+    text-align: right;
+    border-top: none; /* Override the border from the sidebar footer style */
+    padding-top: 0;   /* Override the padding from the sidebar footer style */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.main-header .user-info span {
+    font-weight: 500;
+    color: var(--text-muted-color);
+}
+
+.main-header .user-info a {
+    font-weight: 500;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.main-header .user-info a:hover {
+    color: var(--primary-color);
+}
+/* ================================= */
+/*          LOGIN PAGE STYLES        */
+/* (Add this to the end of style.css)*/
+/* ================================= */
+
+.login-page-body {
+    display: grid;
+    place-items: center; /* This vertically and horizontally centers the login-container */
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px; /* A good width for a login form */
+}
+
+.login-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.login-form .btn {
+    width: 100%; /* Make the login button full-width */
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+
+/* --- UPDATE EXISTING FORM STYLES --- */
+/* Find the existing input style block and add input[type="password"] */
+
+input[type="text"],
+input[type="password"], /* <-- ADD THIS */
+input[type="number"],
+input[type="datetime-local"],
+select,
+textarea {
+    /* ... the rest of the styles remain the same ... */
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+}
+/* ================================= */
+/*       MESSAGES & ALERTS           */
+/* (Add this to the end of style.css)*/
+/* ================================= */
+
+/* This container will position all messages in the top-right corner */
+.messages {
+    position: fixed;
+    top: 90px; /* Position it below the new main header */
+    right: 2rem;
+    z-index: 1050; /* Ensure it's above other content */
+    display: grid;
+    gap: 0.75rem;
+    max-width: 400px;
+}
+
+/* Base style for all alerts */
+.alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid;
+    border-radius: 8px;
+    box-shadow: var(--shadow-color) 0px 8px 24px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Close button on the alert */
+.alert .close {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: bold;
+    cursor: pointer;
+    color: inherit; /* Inherit color from the parent alert */
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.alert .close:hover {
+    opacity: 1;
+}
+
+/* ----- Alert Colors (Theme Aware) ----- */
+
+/* Success */
+.alert.success {
+    background-color: var(--success-bg-color, #f0fff4);
+    border-color: var(--success-border-color, #a7f3d0);
+    color: var(--success-text-color, #22c55e);
+}
+[data-theme="dark"] .alert.success {
+    background-color: #052e16;
+    border-color: #15803d;
+    color: #4ade80;
+}
+
+/* Info */
+.alert.info {
+    background-color: var(--info-bg-color, #f0f9ff);
+    border-color: var(--info-border-color, #bae6fd);
+    color: var(--info-text-color, #3b82f6);
+}
+[data-theme="dark"] .alert.info {
+    background-color: #0c2a4d;
+    border-color: #2563eb;
+    color: #93c5fd;
+}
+
+/* Warning */
+.alert.warning {
+    background-color: var(--warning-bg-color, #fffbeb);
+    border-color: var(--warning-border-color, #fde68a);
+    color: var(--warning-text-color, #f59e0b);
+}
+[data-theme="dark"] .alert.warning {
+    background-color: #422c02;
+    border-color: #d97706;
+    color: #fcd34d;
+}
+
+/* Error / Danger */
+.alert.error, .alert.danger {
+    background-color: var(--error-bg-color, #fff1f2);
+    border-color: var(--error-border-color, #fecdd3);
+    color: var(--error-text-color, #ef4444);
+}
+[data-theme="dark"] .alert.error, [data-theme="dark"] .alert.danger {
+    background-color: #450a0a;
+    border-color: #b91c1c;
+    color: #f87171;
+}
