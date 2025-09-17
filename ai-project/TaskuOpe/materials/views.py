@@ -4,51 +4,49 @@ from django.contrib import messages
 from .ai_service import ask_llm
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.utils import timezone
-
-# Import models from the correct apps
-from .models import Material, Assignment, Submission
-from users.models import CustomUser
 from django.db import transaction
 from django import forms
 
-
-# Import forms for this app
+# Import models and forms
+from .models import Material, Assignment, Submission
+from users.models import CustomUser
 from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
-from .forms import GradingForm  # varmista että tämä on lisätty forms.py:hin aiemmin
 
 
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
 def dashboard_view(request):
-    """
-    Checks the user's role and renders the appropriate dashboard
-    with the necessary data.
-    """
+    """Renders the correct dashboard based on user role."""
     user = request.user
     
     if user.role == 'TEACHER':
         materials = Material.objects.filter(author=user)
         assignments = Assignment.objects.filter(assigned_by=user).select_related('material', 'student').order_by('-created_at')
-        context = {
-            'materials': materials,
-            'assignments': assignments,
-        }
-        return render(request, 'materials/teacher_dashboard.html', context)
+        context = {'materials': materials, 'assignments': assignments}
+        return render(request, 'dashboard/teacher.html', context)
     
     elif user.role == 'STUDENT':
         assignments = Assignment.objects.filter(student=user).select_related('material', 'assigned_by')
-        return render(request, 'materials/student_dashboard.html', {'assignments': assignments})
+        return render(request, 'dashboard/student.html', {'assignments': assignments})
     
-    else:
-        return redirect('kirjaudu')
+    return redirect('kirjaudu')
 
-# --- Teacher's Workflow Views ---
+
+# --- Materials ---
+@login_required(login_url='kirjaudu')
+def material_list_view(request):
+    """Lists all materials created by the teacher."""
+    if request.user.role != 'TEACHER':
+        messages.error(request, "Vain opettajat voivat nähdä tämän sivun.")
+        return redirect('dashboard')
+
+    materials = Material.objects.filter(author=request.user)
+    return render(request, 'materials/list.html', {'materials': materials})
+
 
 @login_required
 def create_material_view(request):
-    """
-    Manuaalinen materiaalin luonti + AI-testi samalla sivulla.
-    """
+    """Manual material creation + AI helper."""
     if request.user.role != 'TEACHER':
         return redirect('dashboard')
 
@@ -62,7 +60,7 @@ def create_material_view(request):
             if ai_prompt_val:
                 ai_reply = ask_llm(ai_prompt_val, user_id=request.user.id)
             form = MaterialForm(request.POST or None)
-            return render(request, 'materials/create_material.html', {'form': form, 'ai_prompt': ai_prompt_val, 'ai_reply': ai_reply})
+            return render(request, 'materials/create.html', {'form': form, 'ai_prompt': ai_prompt_val, 'ai_reply': ai_reply})
 
         if action == 'save' or action is None:
             form = MaterialForm(request.POST)
@@ -73,28 +71,25 @@ def create_material_view(request):
                 material.save()
                 messages.success(request, f"Material '{material.title}' was created successfully.")
                 return redirect('dashboard')
-            return render(request, 'materials/create_material.html', {
-                'form': form,
-                'ai_prompt': request.POST.get('ai_prompt', ''),
-                'ai_reply': None,
-            })
+            return render(request, 'materials/create.html', {'form': form, 'ai_prompt': request.POST.get('ai_prompt', ''), 'ai_reply': None})
 
     form = MaterialForm()
-    return render(request, 'materials/create_material.html', {
-        'form': form,
-        'ai_prompt': '',
-        'ai_reply': None,
-    })
+    return render(request, 'materials/create.html', {'form': form, 'ai_prompt': '', 'ai_reply': None})
+
 
 @login_required
 def material_detail_view(request, material_id):
+    """Shows material details for the teacher."""
     material = get_object_or_404(Material, id=material_id)
     if material.author != request.user:
-        return redirect('dashboard') 
-    return render(request, 'materials/material_detail.html', {'material': material})
+        return redirect('dashboard')
+    return render(request, 'materials/detail.html', {'material': material})
 
+
+# --- Assignments ---
 @login_required
 def assign_material_view(request, material_id):
+    """Assign material to students."""
     material = get_object_or_404(Material, id=material_id)
     if material.author != request.user:
         return redirect('dashboard')
@@ -117,15 +112,12 @@ def assign_material_view(request, material_id):
             return redirect('dashboard')
     else:
         form = AssignmentForm()
-    return render(request, 'materials/assign_material.html', {'form': form, 'material': material})
+    return render(request, 'assignments/assign.html', {'form': form, 'material': material})
 
 
-# --- Students workflow view ---
 @login_required
 def assignment_detail_view(request, assignment_id):
-    """
-    Displays assignment, handles saving drafts, and processes final submissions.
-    """
+    """Students view assignment, save draft, or submit final answer."""
     assignment = get_object_or_404(Assignment, id=assignment_id)
 
     if assignment.student != request.user:
@@ -134,13 +126,12 @@ def assignment_detail_view(request, assignment_id):
 
     if assignment.status in [Assignment.Status.SUBMITTED, Assignment.Status.GRADED]:
         form = SubmissionForm()
-        return render(request, 'materials/assignment_detail.html', {'assignment': assignment, 'form': form})
+        return render(request, 'assignments/detail.html', {'assignment': assignment, 'form': form})
 
     if request.method == 'POST':
         form = SubmissionForm(request.POST)
         if 'save_draft' in request.POST:
-            draft_text = request.POST.get('response', '')
-            assignment.draft_response = draft_text
+            assignment.draft_response = request.POST.get('response', '')
             assignment.status = Assignment.Status.IN_PROGRESS
             assignment.save()
             messages.info(request, "Luonnos tallennettu onnistuneesti!")
@@ -161,13 +152,75 @@ def assignment_detail_view(request, assignment_id):
     else:
         form = SubmissionForm(initial={'response': assignment.draft_response})
 
-    context = {
+    return render(request, 'assignments/detail.html', {'assignment': assignment, 'form': form})
+
+
+# --- Submissions & Grading ---
+@login_required(login_url='kirjaudu')
+def view_submissions(request, material_id):
+    """Teacher: view all student submissions for a material."""
+    material = get_object_or_404(Material, id=material_id)
+    if request.user.role != "TEACHER" or material.author_id != request.user.id:
+        messages.error(request, "Sinulla ei ole oikeuksia tarkastella tätä sivua.")
+        return redirect('dashboard')
+
+    assignments = Assignment.objects.select_related('student', 'material').filter(
+        material=material, status__in=[Assignment.Status.SUBMITTED, Assignment.Status.GRADED]
+    ).order_by('-created_at')
+
+    return render(request, 'assignments/student_submissions.html', {'material': material, 'assignments': assignments})
+
+
+@login_required(login_url='kirjaudu')
+@transaction.atomic
+def grade_submission_view(request, submission_id):
+    """Teacher: grade a single student submission."""
+    submission = get_object_or_404(
+        Submission.objects.select_related('assignment__student', 'assignment__material'),
+        id=submission_id
+    )
+    assignment = submission.assignment
+    material = assignment.material
+
+    if request.user.role != "TEACHER" or material.author_id != request.user.id:
+        messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = GradingForm(request.POST, instance=submission)
+        if form.is_valid():
+            sub = form.save(commit=False)
+            sub.graded_at = timezone.now()
+            sub.save()
+
+            assignment.status = Assignment.Status.GRADED
+            assignment.save(update_fields=['status'])
+
+            messages.success(request, "Arviointi tallennettu.")
+            return redirect('view_submissions', material_id=material.id)
+    else:
+        form = GradingForm(instance=submission)
+
+    return render(request, 'assignments/grade.html', {
+        'material': material,
         'assignment': assignment,
+        'submission': submission,
         'form': form,
-    }
-    return render(request, 'materials/assignment_detail.html', context)
-    
-# --- Deletion Views ---
+    })
+
+
+@login_required(login_url='kirjaudu')
+def view_all_submissions_view(request):
+    """Teacher: view all assignments and their submission status."""
+    if request.user.role != 'TEACHER':
+        messages.error(request, "Vain opettajat voivat nähdä tämän sivun.")
+        return redirect('dashboard')
+
+    assignments = Assignment.objects.filter(assigned_by=request.user).select_related('material', 'student').order_by('-created_at')
+    return render(request, 'assignments/submissions_list.html', {'assignments': assignments})
+
+
+# --- Deletion ---
 @login_required
 def delete_material_view(request, material_id):
     material = get_object_or_404(Material, id=material_id, author=request.user)
@@ -178,6 +231,7 @@ def delete_material_view(request, material_id):
     messages.success(request, f"Materiaali '{title}' poistettu.")
     return redirect('dashboard')
 
+
 @login_required
 def delete_assignment_view(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id, assigned_by=request.user)
@@ -186,67 +240,3 @@ def delete_assignment_view(request, assignment_id):
     assignment.delete()
     messages.success(request, "Tehtävänanto poistettu.")
     return redirect('dashboard')
-
-@login_required(login_url='kirjaudu')
-def view_submissions(request, material_id):
-    """
-    Opettaja: listaa tietyn materiaalin palautukset/arvioinnit.
-    Turva: vain materiaalin tekijä näkee.
-    """
-    material = get_object_or_404(Material, id=material_id)
-    if getattr(request.user, "role", None) != "TEACHER" or material.author_id != request.user.id:
-        messages.error(request, "Sinulla ei ole oikeuksia tarkastella tätä sivua.")
-        return redirect('dashboard')
-
-    assignments = (
-        Assignment.objects
-        .select_related('student', 'material')
-        .filter(material=material, status__in=[Assignment.Status.SUBMITTED, Assignment.Status.GRADED])
-        .order_by('-created_at')
-    )
-
-    return render(request, 'materials/view_submissions.html', {
-        'material': material,
-        'assignments': assignments,
-    })
-
-
-@login_required(login_url='kirjaudu')
-@transaction.atomic
-def grade_submission_view(request, submission_id):
-    """
-    Opettaja arvioi yksittäisen palautuksen.
-    """
-    submission = get_object_or_404(
-        Submission.objects.select_related('assignment__student', 'assignment__material'),
-        id=submission_id
-    )
-    assignment = submission.assignment
-    material = assignment.material
-
-    # Turvatarkistus: vain materiaalin tekijä (opettaja) saa arvioida
-    if getattr(request.user, "role", None) != "TEACHER" or material.author_id != request.user.id:
-        messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
-        return redirect('dashboard')
-
-    if request.method == 'POST':
-        form = GradingForm(request.POST, instance=submission)
-        if form.is_valid():
-            sub = form.save(commit=False)         # ota instanssi muokattavaksi
-            sub.graded_at = timezone.now()        # leimaa arviointihetki
-            sub.save()                            # tallenna arvosana/pisteet/palaute
-
-            assignment.status = Assignment.Status.GRADED
-            assignment.save(update_fields=['status'])
-
-            messages.success(request, "Arviointi tallennettu.")
-            return redirect('view_submissions', material_id=material.id)
-    else:
-        form = GradingForm(instance=submission)
-
-    return render(request, 'materials/grade_submission.html', {
-        'material': material,
-        'assignment': assignment,
-        'submission': submission,
-        'form': form,
-    })

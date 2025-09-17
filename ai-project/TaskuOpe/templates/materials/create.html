@@ -1,0 +1,113 @@
+{% extends "partials/base.html" %}
+{% block title %}Luo uusi materiaali{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <div>
+      <h1 class="h2 mb-0">Luo uusi materiaali</h1>
+      <p class="text-muted mb-0">Täytä tiedot manuaalisesti tai käytä tekoälyä apuna.</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+    </a>
+  </div>
+
+  <!-- Wrap both cards in a single form tag -->
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="row">
+      <!-- SWAPPED: Right Column is now FIRST in the code -->
+      <!-- Left Column (Visually): AI Assistant -->
+      <div class="col-lg-5 col-xl-4 mb-4 mb-lg-0">
+        <div class="card shadow-sm h-100">
+          <div class="card-header">
+            <h5 class="mb-0">1. Luo sisältö tekoälyllä (valinnainen)</h5>
+          </div>
+          <div class="card-body d-flex flex-column">
+            <div class="mb-3">
+              <label for="id_ai_prompt" class="form-label">Kirjoita aihe tai ohje tekoälylle</label>
+              <textarea name="ai_prompt" class="form-control" id="id_ai_prompt" rows="4" placeholder="Esim. 'Johdanto prosenttilaskentaan 7.-luokalle...'">{{ ai_prompt }}</textarea>
+            </div>
+            <div class="d-grid">
+              <button type="submit" name="action" value="ai" class="btn btn-info" formnovalidate>Luo sisältöehdotus</button>
+            </div>
+
+            {% if ai_reply %}
+              <hr class="my-4">
+              <div class="mt-auto">
+                <h6>Tekoälyn vastaus</h6>
+                <div class="p-3 mt-2 border rounded bg-light" style="max-height: 300px; overflow-y: auto;">
+                  <pre id="ai_reply_box" style="white-space: pre-wrap; font-family: inherit;">{{ ai_reply }}</pre>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="
+                  const textToCopy = document.getElementById('ai_reply_box').innerText;
+                  const contentField = document.getElementById('{{ form.content.id_for_label }}');
+                  if (contentField) {
+                    contentField.value = (contentField.value ? contentField.value + '\n\n' : '') + textToCopy;
+                    contentField.focus();
+                  }
+                ">
+                  <i class="bi bi-clipboard-plus me-1"></i> Kopioi sisältökenttään
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- SWAPPED: Left Column is now SECOND in the code -->
+      <!-- Right Column (Visually): Final Material Form -->
+      <div class="col-lg-7 col-xl-8">
+        <div class="card shadow-sm h-100">
+          <div class="card-header">
+            <h5 class="mb-0">2. Viimeistele ja tallenna materiaali</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                  {{ form.title }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
+                  {{ form.subject }}
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.grade_level.id_for_label }}" class="form-label">{{ form.grade_level.label }}</label>
+                  {{ form.grade_level }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.material_type.id_for_label }}" class="form-label">{{ form.material_type.label }}</label>
+                  {{ form.material_type }}
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
+              {{ form.content }}
+            </div>
+            
+            <div class="d-grid mt-4">
+              <button type="submit" name="action" value="save" class="btn btn-primary">Tallenna materiaali</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'partials/base.html' %}
+
+{% block title %}{{ assignment.material.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <div>
+      <h1 class="h2 mb-0">{{ assignment.material.title }}</h1>
+      <p class="text-muted mb-0">Määräaika: {{ assignment.due_at|date:"d.m.Y, H:i"|default:"Ei määritetty" }}</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+    </a>
+  </div>
+
+  <!-- Main Grid Layout -->
+  <div class="row">
+    <!-- Left Column: Assignment Content -->
+    <div class="col-lg-7 mb-4 mb-lg-0">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h5 class="mb-0">Tehtävänanto</h5>
+        </div>
+        <div class="card-body">
+          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 1rem;">{{ assignment.material.content }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Submission Area / Grading -->
+    <div class="col-lg-5">
+      <div class="card shadow-sm sticky-top" style="top: 20px;">
+        
+        {% if assignment.status == 'ASSIGNED' or assignment.status == 'IN_PROGRESS' %}
+          <div class="card-header">
+            <h5 class="mb-0">Vastauksesi</h5>
+          </div>
+          <div class="card-body">
+            <form method="post" novalidate>
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="{{ form.response.id_for_label }}" class="form-label">{{ form.response.label }}</label>
+                {{ form.response }}
+                {% if form.response.errors %}
+                  <div class="text-danger small mt-1">{{ form.response.errors.as_text }}</div>
+                {% endif %}
+              </div>
+              <div class="d-flex justify-content-between">
+                <button type="submit" name="save_draft" value="save" class="btn btn-outline-secondary">Tallenna luonnos</button>
+                <button type="submit" name="submit_final" value="submit" class="btn btn-primary">Lähetä lopullinen vastaus</button>
+              </div>
+            </form>
+          </div>
+        
+        {% elif assignment.status == 'SUBMITTED' or assignment.status == 'GRADED' %}
+          <div class="card-header">
+            <h5 class="mb-0">Vastaus lähetetty</h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-success" role="alert">
+              <i class="bi bi-check-circle-fill me-2"></i>Olet palauttanut tämän tehtävän.
+            </div>
+
+            {% with submission=assignment.submissions.last %}
+              {% if submission %}
+                <h6 class="text-muted mt-4">Oma vastauksesi:</h6>
+                <div class="p-3 border rounded bg-light mb-4">
+                  <pre style="white-space: pre-wrap; font-family: inherit;">{{ submission.response }}</pre>
+                </div>
+
+                {% if assignment.status == 'GRADED' %}
+                  <h5 class="mb-3">Arviointi</h5>
+                  <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Arvosana
+                      <span class="badge bg-primary rounded-pill fs-6">{{ submission.grade|default:"Ei arvosanaa" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Pisteet
+                      <span class="badge bg-secondary rounded-pill">
+                        {% if submission.score is not None %}{{ submission.score|floatformat:"-2" }}{% else %}–{% endif %}{% if submission.max_score is not None %} / {{ submission.max_score|floatformat:"-2" }}{% endif %}
+                      </span>
+                    </li>
+                  </ul>
+                  
+                  {% if submission.feedback %}
+                    <div class="alert alert-secondary mt-3">
+                      <strong class="d-block mb-1">Opettajan palaute:</strong>
+                      {{ submission.feedback|linebreaksbr }}
+                    </div>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endwith %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

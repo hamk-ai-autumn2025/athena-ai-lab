@@ -1,13 +1,13 @@
 {% if messages %}
-<!-- This container is for screen readers and positioning -->
-<div aria-live="polite" aria-atomic="true" class="messages">
+<div class="messages">
     {% for message in messages %}
-      <!-- The classes "alert" and the specific tag (e.g., "success") are applied here -->
-      <div class="alert {{ message.tags|default:'info' }}">
-        <span>{{ message }}</span>
-        <!-- The onclick functionality is simple and reliable, so we'll keep it -->
-        <button type="button" class="close" onclick="this.parentElement.remove()" aria-label="Sulje">&times;</button>
+      {# We map Django's 'error' tag to Bootstrap's 'danger' class #}
+      {% with message_class=message.tags|default:'info' %}
+      <div class="alert {% if 'error' in message_class %}alert-danger{% else %}alert-{{ message_class }}{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
+      {% endwith %}
     {% endfor %}
 </div>
 {% endif %}

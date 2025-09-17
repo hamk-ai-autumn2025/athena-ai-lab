@@ -1,0 +1,81 @@
+{% extends "partials/base.html" %}
+{% block title %}Arvioi palautus – {{ material.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header with button on the right -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+    <h1 class="mb-0">Arvioi palautus</h1>
+    <a href="{% url 'view_submissions' material_id=material.id %}" class="btn btn-outline-secondary btn-sm mt-2 mt-lg-0">
+      ← Takaisin palautuslistaan
+    </a>
+  </div>
+
+  <!-- Two-column layout -->
+  <div class="row g-3 align-items-stretch">
+    <!-- Left Column -->
+    <div class="col-12 col-lg-8 d-flex">
+      <div class="card flex-grow-1 w-100">
+        <div class="card-header fw-bold">{{ material.title }}</div>
+        <div class="card-body">
+          {% if material.content %}
+            <div class="mb-3">{{ material.content|linebreaks }}</div>
+          {% endif %}
+
+          <hr>
+          <h5>Opiskelijan vastaus – {{ assignment.student.get_full_name|default:assignment.student.username }}</h5>
+          <div class="mb-3">{{ submission.response|linebreaks }}</div>
+
+          {% if submission.grade or submission.points_obtained or submission.feedback %}
+            <hr>
+            <h5>Nykyinen arviointi</h5>
+            <p>
+              Arvosana: {{ submission.grade|default:"—" }}<br>
+              Pisteet:
+              {% if submission.points_obtained %}
+                {{ submission.points_obtained }}{% if submission.points_max %} / {{ submission.points_max }}{% endif %}
+              {% else %}—{% endif %}<br>
+              Palaute:<br>
+              {{ submission.feedback|default:"Ei palautetta."|linebreaks }}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-12 col-lg-4 d-flex">
+      <div class="card flex-grow-1 w-100">
+        <div class="card-header fw-bold">Arviointi</div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label for="{{ form.grade.id_for_label }}" class="form-label">Arvosana (4–10) – valinnainen</label>
+              {{ form.grade }}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.score.id_for_label }}" class="form-label">Saadut pisteet</label>
+              {{ form.score }}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.max_score.id_for_label }}" class="form-label">Maksimipisteet</label>
+              {{ form.max_score }}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.feedback.id_for_label }}" class="form-label">Palaute</label>
+              {{ form.feedback }}
+            </div>
+
+            <button class="btn btn-primary w-100" type="submit">Tallenna arviointi</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

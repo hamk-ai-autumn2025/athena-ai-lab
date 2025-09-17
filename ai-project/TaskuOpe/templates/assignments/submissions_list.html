@@ -1,0 +1,69 @@
+{% extends 'partials/base.html' %}
+{% load static %}
+
+{% block title %}Kaikki palautukset{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <!-- THIS IS THE UPDATED HEADER SECTION -->
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <h1 class="h2 mb-0">Kaikki palautukset ja tehtävänannot</h1>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+    </a>
+  </div>
+
+  <section class="assignments-list">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Oppilas</th>
+            <th scope="col">Materiaali</th>
+            <th scope="col">Määräaika</th>
+            <th scope="col">Tila</th>
+            <th scope="col">Toiminnot</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in assignments %}
+          <tr>
+            <td>{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
+            <td>{{ assignment.material.title }}</td>
+            <td>{{ assignment.due_at|date:"d.m.Y H:i"|default:"-" }}</td>
+            <td>
+              <span class="badge 
+                {% if assignment.status == 'GRADED' %}bg-success
+                {% elif assignment.status == 'SUBMITTED' %}bg-primary
+                {% elif assignment.status == 'IN_PROGRESS' %}bg-warning text-dark
+                {% else %}bg-secondary{% endif %}">
+                {{ assignment.get_status_display }}
+              </span>
+            </td>
+            <td>
+                {% with sub=assignment.submissions.last %}
+                  {% if sub %}
+                    <a class="btn btn-sm btn-primary" href="{% url 'grade_submission' submission_id=sub.id %}">
+                      Tarkastele palautusta
+                    </a>
+                  {% else %}
+                    <button class="btn btn-sm btn-secondary" disabled>Ei palautusta</button>
+                  {% endif %}
+                {% endwith %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">
+              <div class="alert alert-secondary mb-0">Yhtään tehtävää ei ole vielä annettu.</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

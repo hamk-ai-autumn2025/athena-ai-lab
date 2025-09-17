@@ -1,118 +1,154 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="fi" data-theme="system"> 
+<html lang="fi" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TaskuOpettaja{% endblock %}</title>
 
-    <!-- Anti-flash script -->
     <script>
         (function() {
-            try {
-                var theme = localStorage.getItem('theme');
-                if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                }
-            } catch (e) { /* Fails gracefully */ }
+            const storedTheme = localStorage.getItem('theme') || 'system';
+            let effectiveTheme = storedTheme;
+            if (storedTheme === 'system') {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
         })();
     </script>
 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Sidebar layout -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="{% url 'dashboard' %}" style="text-decoration: none; color: inherit;"><h3>TaskuOpe</h3></a>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="{% url 'dashboard' %}" class="nav-link active"><span class="nav-icon">&#127968;</span><span class="nav-text">Etusivu</span></a>
-                <a href="#" class="nav-link"><span class="nav-icon">&#128101;</span><span class="nav-text">Oppilaat</span></a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="theme-switcher">
-                    <button id="theme-light" title="Vaalea tila">&#9728;</button>
-                    <button id="theme-dark" title="Tumma tila">&#127769;</button>
-                    <button id="theme-system" title="Järjestelmän oletus">&#128187;</button>
+    <!-- MOBILE NAVBAR -->
+    <nav class="navbar fixed-top d-lg-none">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">TaskuOpe</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title">Valikko</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-house-door-fill me-2"></i>Etusivu</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'create_material' %}"><i class="bi bi-plus-square-fill me-2"></i>Luo materiaali</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'material_list' %}"><i class="bi bi-collection-fill me-2"></i>Omat materiaalit</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'view_all_submissions' %}"><i class="bi bi-card-checklist me-2"></i>Palautukset</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-people-fill me-2"></i>Oppilaat</a></li>
+                        <li class="nav-item dropdown mt-3">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Hei, {{ user.get_full_name|default:user.username }}!</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Profiili</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'ulos' %}">Kirjaudu ulos</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <div class="theme-switcher-mobile mt-4">
+                        <small class="d-block text-center mb-2">Teema</small>
+                        <div class="btn-group w-100">
+                            <button id="theme-light-mobile" class="btn btn-outline-secondary"><i class="bi bi-sun"></i></button>
+                            <button id="theme-dark-mobile" class="btn btn-outline-secondary"><i class="bi bi-moon-stars"></i></button>
+                            <button id="theme-system-mobile" class="btn btn-outline-secondary"><i class="bi bi-display"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </aside>
+        </div>
+    </nav>
 
-        <!-- Content wrapper and header -->
-        <div class="content-wrapper">
-            <header class="main-header">
-                <div class="user-info">
-                    {% if user.is_authenticated %}
-                        <span>Hei, {{ user.get_full_name|default:user.username }}!</span>
-                        <a href="{% url 'ulos' %}">Kirjaudu ulos</a>
-                    {% else %}
-                        <a href="{% url 'kirjaudu' %}">Kirjaudu</a>
-                    {% endif %}
+    <div class="container-fluid">
+        <div class="row">
+            <!-- DESKTOP SIDEBAR -->
+            <aside class="col-lg-2 d-none d-lg-flex sidebar position-fixed">
+                <div class="flex-column w-100">
+                    <h3>TaskuOpe</h3>
+                    <nav class="nav nav-pills flex-column mb-4">
+                        <a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-house-door-fill me-2"></i>Etusivu</a>
+                        <a href="{% url 'create_material' %}" class="nav-link"><i class="bi bi-plus-square-fill me-2"></i>Luo materiaali</a>
+                        <a href="{% url 'material_list' %}" class="nav-link"><i class="bi bi-collection-fill me-2"></i>Omat materiaalit</a>
+                        <a href="{% url 'view_all_submissions' %}" class="nav-link"><i class="bi bi-card-checklist me-2"></i>Palautukset</a>
+                        <a href="#" class="nav-link"><i class="bi bi-people-fill me-2"></i>Oppilaat</a>
+                    </nav>
+                    <div class="mt-auto text-center">
+                        <div class="btn-group">
+                            <button id="theme-light" class="btn btn-outline-secondary btn-sm"><i class="bi bi-sun"></i></button>
+                            <button id="theme-dark" class="btn btn-outline-secondary btn-sm"><i class="bi bi-moon-stars"></i></button>
+                            <button id="theme-system" class="btn btn-outline-secondary btn-sm"><i class="bi bi-display"></i></button>
+                        </div>
+                    </div>
                 </div>
-            </header>
-            
-            <main class="main-content">
-                {% include "partials/messages.html" %}
-                {% block content %}
-                {% endblock %}
+            </aside>
+
+            <!-- MAIN CONTENT AREA -->
+            <main class="col-lg-10 ms-auto">
+                <header class="main-header d-none d-lg-flex justify-content-end align-items-center">
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                            <strong>Hei, {{ user.get_full_name|default:user.username }}!</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+                            <li><a class="dropdown-item" href="#">Profiili</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'ulos' %}">Kirjaudu ulos</a></li>
+                        </ul>
+                    </div>
+                </header>
+                
+                <div class="p-4">
+                    <div style="height: 56px;" class="d-lg-none"></div>
+                    {% include "partials/messages.html" %}
+                    {% block content %}
+                    {% endblock %}
+                </div>
             </main>
         </div>
     </div>
 
-    <!-- ================================================= -->
-    <!--    CORRECT, COMBINED SCRIPT                     -->
-    <!-- ================================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // A single listener that runs once the entire HTML page is loaded.
         document.addEventListener('DOMContentLoaded', () => {
-
-            // --- Block 1: Theme Switcher Logic ---
             const htmlElement = document.documentElement;
-            const lightBtn = document.getElementById('theme-light');
-            const darkBtn = document.getElementById('theme-dark');
-            const systemBtn = document.getElementById('theme-system');
-
-            const setThemeOnClick = (theme) => {
+            const setTheme = (theme) => {
                 localStorage.setItem('theme', theme);
+                let effectiveTheme = theme;
                 if (theme === 'system') {
-                    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                    htmlElement.setAttribute('data-theme', systemTheme);
-                } else {
-                    htmlElement.setAttribute('data-theme', theme);
+                    effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
+                htmlElement.setAttribute('data-bs-theme', effectiveTheme);
             };
-
-            // Make sure the buttons exist before adding listeners to them
-            if (lightBtn && darkBtn && systemBtn) {
-                lightBtn.addEventListener('click', () => setThemeOnClick('light'));
-                darkBtn.addEventListener('click', () => setThemeOnClick('dark'));
-                systemBtn.addEventListener('click', () => setThemeOnClick('system'));
-            }
-
-
-            // --- Block 2: Auto-hiding Messages Logic ---
-            const messageAlerts = document.querySelectorAll('.messages .alert');
-            if (messageAlerts.length > 0) {
-                setTimeout(() => {
-                    messageAlerts.forEach(alert => {
-                        // Add a fade-out effect for a smoother disappearance
-                        alert.style.transition = 'opacity 0.5s ease';
-                        alert.style.opacity = '0';
-                        setTimeout(() => alert.remove(), 500); // Remove from DOM after the fade animation
-                    });
-                }, 5000); // Disappear after 5 seconds
-            }
-            
+            ['light','dark','system'].forEach(mode=>{
+                document.getElementById(`theme-${mode}`)?.addEventListener('click',()=>setTheme(mode));
+                document.getElementById(`theme-${mode}-mobile`)?.addEventListener('click',()=>setTheme(mode));
+            });
         });
     </script>
+
+    <script>
+    // Auto-hide Django messages after 5 seconds
+    document.addEventListener("DOMContentLoaded", () => {
+        const alerts = document.querySelectorAll(".alert");
+        if (alerts.length > 0) {
+            setTimeout(() => {
+                alerts.forEach(alert => {
+                    alert.classList.add("fade");
+                    alert.style.opacity = "0";
+                    setTimeout(() => alert.remove(), 500); // Remove after fade out
+                });
+            }, 5000); // 5000ms = 5 seconds
+        }
+    });
+</script>
+
 </body>
 </html>

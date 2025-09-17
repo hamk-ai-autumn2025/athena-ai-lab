@@ -5,11 +5,13 @@
     <meta charset="UTF-8">
     <title>Kirjaudu sisään</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    <!-- Link to our main stylesheet to get all the variables and base styles -->
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+    <!-- Your custom CSS (for login page body style and theme variables) -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
-    <!-- The anti-flash script is important here too, for users with a saved dark theme preference -->
     <script>
         (function() {
             try {
@@ -22,50 +24,70 @@
             } catch (e) { /* Fails gracefully */ }
         })();
     </script>
+
+<script>
+    // Auto-hide Django messages after 5 seconds
+    document.addEventListener("DOMContentLoaded", () => {
+        const alerts = document.querySelectorAll(".alert");
+        if (alerts.length > 0) {
+            setTimeout(() => {
+                alerts.forEach(alert => {
+                    alert.classList.add("fade");
+                    alert.style.opacity = "0";
+                    setTimeout(() => alert.remove(), 500); // Remove after fade out
+                });
+            }, 5000); // 5000ms = 5 seconds
+        }
+    });
+</script>
+
 </head>
 <body class="login-page-body">
 
     <div class="login-container">
-        <!-- App Title -->
         <h2 class="login-title">TaskuOpe</h2>
 
-        <!-- The login form is now inside our standard card component -->
-        <article class="card">
-            <h3 style="text-align: center; margin-bottom: 1.5rem;">Kirjaudu sisään</h3>
+        <!-- Use Bootstrap's card component -->
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">Kirjaudu sisään</h3>
 
-            <!-- KEPT: Messages framework include -->
-            {% include "partials/messages.html" %}
+                {% include "partials/messages.html" %}
 
-            <!-- KEPT: Form error logic, now styled with our .form-errors class -->
-            {% if form.errors %}
-                <div class="form-errors">
-                    {% for error in form.non_field_errors %}
-                        <span>{{ error }}</span>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <form method="post" action="{% url 'kirjaudu' %}" class="login-form">
-                {% csrf_token %}
-
-                <div class="form-group">
-                    <label for="{{ form.username.id_for_label }}">Käyttäjätunnus</label>
-                    {{ form.username }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.password.id_for_label }}">Salasana</label>
-                    {{ form.password }}
-                </div>
-
-                <!-- KEPT: The hidden 'next' field for redirects -->
-                {% if next %}
-                    <input type="hidden" name="next" value="{{ next }}">
+                <!-- Use Bootstrap alerts for form errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
                 {% endif %}
 
-                <button type="submit" class="btn primary">Kirjaudu</button>
-            </form>
-        </article>
+                <form method="post" action="{% url 'kirjaudu' %}">
+                    {% csrf_token %}
+
+                    <!-- Use Bootstrap's form structure -->
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Käyttäjätunnus</label>
+                        {{ form.username }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">Salasana</label>
+                        {{ form.password }}
+                    </div>
+                    
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+                    
+                    <!-- Use Bootstrap's button classes -->
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary">Kirjaudu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
 </body>

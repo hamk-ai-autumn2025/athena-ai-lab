@@ -5,12 +5,18 @@ from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+# --- NEW: Import the custom form we created ---
+from .forms import CustomLoginForm
+
 
 class FinnishLoginView(LoginView):
     """
     Lisää onnistumisviesti kirjautumisen jälkeen.
     """
     template_name = "registration/login.html"
+    
+    # --- NEW: Tell this view to use our custom form ---
+    authentication_form = CustomLoginForm
 
     def form_valid(self, form):
         response = super().form_valid(form)

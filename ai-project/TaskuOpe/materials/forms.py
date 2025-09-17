@@ -1,4 +1,5 @@
 from django import forms
+from decimal import Decimal, InvalidOperation
 
 # Import the models we need to build forms from
 from .models import Material, Submission, Assignment
@@ -12,8 +13,6 @@ class MaterialForm(forms.ModelForm):
     class Meta:
         model = Material
         fields = ["title", "content", "material_type", "subject", "grade_level"]
-
-        # 🔹 SUOMENNETUT OTSIKOT
         labels = {
             "title": "Otsikko",
             "content": "Sisältö",
@@ -21,23 +20,25 @@ class MaterialForm(forms.ModelForm):
             "grade_level": "Kohderyhmä / luokka-aste",
             "material_type": "Materiaalin tyyppi",
         }
-
-        # 🔹 Isompi tekstialue + suomenkieliset placeholderit
         widgets = {
-            "title": forms.TextInput(attrs={
-                "placeholder": "Esim. Jakokulma – alkeet"
-            }),
-            "content": forms.Textarea(attrs={
-                "rows": 12,
-                "placeholder": "Kirjoita tai liitä materiaalin sisältö..."
-            }),
-            "subject": forms.TextInput(attrs={
-                "placeholder": "Esim. Matematiikka"
-            }),
-            "grade_level": forms.TextInput(attrs={
-                "placeholder": "Esim. 7. luokka"
-            }),
+            "title": forms.TextInput(attrs={"placeholder": "Esim. Jakokulma – alkeet", "class": "form-control"}),
+            "content": forms.Textarea(attrs={"rows": 12, "placeholder": "Kirjoita tai liitä materiaalin sisältö...", "class": "form-control"}),
+            "subject": forms.TextInput(attrs={"placeholder": "Esim. Matematiikka", "class": "form-control"}),
+            "material_type": forms.Select(attrs={"class": "form-select"}),
+            "grade_level": forms.Select(attrs={"class": "form-select"}),
         }
+
+    # This method adds the custom placeholders to the dropdowns
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # For the Class Grade dropdown
+        grade_choices = self.fields['grade_level'].choices
+        self.fields['grade_level'].choices = [('', 'Valitse luokka')] + list(grade_choices)[1:]
+
+        # For the Material Type dropdown
+        type_choices = self.fields['material_type'].choices
+        self.fields['material_type'].choices = [('', 'Valitse materiaalin tyyppi')] + list(type_choices)[1:]
 
 
 class AssignmentForm(forms.Form):
@@ -45,28 +46,22 @@ class AssignmentForm(forms.Form):
     Opettaja: anna materiaali usealle opiskelijalle.
     """
     students = forms.ModelMultipleChoiceField(
-        queryset=CustomUser.objects.none(),  # asetetaan dynaamisesti __init__:ssä
-        widget=forms.CheckboxSelectMultiple,
+        queryset=CustomUser.objects.none(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'list-unstyled'}),
         label="Valitse opiskelijat",
         required=True,
-        help_text="Valitse yksi tai useampi opiskelija."
     )
 
     due_at = forms.DateTimeField(
         label="Määräaika (valinnainen)",
         required=False,
         widget=forms.DateTimeInput(
-            attrs={
-                "type": "datetime-local",
-                "placeholder": "YYYY-MM-DD HH:MM",
-            }
+            attrs={"type": "datetime-local", "class": "form-control"}
         ),
-        help_text="Selaimesi käyttää paikallista aikavyöhykettä."
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Haetaan opiskelijat vasta tässä vaiheessa (aina ajantasainen queryset)
         self.fields["students"].queryset = CustomUser.objects.filter(role="STUDENT").order_by("username")
 
 
@@ -76,25 +71,14 @@ class SubmissionForm(forms.ModelForm):
     """
     class Meta:
         model = Submission
-        # The student only needs to fill out the 'response' field
         fields = ['response']
         widgets = {
-            'response': forms.Textarea(attrs={
-                'rows': 10, 
-                'class': 'form-control', 
-                'placeholder': 'Kirjoita vastauksesi tähän...'
-            }),
+            'response': forms.Textarea(attrs={'rows': 10, 'class': 'form-control', 'placeholder': 'Kirjoita vastauksesi tähän...'}),
         }
-        labels = {
-            'response': 'Vastauksesi (Your Response)'
-        }
+        labels = {'response': 'Vastauksesi (Your Response)'}
 
-from decimal import Decimal, InvalidOperation
-from django import forms
-from .models import Submission
 
 class GradingForm(forms.ModelForm):
-    # 4–10 vaihtoehdot + tyhjä
     GRADE_CHOICES = [(n, str(n)) for n in range(4, 11)]
     grade = forms.TypedChoiceField(
         choices=[('', '— Ei arvosanaa —')] + GRADE_CHOICES,
@@ -102,23 +86,36 @@ class GradingForm(forms.ModelForm):
         label="Arvosana (4–10) – valinnainen",
         coerce=lambda v: int(v) if v not in (None, '',) else None,
         empty_value=None,
+        widget=forms.Select(attrs={
+            "class": "form-select w-100"
+        })
     )
-
-    # ⬇️ huomaa nimet: score ja max_score (samat kuin mallissa)
     score = forms.DecimalField(
         required=False, min_value=0, decimal_places=2, max_digits=6,
         label="Saadut pisteet",
-        widget=forms.NumberInput(attrs={"step": "0.5", "placeholder": "esim. 17"})
+        widget=forms.NumberInput(attrs={
+            "step": "0.5",
+            "placeholder": "esim. 17",
+            "class": "form-control w-100"
+        })
     )
     max_score = forms.DecimalField(
         required=False, min_value=0, decimal_places=2, max_digits=6,
         label="Maksimipisteet",
-        widget=forms.NumberInput(attrs={"step": "0.5", "placeholder": "esim. 20"})
+        widget=forms.NumberInput(attrs={
+            "step": "0.5",
+            "placeholder": "esim. 20",
+            "class": "form-control w-100"
+        })
     )
-
     feedback = forms.CharField(
-        required=False, label="Palaute",
-        widget=forms.Textarea(attrs={"rows": 6, "placeholder": "Avoin palaute oppilaalle…"})
+        required=False,
+        label="Palaute",
+        widget=forms.Textarea(attrs={
+            "rows": 6,
+            "placeholder": "Avoin palaute oppilaalle…",
+            "class": "form-control w-100"
+        })
     )
 
     class Meta:
@@ -129,28 +126,3 @@ class GradingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         instance = kwargs.get("instance")
         self.fields["grade"].initial = str(instance.grade) if instance and instance.grade is not None else ''
-
-    # Salli pilkku desimaalina
-    def _to_decimal(self, val):
-        if val in (None, ''):
-            return None
-        if isinstance(val, str):
-            val = val.replace(',', '.')
-        try:
-            return Decimal(val)
-        except (InvalidOperation, TypeError, ValueError):
-            raise forms.ValidationError("Anna kelvollinen numero (voit käyttää pilkkua).")
-
-    def clean_score(self):
-        return self._to_decimal(self.cleaned_data.get("score"))
-
-    def clean_max_score(self):
-        return self._to_decimal(self.cleaned_data.get("max_score"))
-
-    def clean(self):
-        cleaned = super().clean()
-        s = cleaned.get("score")
-        m = cleaned.get("max_score")
-        if s is not None and m is not None and s > m:
-            self.add_error("score", "Saadut pisteet eivät voi ylittää maksimipisteitä.")
-        return cleaned
