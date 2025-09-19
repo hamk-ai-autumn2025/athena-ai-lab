@@ -8,7 +8,16 @@
   <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
     <div>
       <h1 class="h2 mb-0">{{ assignment.material.title }}</h1>
-      <p class="text-muted mb-0">Määräaika: {{ assignment.due_at|date:"d.m.Y, H:i"|default:"Ei määritetty" }}</p>
+      <p class="text-muted mb-1">
+        Määräaika: {{ assignment.due_at|date:"d.m.Y, H:i"|default:"Ei määritetty" }}
+      </p>
+      {% if assignment.due_at %}
+        {% if now and assignment.due_at > now %}
+          <span class="badge bg-outline border">{{ assignment.due_at|timeuntil }} jäljellä</span>
+        {% else %}
+          <span class="badge bg-danger">Myöhässä</span>
+        {% endif %}
+      {% endif %}
     </div>
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
@@ -32,29 +41,9 @@
     <!-- Right Column: Submission Area / Grading -->
     <div class="col-lg-5">
       <div class="card shadow-sm sticky-top" style="top: 20px;">
-        
-        {% if assignment.status == 'ASSIGNED' or assignment.status == 'IN_PROGRESS' %}
-          <div class="card-header">
-            <h5 class="mb-0">Vastauksesi</h5>
-          </div>
-          <div class="card-body">
-            <form method="post" novalidate>
-              {% csrf_token %}
-              <div class="mb-3">
-                <label for="{{ form.response.id_for_label }}" class="form-label">{{ form.response.label }}</label>
-                {{ form.response }}
-                {% if form.response.errors %}
-                  <div class="text-danger small mt-1">{{ form.response.errors.as_text }}</div>
-                {% endif %}
-              </div>
-              <div class="d-flex justify-content-between">
-                <button type="submit" name="save_draft" value="save" class="btn btn-outline-secondary">Tallenna luonnos</button>
-                <button type="submit" name="submit_final" value="submit" class="btn btn-primary">Lähetä lopullinen vastaus</button>
-              </div>
-            </form>
-          </div>
-        
-        {% elif assignment.status == 'SUBMITTED' or assignment.status == 'GRADED' %}
+
+        {% if readonly %}
+          <!-- Lukutila: palautettu/arvioitu -->
           <div class="card-header">
             <h5 class="mb-0">Vastaus lähetetty</h5>
           </div>
@@ -69,6 +58,10 @@
                 <div class="p-3 border rounded bg-light mb-4">
                   <pre style="white-space: pre-wrap; font-family: inherit;">{{ submission.response }}</pre>
                 </div>
+
+                {% if submission.submitted_at %}
+                  <div class="small text-muted mb-3">Lähetetty: {{ submission.submitted_at|date:"d.m.Y H:i" }}</div>
+                {% endif %}
 
                 {% if assignment.status == 'GRADED' %}
                   <h5 class="mb-3">Arviointi</h5>
@@ -95,7 +88,80 @@
               {% endif %}
             {% endwith %}
           </div>
+
+        {% else %}
+          <!-- Muokkaustila: ASSIGNED / IN_PROGRESS -->
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Vastauksesi</h5>
+            <small id="autosave-status" class="text-muted">Luonnos ei ole tallennettu</small>
+          </div>
+          <div class="card-body">
+            <form method="post" novalidate>
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="{{ form.response.id_for_label }}" class="form-label">{{ form.response.label }}</label>
+                {{ form.response }}
+                {% if form.response.errors %}
+                  <div class="text-danger small mt-1">{{ form.response.errors.as_text }}</div>
+                {% endif %}
+              </div>
+              <div class="d-flex justify-content-between">
+                <button type="submit" name="save_draft" value="save" class="btn btn-outline-secondary">Tallenna luonnos</button>
+                <button type="submit" name="submit_final" value="submit" class="btn btn-primary">Lähetä lopullinen vastaus</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Autosave script -->
+          <script>
+          (function() {
+            const textarea = document.querySelector('textarea[name="response"]');
+            const statusEl = document.getElementById('autosave-status');
+            if (!textarea || !statusEl) return;
+
+            // CSRF helper
+            function getCookie(name) {
+              const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+              return m ? m.pop() : '';
+            }
+            const csrftoken = getCookie('csrftoken');
+
+            let dirty = false;
+            let saving = false;
+
+            textarea.addEventListener('input', () => { dirty = true; });
+
+            async function autosave() {
+              if (!dirty || saving) return;
+              saving = true;
+              statusEl.textContent = 'Tallennetaan...';
+
+              const formData = new FormData();
+              formData.append('response', textarea.value);
+
+              try {
+                const res = await fetch("{% url 'assignment_autosave' assignment_id=assignment.id %}", {
+                  method: 'POST',
+                  headers: { 'X-CSRFToken': csrftoken },
+                  body: formData
+                });
+                if (!res.ok) throw new Error('Autosave failed');
+                await res.json();
+                statusEl.textContent = 'Luonnos tallennettu';
+                dirty = false;
+              } catch (e) {
+                statusEl.textContent = 'Tallennus epäonnistui (yritetään uudelleen)';
+              } finally {
+                saving = false;
+              }
+            }
+
+            // 5 sek välein, vain jos sisältö muuttunut
+            setInterval(autosave, 5000);
+          })();
+          </script>
         {% endif %}
+
       </div>
     </div>
   </div>

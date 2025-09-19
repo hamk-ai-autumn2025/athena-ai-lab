@@ -3,7 +3,6 @@ import uuid
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-import uuid
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Prompt(models.Model):
@@ -73,6 +72,13 @@ class MaterialRevision(models.Model):
 # ==========================================================
 # --- MODIFICATIONS START HERE ---
 # ==========================================================
+import uuid
+from django.conf import settings
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+# if Material is in same file, ok; otherwise adjust import accordingly.
+# from .models import Material  # jos tarvitset erillisestä moduulista
+
 class Assignment(models.Model):
     class Status(models.TextChoices):
         ASSIGNED     = "ASSIGNED",     _("Annettu")
@@ -80,36 +86,59 @@ class Assignment(models.Model):
         SUBMITTED    = "SUBMITTED",    _("Palautettu")
         GRADED       = "GRADED",       _("Arvioitu")
 
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.ASSIGNED,
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.CASCADE
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    material = models.ForeignKey(Material, on_delete=models.CASCADE)
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='assignments',
         on_delete=models.CASCADE,
         limit_choices_to={'role': 'STUDENT'}
     )
+
     assigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='assigned_tasks',
         on_delete=models.CASCADE,
         limit_choices_to={'role': 'TEACHER'}
     )
+
     due_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=50, choices=Status.choices, default=Status.ASSIGNED)
-    
-    # This new field will store the student's saved work before final submission.
-    draft_response = models.TextField(blank=True, null=True) # <-- 2. ADD THIS NEW FIELD
-    
+
+    # status (YKSI määrittely – max_length riittää 20:lle)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ASSIGNED,
+    )
+
+    # Tallennetaan oppilaan luonnos ennen lopullista palautusta
+    draft_response = models.TextField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            # Estää duplikaattitehtävät samalle oppilaalle samasta materiaalista
+            models.UniqueConstraint(
+                fields=['material', 'student'],
+                name='unique_assignment_per_student'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['due_at']),
+            models.Index(fields=['student']),
+            models.Index(fields=['assigned_by']),
+        ]
 
     def __str__(self):
         return f"'{self.material.title}' for {self.student.username}"
+
 # ==========================================================
 # --- MODIFICATIONS END HERE ---
 # ==========================================================

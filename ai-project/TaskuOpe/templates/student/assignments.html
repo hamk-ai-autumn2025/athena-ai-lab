@@ -1,0 +1,77 @@
+{% extends 'partials/base.html' %}
+{% block title %}Omat tehtävät{% endblock %}
+{% block content %}
+<div class="container-fluid">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 border-bottom pb-3">
+    <h1 class="h2 mb-0">Omat tehtävät</h1>
+    <a href="{% url 'student_grades' %}" class="btn btn-outline-secondary">Palautukset & arvioinnit</a>
+  </div>
+
+  <!-- Suodatus & järjestys (oma rivi, täysleveä) -->
+  <form class="row g-2 align-items-end mb-4" method="get" action=".">
+    <div class="col-12 col-md-4">
+      <label class="form-label">Tila</label>
+      <select class="form-select" name="status">
+        <option value="" {% if not status %}selected{% endif %}>Kaikki</option>
+        <option value="ASSIGNED" {% if status == "ASSIGNED" %}selected{% endif %}>Annettu</option>
+        <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Kesken</option>
+        <option value="SUBMITTED" {% if status == "SUBMITTED" %}selected{% endif %}>Palautettu</option>
+        <option value="GRADED" {% if status == "GRADED" %}selected{% endif %}>Arvioitu</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Järjestä</label>
+      <select class="form-select" name="order">
+        <option value="due_at" {% if order == "due_at" %}selected{% endif %}>Eräpäivä nouseva</option>
+        <option value="-due_at" {% if order == "-due_at" %}selected{% endif %}>Eräpäivä laskeva</option>
+        <option value="-created_at" {% if order == "-created_at" %}selected{% endif %}>Uusimmat ensin</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-4 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Suodata</button>
+      <a class="btn btn-outline-secondary" href=".">Tyhjennä</a>
+    </div>
+  </form>
+
+  {# Näytetään 3 saraketta normaalisti. Jos status valittu, näytetään vain yksi sarake jossa kaikki osumat #}
+  {% if status %}
+    <div class="row g-4">
+      <div class="col-12">
+        <h5 class="mb-3">
+          {% if status == "ASSIGNED" %}Uudet{% elif status == "IN_PROGRESS" %}Kesken{% elif status == "SUBMITTED" %}Palautetut{% elif status == "GRADED" %}Arvioidut{% else %}Tehtävät{% endif %}
+        </h5>
+        {% for a in assigned %}{% include 'student/partials/_assignment_card.html' with a=a badge="Annettu" %}{% endfor %}
+        {% for a in in_progress %}{% include 'student/partials/_assignment_card.html' with a=a badge="Kesken" %}{% endfor %}
+        {% for a in submitted %}{% include 'student/partials/_assignment_card.html' with a=a badge=a.get_status_display %}{% endfor %}
+        {% if not assigned and not in_progress and not submitted %}
+          <div class="text-muted">Ei osumia valituilla suodattimilla.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="row g-4">
+      <div class="col-12 col-xl-4">
+        <h5 class="mb-3">Uudet</h5>
+        {% for a in assigned %}
+          {% include 'student/partials/_assignment_card.html' with a=a badge="Annettu" %}
+        {% empty %}<div class="text-muted">Ei uusia tehtäviä.</div>{% endfor %}
+      </div>
+      <div class="col-12 col-xl-4">
+        <h5 class="mb-3">Kesken</h5>
+        {% for a in in_progress %}
+          {% include 'student/partials/_assignment_card.html' with a=a badge="Kesken" %}
+        {% empty %}<div class="text-muted">Ei keskeneräisiä.</div>{% endfor %}
+      </div>
+      <div class="col-12 col-xl-4">
+        <h5 class="mb-3">Palautetut</h5>
+        {% for a in submitted %}
+          {% include 'student/partials/_assignment_card.html' with a=a badge=a.get_status_display %}
+        {% empty %}<div class="text-muted">Ei palautettuja.</div>{% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

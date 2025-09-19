@@ -22,4 +22,13 @@ urlpatterns = [
 
     # Submission URLs
     path('submission/<uuid:submission_id>/grade/', views.grade_submission_view, name='grade_submission'),
+
+     # --- Oppilaan näkymät ---
+    path("oppilas/tehtavat/", views.student_assignments_view, name="student_assignments"),
+    path("oppilas/palautukset/", views.student_grades_view, name="student_grades"),
+
+    # Automaattitallennus
+    path("assignment/<uuid:assignment_id>/autosave/", views.assignment_autosave_view, name="assignment_autosave"),
+
+    path("palautukset/export.csv", views.export_submissions_csv_view, name="export_submissions_csv"),
 ]
