@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}TaskuOpettaja{% endblock %}</title>
 
+  <!-- CHANGE 1: Added the favicon link -->
+  <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+
   <script>
     (function() {
       const storedTheme = localStorage.getItem('theme') || 'system';
@@ -28,7 +31,10 @@
   <!-- MOBILE NAVBAR (vain < lg) -->
   <nav class="navbar fixed-top d-lg-none navbar-dark bg-body">
     <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">TaskuOpe</a>
+      <!-- CHANGE 2: Replaced text with logo in mobile navbar -->
+      <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+        <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" height="30">
+      </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -109,7 +115,10 @@
       <!-- DESKTOP SIDEBAR (vain ≥ lg) -->
       <aside class="col-lg-2 d-none d-lg-flex sidebar position-fixed flex-column h-100">
         <div class="flex-column w-100">
-          <h3 class="px-3 pt-3">TaskuOpe</h3>
+          <!-- CHANGE 3: Replaced h3 text with a clickable logo image -->
+          <a href="{% url 'dashboard' %}" class="px-3 pt-3 d-block">
+            <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" class="img-fluid">
+          </a>
 
           {% with nm=request.resolver_match.url_name %}
           <nav class="nav nav-pills flex-column mb-4 px-2">
