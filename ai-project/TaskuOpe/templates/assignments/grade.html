@@ -26,18 +26,26 @@
           <h5>Opiskelijan vastaus – {{ assignment.student.get_full_name|default:assignment.student.username }}</h5>
           <div class="mb-3">{{ submission.response|linebreaks }}</div>
 
-          {% if submission.grade or submission.points_obtained or submission.feedback %}
+          {% if submission.grade or submission.score is not None or submission.feedback %}
             <hr>
             <h5>Nykyinen arviointi</h5>
-            <p>
-              Arvosana: {{ submission.grade|default:"—" }}<br>
-              Pisteet:
-              {% if submission.points_obtained %}
-                {{ submission.points_obtained }}{% if submission.points_max %} / {{ submission.points_max }}{% endif %}
-              {% else %}—{% endif %}<br>
-              Palaute:<br>
-              {{ submission.feedback|default:"Ei palautetta."|linebreaks }}
-            </p>
+            <dl class="mb-0">
+              <dt>Arvosana:</dt>
+              <dd>{{ submission.grade|default:"—" }}</dd>
+
+              <dt>Pisteet:</dt>
+              <dd>
+                {% if submission.score is not None %}
+                  {{ submission.score|floatformat:"-2" }}
+                  {% if submission.max_score is not None %}/ {{ submission.max_score|floatformat:"-2" }}{% endif %}
+                {% else %}
+                  —
+                {% endif %}
+              </dd>
+
+              <dt>Palaute:</dt>
+              <dd>{{ submission.feedback|default:"Ei palautetta."|linebreaks }}</dd>
+            </dl>
           {% endif %}
         </div>
       </div>

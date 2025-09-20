@@ -4,107 +4,107 @@
 
 /* --- LIGHT THEME (DEFAULT) --- */
 [data-bs-theme="light"] {
-    --bg-color: #f8f9fa;
-    --card-bg-color: #ffffff;
-    --text-color: #212529;
-    --border-color: #dee2e6;
+  --bg-color: #f8f9fa;
+  --card-bg-color: #ffffff;
+  --text-color: #212529;
+  --border-color: #dee2e6;
 
-    --bs-body-bg: var(--bg-color);
-    --bs-body-color: var(--text-color);
-    --bs-border-color: var(--border-color);
-    --bs-card-bg: var(--card-bg-color);
+  --bs-body-bg: var(--bg-color);
+  --bs-body-color: var(--text-color);
+  --bs-border-color: var(--border-color);
+  --bs-card-bg: var(--card-bg-color);
 }
 
 /* --- DARK THEME --- */
 [data-bs-theme="dark"] {
-    --bg-color: #0d1117;
-    --card-bg-color: #161b22;
-    --text-color: #c9d1d9;
-    --border-color: #303d3d;
+  --bg-color: #0d1117;
+  --card-bg-color: #161b22;
+  --text-color: #c9d1d9;
+  --border-color: #303d3d;
 
-    --bs-body-bg: var(--bg-color);
-    --bs-body-color: var(--text-color);
-    --bs-border-color: var(--border-color);
-    --bs-card-bg: var(--card-bg-color);
-    --bs-tertiary-bg: var(--card-bg-color);
-    --bs-dropdown-bg: var(--card-bg-color);
-    --bs-dropdown-link-color: var(--text-color);
+  --bs-body-bg: var(--bg-color);
+  --bs-body-color: var(--text-color);
+  --bs-border-color: var(--border-color);
+  --bs-card-bg: var(--card-bg-color);
+  --bs-tertiary-bg: var(--card-bg-color);
+  --bs-dropdown-bg: var(--card-bg-color);
+  --bs-dropdown-link-color: var(--text-color);
 }
 
 /* ================================================= */
 /*           2. LAYOUT & COMPONENTS                  */
 /* ================================================= */
 .sidebar {
-    background-color: var(--card-bg-color);
-    border-right: 1px solid var(--border-color);
-    min-height: 100vh;
-    width: 240px;               /* pidetään 240px → katso media-sääntö alempana */
-    padding: 1.5rem 1rem;
-    display: flex;
-    flex-direction: column;
+  background-color: var(--card-bg-color);
+  border-right: 1px solid var(--border-color);
+  min-height: 100vh;
+  width: 240px;               /* pidetään 240px → katso media-sääntö alempana */
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar .nav-link {
-    color: var(--text-color);
-    font-weight: 500;
-    padding: 0.6rem 0.9rem;
-    border-radius: 0.4rem;
-    margin-bottom: 0.3rem;
-    transition: background 0.2s;
+  color: var(--text-color);
+  font-weight: 500;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.4rem;
+  margin-bottom: 0.3rem;
+  transition: background 0.2s;
 }
 /* TEEMA-TIETOISEN HOVERIN PARANNUS */
 .sidebar .nav-link:hover {
-    /* aiempi: rgba(0,0,0,.05) → ei toimi hyvin darkissa */
-    background-color: color-mix(in oklab, var(--text-color) 12%, transparent);
+  /* aiempi: rgba(0,0,0,.05) → ei toimi hyvin darkissa */
+  background-color: color-mix(in oklab, var(--text-color) 12%, transparent);
 }
 .sidebar .nav-link.active {
-    background-color: #4a6cfd;
-    color: #fff;
+  background-color: #4a6cfd;
+  color: #fff;
 }
 
 .sidebar h3 {
-    font-weight: 700;
-    margin-bottom: 1rem;
-    color: var(--text-color);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-color);
 }
 
 /* Main header */
 .main-header {
-    background-color: var(--card-bg-color);
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-    padding: 0.75rem 1.5rem;
+  background-color: var(--card-bg-color);
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
 }
 
 /* Mobile adjustments */
 .navbar.fixed-top {
-    background-color: var(--card-bg-color);
-    border-bottom: 1px solid var(--border-color);
+  background-color: var(--card-bg-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* Messages */
 .messages {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1055;
-    display: grid;
-    gap: 0.75rem;
-    min-width: 300px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1055;
+  display: grid;
+  gap: 0.75rem;
+  min-width: 300px;
 }
 
 /* Login page */
 .login-page-body {
-    display: grid;
-    place-items: center;
-    min-height: 100vh;
-    padding: 2rem;
-    background-color: var(--bg-color);
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: var(--bg-color);
 }
 
 .login-container {
-    width: 100%;
-    max-width: 420px;
+  width: 100%;
+  max-width: 420px;
 }
 
 /* ================================================= */
@@ -113,8 +113,8 @@
 
 /* Prevent overflow */
 .card {
-    max-width: 100%;
-    box-sizing: border-box;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* --- UI polish --- */
@@ -130,7 +130,7 @@
 /* koska .sidebar on fixed, varataan tilaa mainille ≥ lg */
 @media (min-width: 992px) {
   .row > .sidebar { width: 240px; }
-  main.main-content { margin-left: 240px; }
+  main.main-content { margin-left: 240px; padding-left: 0; }
   .row.align-items-stretch .card { height: 100%; } /* säilytetään ennestään */
 }
 
@@ -166,4 +166,129 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ================================================= */
+/*  LIGHT THEME: nav/offcanvas/dropdown tekstit mustiksi  */
+/* ================================================= */
+[data-bs-theme="light"] .navbar {
+  /* Bootstrappin muuttujat navbarin väreille */
+  --bs-navbar-color: #000;
+  --bs-navbar-hover-color: #000;
+  --bs-navbar-disabled-color: rgba(0,0,0,.5);
+  --bs-navbar-brand-color: #000;
+  --bs-navbar-brand-hover-color: #000;
+  --bs-navbar-toggler-border-color: rgba(0,0,0,.15);
+}
+
+/* Linkit ja brändi navissa sekä offcanvasissa */
+[data-bs-theme="light"] .navbar .navbar-brand,
+[data-bs-theme="light"] .navbar .nav-link,
+[data-bs-theme="light"] .offcanvas .nav-link,
+[data-bs-theme="light"] .offcanvas-title {
+  color: #000 !important;
+}
+
+/* Dropdown-valikossa tekstit mustiksi */
+[data-bs-theme="light"] .dropdown-menu {
+  --bs-dropdown-color: #000;
+}
+[data-bs-theme="light"] .dropdown-item {
+  color: #000 !important;
+}
+
+/* (Valinnainen) Lomakekomponenttien teksti vaaleassa teemassa */
+[data-bs-theme="light"] .form-select,
+[data-bs-theme="light"] .form-control {
+  color: #000;
+}
+
+/* (Valinnainen) Navbarin toggleri-ikonin viivat hieman tummemmiksi */
+[data-bs-theme="light"] .navbar .navbar-toggler {
+  border-color: rgba(0,0,0,.2);
+}
+
+/* ================================================= */
+/*  LIGHT THEME: hamburger-kuvakkeen viivat mustiksi */
+/* ================================================= */
+[data-bs-theme="light"] .navbar {
+  /* Korvataan Bootstrapin oletus-SVG mustalla viivalla */
+  --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0,0,0,0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* varmistus, että nappi käyttää yllä määriteltyä taustakuvaa */
+[data-bs-theme="light"] .navbar .navbar-toggler-icon {
+  background-image: var(--bs-navbar-toggler-icon-bg);
+}
+
+/* (valinnainen) pientä kontrastia reunalle */
+[data-bs-theme="light"] .navbar .navbar-toggler {
+  border-color: rgba(0,0,0,.25);
+}
+
+/* ============================================================
+   DESKTOP: header ja sidebar kiinni toisiinsa, ei sivurakoa
+   ja header pysyy yläreunassa (sticky).
+   Lisäksi poistetaan container-fluidin sivupadding ≥ lg.
+============================================================ */
+:root { --sidebar-w: 240px; }
+
+@media (min-width: 992px) {
+  .container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .sidebar {
+    top: 0;         /* position-fixed varmistus */
+    left: 0;
+    width: var(--sidebar-w);
+  }
+
+  main.main-content {
+    margin-left: var(--sidebar-w);
+  }
+
+  .main-header {
+    position: sticky;
+    top: 0;
+    z-index: 1030;  /* header korttien yläpuolelle */
+  }
+}
+
+/* Vähennetään visuaalista rakoa sivupalkin otsikon ja sisällön välillä (valinnainen) */
+.sidebar h3 { margin-bottom: 0; }
+
+/* Due date pill styling */
+.badge.bg-outline {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+/* Force black text in light theme for extra clarity */
+[data-bs-theme="light"] .badge.bg-outline {
+  color: #000;
+}
+
+/* Varmista, että pystypinon elementeillä on väli eikä mikään kellu/positionoi päällekkäin */
+.stack-flow > * + * {
+  margin-top: 1rem;
+}
+
+/* Varmuuden vuoksi: kortit eivät käytä absoluuttista sijoittelua eivätkä riko virtausta */
+.student-card {
+  position: static;
+}
+
+/* Kätevä grid mobiilissa; laajenee isommilla */
+.student-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 768px) {
+  .student-cards {
+    grid-template-columns: 1fr 1fr;
+  }
 }
