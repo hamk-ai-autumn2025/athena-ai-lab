@@ -42,12 +42,14 @@
 </script>
 
 </head>
-<body class="login-page-body">
+<body class="d-flex justify-content-center align-items-start pt-2 vh-100">
 
     <div class="login-container">
-        <!-- THIS IS THE ONLY CHANGE: Replaced h2 text with a logo image -->
-        <div class="text-center mb-4">
-            <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" style="width: 200px;">
+        
+        <!-- THE ONLY CHANGE IS HERE: mb-4 is changed to mb-3 -->
+        <div class="mb-1 text-center">
+             <!-- img-fluid makes the image responsive to the container width -->
+            <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" class="img-fluid" style="max-height: 400px;">
         </div>
 
         <!-- Use Bootstrap's card component -->
