@@ -39,9 +39,9 @@
               <hr class="my-4">
               <div class="mt-auto">
                 <h6>Tekoälyn vastaus</h6>
-                <div class="p-3 mt-2 border rounded bg-light" style="max-height: 300px; overflow-y: auto;">
-                  <pre id="ai_reply_box" style="white-space: pre-wrap; font-family: inherit;">{{ ai_reply }}</pre>
-                </div>
+                  <div class="ai-reply p-3 mt-2 border rounded" style="max-height: 300px; overflow-y: auto;">
+                    <pre id="ai_reply_box">{{ ai_reply }}</pre>
+                  </div>
                 <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="
                   const textToCopy = document.getElementById('ai_reply_box').innerText;
                   const contentField = document.getElementById('{{ form.content.id_for_label }}');

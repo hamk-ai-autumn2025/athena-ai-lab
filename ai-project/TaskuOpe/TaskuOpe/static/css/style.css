@@ -292,3 +292,31 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* =======================================================
+   AI-vastauslaatikko – teematietoinen tausta ja typografia
+   ======================================================= */
+.ai-reply {
+  /* perusvärit muuttujista */
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+/* Vaalea teema: asteen tummempi kuin kortti */
+[data-bs-theme="light"] .ai-reply {
+  background-color: #f1f3f5; /* tai var(--bg-color), jos haluat vielä vaaleamman */
+}
+
+/* Tumma teema: selvästi korttia tummempi */
+[data-bs-theme="dark"] .ai-reply {
+  /* hiukan korttia tummempi sävy hyvällä kontrastilla */
+  background-color: color-mix(in oklab, var(--card-bg-color) 75%, black);
+}
+
+/* Sisäinen <pre>: rivinvaihdot ja sama fontti kuin muualla */
+.ai-reply pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.45;
+}
