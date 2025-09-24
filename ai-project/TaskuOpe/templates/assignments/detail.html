@@ -76,14 +76,17 @@
                         {% if submission.score is not None %}{{ submission.score|floatformat:"-2" }}{% else %}–{% endif %}{% if submission.max_score is not None %} / {{ submission.max_score|floatformat:"-2" }}{% endif %}
                       </span>
                     </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Opettajan palaute
+                      <span class="text-break ms-3">
+                        {% if submission.feedback %}
+                          {{ submission.feedback|linebreaksbr }}
+                        {% else %}
+                          –
+                        {% endif %}
+                      </span>
+                    </li>
                   </ul>
-                  
-                  {% if submission.feedback %}
-                    <div class="alert alert-secondary mt-3">
-                      <strong class="d-block mb-1">Opettajan palaute:</strong>
-                      {{ submission.feedback|linebreaksbr }}
-                    </div>
-                  {% endif %}
                 {% endif %}
               {% endif %}
             {% endwith %}
