@@ -15,6 +15,8 @@ from .ai_service import ask_llm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
+# 👉 Plagiointitarkistuspalvelu (UUSI)
+from .plagiarism import build_or_update_report
 
 # Import models and forms
 from .models import Material, Assignment, Submission
@@ -366,6 +368,25 @@ def grade_submission_view(request, submission_id):
         messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
         return redirect('dashboard')
 
+    # 👉 Plagiointitarkistus napista (ei automaattisesti)
+    if request.method == 'POST' and 'run_plagiarism' in request.POST:
+        try:
+            report = build_or_update_report(submission)
+            if report.suspected_source:
+                messages.success(
+                    request,
+                    f"Alkuperäisyysraportti päivitetty. Samankaltaisuus: {report.score:.2f}"
+                )
+            else:
+                messages.info(
+                    request,
+                    "Raportti päivitetty. Merkittävää samankaltaisuutta ei löytynyt."
+                )
+        except Exception as e:
+            messages.error(request, f"Raportin luonti epäonnistui: {e}")
+        # Redirect, jotta POST ei toistu (PRG-malli)
+        return redirect('grade_submission', submission_id=submission.id)
+
     if request.method == 'POST':
         form = GradingForm(request.POST, instance=submission)
         if form.is_valid():
@@ -381,11 +402,15 @@ def grade_submission_view(request, submission_id):
     else:
         form = GradingForm(instance=submission)
 
+    # Viedään mahdollinen raportti templaatille
+    plagiarism_report = getattr(submission, "plagiarism_report", None)
+
     return render(request, 'assignments/grade.html', {
         'material': material,
         'assignment': assignment,
         'submission': submission,
         'form': form,
+        'plagiarism_report': plagiarism_report,  # <-- käytä templaatissa
     })
 
 

@@ -211,3 +211,36 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"{self.student} → {self.assignment} ({self.get_status_display()})"
+    
+class PlagiarismReport(models.Model):
+    submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name="plagiarism_report")
+    suspected_source = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.SET_NULL, related_name="plagiarized_by")
+    score = models.FloatField(default=0.0, help_text="Cosine similarity score between submissions")
+    highlights = models.TextField(blank=True, help_text="Highlighted overlapping text segments in HTML or JSON format")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Rubric(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='rubrics')
+    title = models.CharField(max_length=200, default="Oletusrubriikki")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class RubricCriterion(models.Model):
+    rubric = models.ForeignKey(Rubric, on_delete=models.CASCADE, related_name='criteria')
+    name = models.CharField(max_length=200)
+    max_points = models.PositiveIntegerField(default=5)
+    guidance = models.TextField(blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+class AIGrade(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name='ai_grade')
+    rubric = models.ForeignKey(Rubric, on_delete=models.SET_NULL, null=True)
+    model_name = models.CharField(max_length=100, default="gpt-4o-mini")
+    total_points = models.FloatField(default=0)
+    details = models.JSONField(default=dict, blank=True)  # {"criteria":[{"name","points","max","feedback"}], "general_feedback":""}
+    teacher_confirmed = models.BooleanField(default=False)
+    teacher_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+

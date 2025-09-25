@@ -56,6 +56,34 @@
       <div class="card flex-grow-1 w-100">
         <div class="card-header fw-bold">Arviointi</div>
         <div class="card-body">
+
+          <!-- Plagiointitarkistus – nappi + raportti (LISÄTTY) -->
+          {% if user.is_authenticated and user.role == 'TEACHER' %}
+            <form method="post" class="mb-3">
+              {% csrf_token %}
+              <button type="submit" name="run_plagiarism" class="btn btn-outline-danger w-100">
+                Tarkista plagiointi (TF-IDF)
+              </button>
+            </form>
+
+            {% if plagiarism_report %}
+              <div class="mb-3">
+                <div><strong>Alkuperäisyysraportti:</strong></div>
+                <div>Samankaltaisuus: {{ plagiarism_report.score|floatformat:2 }}</div>
+                {% if plagiarism_report.suspected_source %}
+                  <div>Mahdollinen lähde: {{ plagiarism_report.suspected_source.student.username }}</div>
+                {% endif %}
+                <details class="mt-2">
+                  <summary>Näytä korostukset</summary>
+                  <div class="border p-2 mt-2" style="white-space:pre-wrap;">
+                    {{ plagiarism_report.highlights|safe }}
+                  </div>
+                </details>
+              </div>
+            {% endif %}
+          {% endif %}
+          <!-- /Plagiointitarkistus -->
+
           <form method="post">
             {% csrf_token %}
 
