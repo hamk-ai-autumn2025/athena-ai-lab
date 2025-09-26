@@ -110,3 +110,5 @@ AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_URL = "kirjaudu"
 LOGIN_REDIRECT_URL = "dashboard" 
 LOGOUT_REDIRECT_URL = "kirjaudu"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

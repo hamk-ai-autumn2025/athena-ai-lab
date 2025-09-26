@@ -9,14 +9,20 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 import csv
 from django.http import HttpResponse
+from .models import Assignment
+from django.core.files.storage import FileSystemStorage
+import io, os, json, base64, uuid, datetime
+from PIL import Image, ImageDraw, ImageFont
+from django.conf import settings
 
 # AI-avustin (demo/tuotanto)
 from .ai_service import ask_llm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-
+import json
 # 👉 Plagiointitarkistuspalvelu (UUSI)
 from .plagiarism import build_or_update_report
+from .forms import AssignForm
 
 # Import models and forms
 from .models import Material, Assignment, Submission
@@ -26,6 +32,19 @@ from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
 # Rubric & AI grading -> arviointikriteeristö & AI-arviointi
 from .models import AIGrade, Rubric
 from .ai_rubric import create_or_update_ai_grade
+
+#Kuvageneraation importteja
+import markdown as md
+from django.utils.safestring import mark_safe
+import re
+
+
+try:
+    from openai import OpenAI
+    _has_openai = True
+except Exception:
+    _has_openai = False
+
 
 
 # --- Main Dashboard ---
@@ -199,7 +218,13 @@ def material_detail_view(request, material_id):
     material = get_object_or_404(Material, id=material_id)
     if material.author != request.user:
         return redirect('dashboard')
-    return render(request, 'materials/detail.html', {'material': material})
+
+    content_html = render_material_content_to_html(material.content)
+
+    return render(request, 'materials/detail.html', {
+        'material': material,
+        'content_html': content_html,
+    })
 
 
 # --- Assignments ---
@@ -228,15 +253,13 @@ def assign_material_view(request, material_id):
             return redirect('dashboard')
     else:
         form = AssignmentForm()
-    return render(request, 'assignments/assign.html', {'form': form, 'material': material})
+    return render(request, "assignments/assign.html", {"material": m, "form": form})
 
 
 @login_required(login_url='kirjaudu')
 def assignment_detail_view(request, assignment_id):
     """
     Oppilas: katso tehtävä, tallenna luonnos, tai lähetä lopullinen vastaus.
-    - Jos tehtävä on jo SUBMITTED/GRADED -> renderöidään lukutilassa (ei muokkausta).
-    - Muuten: voidaan tallentaa luonnos tai lähettää lopullinen.
     """
     assignment = get_object_or_404(
         Assignment.objects.select_related('material', 'student', 'assigned_by'),
@@ -248,24 +271,29 @@ def assignment_detail_view(request, assignment_id):
         messages.error(request, "You are not authorized to view this assignment.")
         return redirect('dashboard')
 
-    # Jos jo palautettu/arvioitu: näytä lukutilassa (ei muokkauslomaketta)
+    # RENDERÖITY MATERIAALISISÄLTÖ (kuvat ym. näkyviin oppilaalle)
+    content_html = render_material_content_to_html(assignment.material.content)
+
+    # Jos jo palautettu/arvioitu: näytä lukutilassa
     if assignment.status in (Assignment.Status.SUBMITTED, Assignment.Status.GRADED):
         form = SubmissionForm()
         last_sub = assignment.submissions.last()
         ai_grade = getattr(last_sub, 'ai_grade', None) if last_sub else None
+
         return render(request, 'assignments/detail.html', {
             'assignment': assignment,
             'form': form,
             'readonly': True,
             'now': timezone.now(),
-            'ai_grade': ai_grade,   # <-- AI-ehdotus opiskelijan näkyville (näytä/piilota)
+            'ai_grade': ai_grade,
+            'content_html': content_html,   # <-- tärkeä lisä
         })
 
     # Muokkaustila
     if request.method == 'POST':
         form = SubmissionForm(request.POST)
 
-        # Luonnoksen tallennus (manuaalinen nappi)
+        # Luonnoksen tallennus
         if 'save_draft' in request.POST:
             assignment.draft_response = request.POST.get('response', '').strip()
             if assignment.draft_response and assignment.status == Assignment.Status.ASSIGNED:
@@ -292,20 +320,19 @@ def assignment_detail_view(request, assignment_id):
 
                 messages.success(request, "Vastauksesi on lähetetty onnistuneesti!")
                 return redirect('dashboard')
-
     else:
-        # Esitäytä lomake mahdollisella luonnoksella
+        # Esitäytä lomake luonnoksella
         form = SubmissionForm(initial={'response': assignment.draft_response})
 
-    # Muokkaustilassa ei vielä AI-ehdotusta oppilaalle (näkyy vasta SUBMITTED/GRADED)
+    # Muokkausnäkymä
     return render(request, 'assignments/detail.html', {
         'assignment': assignment,
         'form': form,
         'readonly': False,
         'now': timezone.now(),
         'ai_grade': None,
+        'content_html': content_html,   # <-- tärkeä lisä
     })
-
 
 @login_required(login_url='kirjaudu')
 @require_POST
@@ -578,3 +605,220 @@ def export_submissions_csv_view(request):
         ])
 
     return response
+
+@login_required
+def add_material_image_view(request, material_id):
+    m = get_object_or_404(Material, pk=material_id)
+    if request.user.role != "TEACHER" or m.author_id != request.user.id:
+        messages.error(request, "Ei oikeutta.")
+        return redirect("material_detail", material_id=m.id)
+
+    form = AddImageForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        upload = form.cleaned_data["upload"]
+        prompt = form.cleaned_data["gen_prompt"]
+        caption = form.cleaned_data["caption"] or ""
+
+        if upload:
+            MaterialImage.objects.create(material=m, image=upload, caption=caption, created_by=request.user)
+            messages.success(request, "Kuva lisätty.")
+            return redirect("material_detail", material_id=m.id)
+
+        if prompt:
+            data = generate_image(prompt)
+            if data:
+                img = ContentFile(data, name="gen.png")
+                MaterialImage.objects.create(material=m, image=img, caption=caption, created_by=request.user)
+                messages.success(request, "Generoitu kuva lisätty.")
+                return redirect("material_detail", material_id=m.id)
+            messages.error(request, "Kuvan generointi epäonnistui (puuttuuko API-avain?).")
+
+    return render(request, "materials/add_image.html", {"material": m, "form": form})
+
+@login_required
+def edit_material_view(request, material_id):
+    m = get_object_or_404(Material, pk=material_id)
+    if request.user.role != "TEACHER" or m.author_id != request.user.id:
+        messages.error(request, "Ei oikeutta.")
+        return redirect("material_detail", material_id=m.id)
+
+    if request.method == "POST":
+        form = MaterialForm(request.POST, instance=m)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Materiaali päivitetty.")
+            return redirect("material_detail", material_id=m.id)
+    else:
+        form = MaterialForm(instance=m)
+
+    return render(request, "materials/edit.html", {"material": m, "form": form})
+
+@login_required
+def unassign_view(request, assignment_id):
+    a = get_object_or_404(Assignment, pk=assignment_id)
+    if request.user.role != "TEACHER" or a.assigned_by_id != request.user.id:
+        messages.error(request, "Ei oikeutta.")
+        return redirect("view_submissions", material_id=a.material_id)
+    a.delete()
+    messages.success(request, "Tehtävänanto poistettu tältä oppilaalta.")
+    return redirect("view_submissions", material_id=a.material_id)
+
+@login_required
+def assign_material_view(request, material_id):
+    m = get_object_or_404(Material, pk=material_id)
+    if request.user.role != "TEACHER" or m.author_id != request.user.id:
+        messages.error(request, "Ei oikeutta.")
+        return redirect("material_detail", material_id=m.id)
+
+    if request.method == "POST":
+        form = AssignForm(request.POST, teacher=request.user)
+        if form.is_valid():
+            due_at = form.cleaned_data["due_at"]
+            give_to_class = form.cleaned_data["give_to_class"]
+            class_number = form.cleaned_data["class_number"]
+            students = form.cleaned_data["students"]
+
+            targets = []
+            if give_to_class and class_number:
+                from users.models import CustomUser
+                targets = list(CustomUser.objects.filter(role="STUDENT", grade_class=class_number))
+            else:
+                targets = list(students)
+
+            created = 0
+            for st in targets:
+                Assignment.objects.get_or_create(
+                    material=m, student=st,
+                    defaults={"assigned_by": request.user, "due_at": due_at}
+                )
+                created += 1
+            messages.success(request, f"Annettu {created} oppilaalle.")
+            return redirect("material_detail", material_id=m.id)
+    else:
+        form = AssignForm(teacher=request.user)
+
+    return render(request, "assignments/assign.html", {"material": m, "form": form})
+
+
+@login_required
+def unassign_assignment(request, assignment_id):  # assignment_id on UUID, koska urls käyttää <uuid:...>
+    # sallitaan vain opettajille
+    if not hasattr(request.user, "role") or request.user.role != "TEACHER":
+        return HttpResponseForbidden("Vain opettaja voi poistaa tehtävänannon.")
+
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+
+    if request.method == "POST":
+        title = assignment.material.title
+        student_name = assignment.student.get_full_name() or assignment.student.username
+        assignment.delete()
+        messages.success(request, f"Tehtävänanto poistettu: '{title}' → {student_name}.")
+        return redirect("dashboard")
+
+    # GET: ei tehdä poistoa, vain takaisin
+    return redirect("dashboard")
+
+@require_POST
+def generate_image_view(request):
+    # --- 1) Lue payload sekä JSON- että form-encoded -pyynnöistä ---
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+    else:
+        payload = request.POST
+
+    prompt = (payload.get("prompt") or "").strip()
+    size_key = (payload.get("size") or "square").strip().lower()
+
+    if not prompt:
+        return JsonResponse({"error": "Tyhjä prompt"}, status=400)
+
+    # --- 2) Koon määritys ---
+    size_map = {
+        "square": (1024, 1024),
+        "landscape": (1344, 768),
+        "portrait": (768, 1344),
+    }
+    width, height = size_map.get(size_key, size_map["square"])
+    size_str = f"{width}x{height}"
+
+    # --- 3) Tallennuspolku ---
+    rel_dir = "ai_images"
+    os.makedirs(os.path.join(settings.MEDIA_ROOT, rel_dir), exist_ok=True)
+    filename = f"{uuid.uuid4().hex}.png"
+    rel_path = os.path.join(rel_dir, filename)
+    abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+
+    # --- 4) Yritä OpenAI:ta; jos ei onnistu, tee placeholder ---
+    image_bytes = None
+    used_placeholder = False
+
+    try:
+        if _has_openai and os.environ.get("OPENAI_API_KEY"):
+            client = OpenAI()
+            resp = client.images.generate(
+                model="gpt-image-1",
+                prompt=prompt,
+                size=size_str,
+                quality="high",
+                n=1,
+            )
+            b64 = resp.data[0].b64_json
+            image_bytes = base64.b64decode(b64)
+        else:
+            used_placeholder = True
+    except Exception:
+        # Jos API-kutsu epäonnistuu, fallback
+        used_placeholder = True
+
+    if used_placeholder:
+        # Luo placeholder-kuva, jotta virtaus toimii heti
+        img = Image.new("RGB", (width, height), (20, 24, 28))
+        draw = ImageDraw.Draw(img)
+        try:
+            # järjestelmäfontti; jos ei löydy, PILin default
+            font = ImageFont.truetype("DejaVuSans.ttf", size=28)
+        except Exception:
+            font = ImageFont.load_default()
+
+        margin = 40
+        text = f"AI-kuva ({size_str})\n\n{prompt}"
+        draw.multiline_text((margin, margin), text, font=font, fill=(220, 230, 240), spacing=6)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        image_bytes = buf.getvalue()
+
+    # --- 5) Tallenna levyyn ja palauta URL ---
+    with open(abs_path, "wb") as f:
+        f.write(image_bytes)
+
+    # MEDIA_URL + suhteellinen polku
+    image_url = settings.MEDIA_URL + rel_path.replace("\\", "/")
+
+    return JsonResponse({"image_url": image_url})
+
+def material_detail_view(request, material_id):
+    material = get_object_or_404(Material, pk=material_id)
+    rendered = mark_safe(md.markdown(material.content, extensions=['extra']))
+    return render(request, 'materials/material_detail.html', {
+        'material': material,
+        'rendered_content': rendered,
+    })
+
+_MD_IMG = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
+
+def render_material_content_to_html(text: str) -> str:
+    """
+    Korvaa Markdown-kuvat <img>-tageiksi ja muuntaa rivinvaihdot <br>-tageiksi.
+    """
+    if not text:
+        return ""
+    html = _MD_IMG.sub(
+        r'<figure class="my-3"><img src="\2" alt="\1" class="img-fluid rounded border"><figcaption class="small text-muted">\1</figcaption></figure>',
+        text,
+    )
+    # Kevyt rivinvaihtojen säilytys
+    html = html.replace("\n", "<br>")
+    return mark_safe(html)

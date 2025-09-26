@@ -63,7 +63,7 @@
     </div>
   </section>
 
-  <!-- *** MUOKATTU OSIO: Annetut tehtävät (mobiilissa korttilista, ei vaakaskrollia) *** -->
+  <!-- *** MUOKATTU OSIO: Annetut tehtävät *** -->
   <section class="assignments-list" id="annetut-tehtavat">
     <h2 class="h4 mb-3">Annetut tehtävät</h2>
 
@@ -92,16 +92,26 @@
               {{ assignment.get_status_display }}
             </span>
           </td>
-          <td data-label="Toiminnot">
+          <td data-label="Toiminnot" class="d-grid gap-2">
             {% with sub=assignment.submissions.last %}
               {% if sub %}
-                <a class="btn btn-sm btn-primary w-100" href="{% url 'grade_submission' submission_id=sub.id %}">
+                <a class="btn btn-sm btn-primary" href="{% url 'grade_submission' submission_id=sub.id %}">
                   Tarkastele palautusta
                 </a>
               {% else %}
-                <button class="btn btn-sm btn-secondary w-100" disabled>Ei palautusta</button>
+                <button class="btn btn-sm btn-secondary" disabled>Ei palautusta</button>
               {% endif %}
             {% endwith %}
+
+            <!-- Poista anto → avaa vahvistusmodaali (rakenteellinen, ei alert) -->
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#confirmUnassignModal"
+                    data-title="{{ assignment.material.title }} – {{ assignment.student.get_full_name|default:assignment.student.username }}"
+                    data-action="{% url 'unassign' assignment_id=assignment.id %}">
+              Poista anto
+            </button>
           </td>
         </tr>
         {% empty %}
@@ -117,7 +127,7 @@
 
 </div>
 
-<!-- YLEINEN POISTO-VAHVISTUSMODAALI -->
+<!-- MATERIAALIN POISTO -MODAALI -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1"
      aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -141,18 +151,56 @@
   </div>
 </div>
 
+<!-- TEHTÄVÄNANNON POISTO (UNASSIGN) -MODAALI -->
+<div class="modal fade" id="confirmUnassignModal" tabindex="-1"
+     aria-labelledby="confirmUnassignModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmUnassignModalLabel">Poista tehtävänanto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
+      </div>
+      <div class="modal-body">
+        Poistetaanko tehtävänanto: <strong id="unassignTitle"></strong>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Peruuta</button>
+        <form id="unassignForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Poista anto</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const modalEl = document.getElementById('confirmDeleteModal');
-  if (!modalEl) return;
-  modalEl.addEventListener('show.bs.modal', (ev) => {
-    const btn = ev.relatedTarget;
-    if (!btn) return;
-    const title = btn.getAttribute('data-title') || '';
-    const action = btn.getAttribute('data-action') || '#';
-    modalEl.querySelector('#delTitle').textContent = title;
-    modalEl.querySelector('#delForm').setAttribute('action', action);
-  });
+  // Materiaalin poisto
+  const delModal = document.getElementById('confirmDeleteModal');
+  if (delModal) {
+    delModal.addEventListener('show.bs.modal', (ev) => {
+      const btn = ev.relatedTarget;
+      if (!btn) return;
+      const title = btn.getAttribute('data-title') || '';
+      const action = btn.getAttribute('data-action') || '#';
+      delModal.querySelector('#delTitle').textContent = title;
+      delModal.querySelector('#delForm').setAttribute('action', action);
+    });
+  }
+
+  // Tehtävänannon poisto (unassign)
+  const unassignModal = document.getElementById('confirmUnassignModal');
+  if (unassignModal) {
+    unassignModal.addEventListener('show.bs.modal', (ev) => {
+      const btn = ev.relatedTarget;
+      if (!btn) return;
+      const title = btn.getAttribute('data-title') || '';
+      const action = btn.getAttribute('data-action') || '#';
+      unassignModal.querySelector('#unassignTitle').textContent = title;
+      unassignModal.querySelector('#unassignForm').setAttribute('action', action);
+    });
+  }
 });
 </script>
 {% endblock %}

@@ -33,7 +33,16 @@
           <h5 class="mb-0">Tehtävänanto</h5>
         </div>
         <div class="card-body">
-          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 1rem;">{{ assignment.material.content }}</pre>
+          {# Renderöity opettajan sisältö (kuvat, linkit, ym.) #}
+          {% if content_html %}
+            <div class="material-content">
+              {{ content_html|safe }}
+            </div>
+          {% else %}
+            <pre style="white-space: pre-wrap; font-family: inherit; font-size: 1rem;">
+{{ assignment.material.content }}
+            </pre>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -124,7 +133,7 @@
 
             // CSRF helper
             function getCookie(name) {
-              const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+              const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)'); 
               return m ? m.pop() : '';
             }
             const csrftoken = getCookie('csrftoken');

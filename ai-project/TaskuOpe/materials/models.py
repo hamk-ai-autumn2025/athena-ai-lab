@@ -4,6 +4,7 @@ from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import AbstractUser
 
 
 class Prompt(models.Model):
@@ -312,3 +313,10 @@ class AIGrade(models.Model):
     class Meta:
         verbose_name = _("AI-arvio")
         verbose_name_plural = _("AI-arviot")
+
+class MaterialImage(models.Model):
+    material = models.ForeignKey("Material", related_name="images", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="materials/%Y/%m/")
+    caption = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)

@@ -1,18 +1,29 @@
 # TaskuOpe/urls.py
-
 from django.contrib import admin
 from django.urls import path, include
-
-# Import the views from the 'users' app now
-from users.views import FinnishLoginView, simple_logout
+from django.contrib.auth import views as auth_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 
-    # These paths now correctly use the views from the users app
-    path('kirjaudu/', FinnishLoginView.as_view(), name='kirjaudu'),
-    path('ulos/', simple_logout, name='ulos'),
+    path(
+        "kirjaudu-ulos/",
+        auth_views.LogoutView.as_view(next_page="kirjaudu"),  # ohjaa kirjautumissivulle
+        name="kirjaudu_ulos",
+    ),
 
-    # Include the materials app URLs
-    path('', include('materials.urls')),  # Changed to include materials.urls as the main app
+
+    path(
+        "kirjaudu/",
+        auth_views.LoginView.as_view(template_name="registration/login.html"),
+        name="kirjaudu",
+    ),
+
+    # Sovelluksen päänäkymät
+    path("", include("materials.urls")),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

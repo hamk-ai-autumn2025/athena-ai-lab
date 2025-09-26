@@ -1,0 +1,59 @@
+{% extends 'partials/base.html' %}
+{% block title %}{{ material.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <div>
+      <h1 class="h2 mb-0">{{ material.title }}</h1>
+      <p class="text-muted mb-0">
+        Tila: {{ material.get_status_display }}
+        | Aihe: {{ material.subject|default:'Ei määritelty' }}
+      </p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+    </a>
+  </div>
+
+  <!-- Materiaalin sisältö -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-header">
+      <h5 class="mb-0">Materiaalin sisältö</h5>
+    </div>
+    <div class="card-body">
+      {% if rendered_content %}
+        {{ rendered_content|safe }}
+      {% else %}
+        {{ material.content|safe }}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Lisää kuva -nappi -->
+  <a href="{% url 'material_add_image' material_id=material.id %}" class="btn btn-outline-secondary btn-sm mb-3">
+    Lisää kuva
+  </a>
+
+  <!-- Kuvagalleria -->
+  <div class="row g-3">
+    {% for img in material.images.all %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100">
+          <a href="{{ img.image.url }}" target="_blank" rel="noopener">
+            <img class="card-img-top" src="{{ img.image.url }}" alt="{{ img.caption|default:'Kuva' }}">
+          </a>
+          {% if img.caption %}
+            <div class="card-body py-2 small">{{ img.caption }}</div>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-muted small">Ei kuvia.</div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

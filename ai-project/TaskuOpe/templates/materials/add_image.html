@@ -1,0 +1,26 @@
+{# templates/materials/add_image.html #}
+{% extends 'partials/base.html' %}
+{% block title %}Lisää kuva{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <h1 class="h4">Lisää kuva: {{ material.title }}</h1>
+  <form method="post" enctype="multipart/form-data" class="card p-3">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Lataa kuva</label>
+      {{ form.upload }}
+    </div>
+    <div class="text-center my-2">— tai —</div>
+    <div class="mb-3">
+      <label class="form-label">Generoi kuva (prompt)</label>
+      {{ form.gen_prompt }}
+      <div class="form-text">Käytetään vain jos OpenAI-avain on asetettu.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Kuvateksti</label>
+      {{ form.caption }}
+    </div>
+    <button class="btn btn-primary">Tallenna</button>
+  </form>
+</div>
+{% endblock %}

@@ -91,7 +91,10 @@
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="#">Profiili</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{% url 'ulos' %}">Kirjaudu ulos</a></li>
+                <a href="#" class="dropdown-item"
+                  onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                  Kirjaudu ulos
+                </a>
               </ul>
             </li>
           </ul>
@@ -169,7 +172,12 @@
             <ul class="dropdown-menu dropdown-menu-end text-small shadow">
               <li><a class="dropdown-item" href="#">Profiili</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="{% url 'ulos' %}">Kirjaudu ulos</a></li>
+              <li>
+              <a href="#" class="dropdown-item"
+                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                Kirjaudu ulos
+              </a>
+              </li>
             </ul>
           </div>
         </header>
@@ -218,5 +226,9 @@
       }
     });
   </script>
+  <form id="logout-form" action="{% url 'kirjaudu_ulos' %}" method="post" style="display:none;">
+  {% csrf_token %}
+</form>
+
 </body>
 </html>

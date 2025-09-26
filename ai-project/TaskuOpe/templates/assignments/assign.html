@@ -15,6 +15,7 @@
     </a>
   </div>
 
+
   <!-- Keskitys ja kavennus -->
   <div class="row justify-content-center">
     <div class="col-12 col-md-10 col-lg-8 col-xl-6">
@@ -29,6 +30,19 @@
                 {{ form.non_field_errors.as_ul }}
               </div>
             {% endif %}
+            
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <div class="form-check mb-2">
+                    {{ form.give_to_class }} <label class="form-check-label">Anna koko luokalle</label>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Luokka</label>
+                    {{ form.class_number }}
+                    <div class="form-text">Jos valitset luokan, yksittäiset valinnat sivuutetaan.</div>
+                  </div>
+                </div>
+              </div>
 
             <!-- Student Selection Field -->
             <div class="mb-4">
