@@ -6,6 +6,8 @@ This is a Python-based GUI tool for logging and tracking working hours in an AI 
 
 ## Update for Version 2
 
+There seems to be user rights problems, if so give the right user rights to software or manually create the right .csv file
+
 This is Version 2 of the AI Project Hour Tracker, with several improvements:
 
 ### What’s New
