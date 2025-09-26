@@ -7,7 +7,7 @@ It includes multiple components, such as the **hour tracking application** and s
 
 ---
 
-## Hour Tracking Application
+## Hour Tracking Application NOTE: Updated real-time project hours at Moodle return!!!
 The hour tracking application can be found in its own subdirectory inside this project.  
 ➡️ Please read the **README.md** file in that directory for specific instructions on setup and usage.
 https://github.com/hamk-ai-autumn2025/athena-ai-lab/tree/prototyyppi-23.09.2025/ai-project/docs/hour-tracking
