@@ -58,23 +58,37 @@
         <div class="card-body">
 
           <!-- Plagiointitarkistus – nappi + raportti (LISÄTTY) -->
+          <!-- Alkuperäisyystarkistus – selkokielinen versio -->
           {% if user.is_authenticated and user.role == 'TEACHER' %}
-            <form method="post" class="mb-3">
+            <form method="post" class="mb-2">
               {% csrf_token %}
               <button type="submit" name="run_plagiarism" class="btn btn-outline-danger w-100">
-                Tarkista plagiointi (TF-IDF)
+                Tarkista alkuperäisyys (AI)
               </button>
             </form>
+            <div class="text-muted small mb-3">
+              Tämä tarkistus arvioi tekoälyn avulla, onko vastaus mahdollisesti
+              <strong>tekoälyn tuottama</strong> ja löytyykö siitä
+              <strong>samankaltaisuutta</strong> muihin saman tehtävän palautuksiin verrattuna.
+              Tulosta käytetään opettajan tukena – se <em>ei tee päätöksiä puolestasi</em>.
+            </div>
 
             {% if plagiarism_report %}
               <div class="mb-3">
-                <div><strong>Alkuperäisyysraportti:</strong></div>
-                <div>Samankaltaisuus: {{ plagiarism_report.score|floatformat:2 }}</div>
+                <div class="fw-semibold">Alkuperäisyysraportti</div>
+                <div class="mb-1">
+                  Arvioitu plagiointiriski (0–1): <strong>{{ plagiarism_report.score|floatformat:2 }}</strong>
+                </div>
+                <div class="text-muted small mb-2">
+                  <strong>Tulkinta:</strong> 0.00–0.29 = matala, 0.30–0.59 = kohtalainen, 0.60–1.00 = korkea.
+                </div>
                 {% if plagiarism_report.suspected_source %}
-                  <div>Mahdollinen lähde: {{ plagiarism_report.suspected_source.student.username }}</div>
+                  <div class="mb-2">
+                    Mahdollinen lähde: {{ plagiarism_report.suspected_source.student.username }}
+                  </div>
                 {% endif %}
                 <details class="mt-2">
-                  <summary>Näytä korostukset</summary>
+                  <summary>Näytä AI:n huomiot ja esimerkit</summary>
                   <div class="border p-2 mt-2" style="white-space:pre-wrap;">
                     {{ plagiarism_report.highlights|safe }}
                   </div>
@@ -82,6 +96,7 @@
               </div>
             {% endif %}
           {% endif %}
+          <!-- /Alkuperäisyystarkistus -->
           <!-- /Plagiointitarkistus -->
 
           <form method="post">
@@ -103,7 +118,7 @@
             </div>
 
             <div class="mb-3">
-              <label for="{{ form.feedback.id_for_label }}" class="form-label">Palaute</label>
+              <label for "{{ form.feedback.id_for_label }}" class="form-label">Palaute</label>
               {{ form.feedback }}
             </div>
 

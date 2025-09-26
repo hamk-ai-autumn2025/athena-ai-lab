@@ -181,7 +181,7 @@ def analyze_plagiarism(new_submission: Submission) -> Dict[str, object]:
     html_block.append(html.escape(summary) if summary else "—")
     html_block.append("</div>")
     html_block.append("<div><small>")
-    html_block.append(f"LLM-arvio: AI-likelihood = {ai_like:.2f}, plagiointiriski = {plag_risk:.2f}")
+    html_block.append(f"LLM-arvio: AI-todennäköisyys = {ai_like:.2f}, plagiointiriski = {plag_risk:.2f}")
     html_block.append("</small></div>")
     html_block.append(_render_highlights_html(student_text, evidence))
     highlight_html = "".join(html_block)

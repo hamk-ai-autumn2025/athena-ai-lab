@@ -27,3 +27,4 @@ class PlagiarismReportAdmin(admin.ModelAdmin):
         "suspected_source__student__username",
     )
     list_filter = ("created_at",)
+
