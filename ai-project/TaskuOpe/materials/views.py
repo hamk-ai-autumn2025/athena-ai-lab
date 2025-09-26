@@ -23,6 +23,10 @@ from .models import Material, Assignment, Submission
 from users.models import CustomUser
 from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
 
+# Rubric & AI grading -> arviointikriteeristö & AI-arviointi
+from .models import AIGrade, Rubric
+from .ai_rubric import create_or_update_ai_grade
+
 
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
@@ -94,7 +98,7 @@ def student_assignments_view(request):
         "submitted": qs.filter(status__in=["SUBMITTED", "GRADED"]),
         "status": status,
         "order": order,
-        "now": timezone.now(), 
+        "now": timezone.now(),
     }
     return render(request, 'student/assignments.html', ctx)
 
@@ -246,13 +250,15 @@ def assignment_detail_view(request, assignment_id):
 
     # Jos jo palautettu/arvioitu: näytä lukutilassa (ei muokkauslomaketta)
     if assignment.status in (Assignment.Status.SUBMITTED, Assignment.Status.GRADED):
-        # Tyhjä form vain template-yhteensopivuuden vuoksi
         form = SubmissionForm()
+        last_sub = assignment.submissions.last()
+        ai_grade = getattr(last_sub, 'ai_grade', None) if last_sub else None
         return render(request, 'assignments/detail.html', {
             'assignment': assignment,
             'form': form,
-            'readonly': True,          # <-- voit käyttää templaatissa estämään editoinnin
-            'now': timezone.now(),     # <-- hyödyllinen esim. eräpäiväbadgeihin
+            'readonly': True,
+            'now': timezone.now(),
+            'ai_grade': ai_grade,   # <-- AI-ehdotus opiskelijan näkyville (näytä/piilota)
         })
 
     # Muokkaustila
@@ -262,7 +268,6 @@ def assignment_detail_view(request, assignment_id):
         # Luonnoksen tallennus (manuaalinen nappi)
         if 'save_draft' in request.POST:
             assignment.draft_response = request.POST.get('response', '').strip()
-            # Jos jotain sisältöä -> siirrä tilaan IN_PROGRESS
             if assignment.draft_response and assignment.status == Assignment.Status.ASSIGNED:
                 assignment.status = Assignment.Status.IN_PROGRESS
             assignment.save(update_fields=['draft_response', 'status'])
@@ -275,13 +280,10 @@ def assignment_detail_view(request, assignment_id):
                 submission = form.save(commit=False)
                 submission.student = request.user
                 submission.assignment = assignment
-
-                # Jos Submission-mallissa on nämä kentät, asetetaan selkeästi
                 if hasattr(submission, 'status'):
                     submission.status = Submission.Status.SUBMITTED
                 if hasattr(submission, 'submitted_at'):
                     submission.submitted_at = timezone.now()
-
                 submission.save()
 
                 assignment.status = Assignment.Status.SUBMITTED
@@ -295,12 +297,15 @@ def assignment_detail_view(request, assignment_id):
         # Esitäytä lomake mahdollisella luonnoksella
         form = SubmissionForm(initial={'response': assignment.draft_response})
 
+    # Muokkaustilassa ei vielä AI-ehdotusta oppilaalle (näkyy vasta SUBMITTED/GRADED)
     return render(request, 'assignments/detail.html', {
         'assignment': assignment,
         'form': form,
         'readonly': False,
         'now': timezone.now(),
+        'ai_grade': None,
     })
+
 
 @login_required(login_url='kirjaudu')
 @require_POST
@@ -368,6 +373,40 @@ def grade_submission_view(request, submission_id):
         messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
         return redirect('dashboard')
 
+    # --- AI-rubriikkiarviointi: luonti napista ---
+    if request.method == 'POST' and 'run_ai_grade' in request.POST:
+        try:
+            ag = create_or_update_ai_grade(submission)
+            messages.success(request, f"AI-arviointiehdotus luotu ({ag.total_points:.1f} p).")
+        except Exception as e:
+            messages.error(request, f"AI-arviointi epäonnistui: {e}")
+        return redirect('grade_submission', submission_id=submission.id)
+
+    # --- AI-rubriikkiarviointi: hyväksy ehdotus kenttiin ---
+    if request.method == 'POST' and 'accept_ai_grade' in request.POST:
+        ag = getattr(submission, 'ai_grade', None)
+        if not ag:
+            messages.error(request, "AI-arviointiehdotusta ei ole.")
+            return redirect('grade_submission', submission_id=submission.id)
+
+        # Kopioi kriteerikohtaiset pisteet ja palautteet submissionin kenttiin
+        max_total = sum(int(c.get("max", 0)) for c in ag.details.get("criteria", []))
+        submission.score = ag.total_points
+        submission.max_score = max_total or None
+
+        lines = []
+        for c in ag.details.get("criteria", []):
+            lines.append(f"- {c.get('name')}: {c.get('points')}/{c.get('max')} – {c.get('feedback')}")
+        gen = ag.details.get("general_feedback") or ""
+        if gen:
+            lines.append("")
+            lines.append(gen)
+        submission.feedback = "\n".join(lines).strip()
+        submission.save(update_fields=["score", "max_score", "feedback"])
+
+        messages.success(request, "AI-ehdotus kopioitu arviointikenttiin. Voit vielä muokata ja tallentaa.")
+        return redirect('grade_submission', submission_id=submission.id)
+
     # 👉 Plagiointitarkistus napista (ei automaattisesti)
     if request.method == 'POST' and 'run_plagiarism' in request.POST:
         try:
@@ -402,15 +441,17 @@ def grade_submission_view(request, submission_id):
     else:
         form = GradingForm(instance=submission)
 
-    # Viedään mahdollinen raportti templaatille
+    # Viedään mahdolliset raportit/ehdotukset templaatille
     plagiarism_report = getattr(submission, "plagiarism_report", None)
+    ai_grade = getattr(submission, "ai_grade", None)
 
     return render(request, 'assignments/grade.html', {
         'material': material,
         'assignment': assignment,
         'submission': submission,
         'form': form,
-        'plagiarism_report': plagiarism_report,  # <-- käytä templaatissa
+        'plagiarism_report': plagiarism_report,
+        'ai_grade': ai_grade,
     })
 
 
