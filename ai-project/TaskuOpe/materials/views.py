@@ -941,3 +941,20 @@ def generate_image_view(request):
         {"image_url": image_url, "placeholder": used_placeholder, "error": last_error},
         status=201 if not used_placeholder else 207
     )
+
+_MD_IMG = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
+
+def render_material_content_to_html(text: str) -> str:
+    """
+    Kevyt renderöinti: muutetaan Markdown-kuvat <img>-tageiksi ja säilytetään rivinvaihdot.
+    Jos haluat täyden markdown-renderöinnin, korvaa tämä md.markdown()-kutsulla.
+    """
+    if not text:
+        return ""
+    html = _MD_IMG.sub(
+        r'<figure class="my-3"><img src="\2" alt="\1" class="img-fluid rounded border">'
+        r'<figcaption class="small text-muted">\1</figcaption></figure>',
+        text,
+    )
+    html = html.replace("\n", "<br>")
+    return mark_safe(html)
