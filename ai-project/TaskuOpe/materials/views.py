@@ -20,6 +20,7 @@ from .ai_service import ask_llm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import json
+
 # 👉 Plagiointitarkistuspalvelu (UUSI)
 from .plagiarism import build_or_update_report
 from .forms import AssignForm
@@ -33,11 +34,23 @@ from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
 from .models import AIGrade, Rubric
 from .ai_rubric import create_or_update_ai_grade
 
+from urllib.parse import urljoin
+from django.core.files.base import ContentFile
+from .forms import AddImageForm
+from .models import MaterialImage
+
 #Kuvageneraation importteja
 import markdown as md
-from django.utils.safestring import mark_safe
 import re
+from django.utils.safestring import mark_safe
 
+from .ai_service import generate_image_bytes
+
+from django.core.files.base import ContentFile
+from .forms import AddImageForm
+from .models import MaterialImage
+import re
+from django.utils.safestring import mark_safe
 
 try:
     from openai import OpenAI
@@ -45,7 +58,22 @@ try:
 except Exception:
     _has_openai = False
 
+# materials/views.py
+import markdown as md
+from django.utils.safestring import mark_safe
+from django.shortcuts import render, get_object_or_404
 
+# materials/views.py
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.http import HttpResponseForbidden
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from .models import MaterialImage
+
+# views.py
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+import io
 
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
@@ -615,25 +643,52 @@ def add_material_image_view(request, material_id):
 
     form = AddImageForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        upload = form.cleaned_data["upload"]
-        prompt = form.cleaned_data["gen_prompt"]
+        upload  = form.cleaned_data["upload"]
+        prompt  = (form.cleaned_data["gen_prompt"] or "").strip()
         caption = form.cleaned_data["caption"] or ""
 
+        def append_image_to_content(image_url: str, cap: str):
+            md_img = f"![{cap or 'Kuva'}]({image_url})"
+            m.content = (m.content or "").rstrip()
+            m.content += (("\n\n" if m.content else "") + md_img + "\n")
+            m.save(update_fields=["content"])
+
+        # 1) Tiedosto
         if upload:
-            MaterialImage.objects.create(material=m, image=upload, caption=caption, created_by=request.user)
-            messages.success(request, "Kuva lisätty.")
+            mi = MaterialImage.objects.create(
+                material=m, image=upload, caption=caption, created_by=request.user
+            )
+            append_image_to_content(mi.image.url, caption)
+            messages.success(request, "Kuva lisätty sisältöön.")
             return redirect("material_detail", material_id=m.id)
 
+        # 2) Generointi (käyttää ai_service.py:n funktiota)
         if prompt:
-            data = generate_image(prompt)
-            if data:
-                img = ContentFile(data, name="gen.png")
-                MaterialImage.objects.create(material=m, image=img, caption=caption, created_by=request.user)
-                messages.success(request, "Generoitu kuva lisätty.")
+            try:
+                from .ai_service import generate_image_bytes  # AI-koodi pysyy ai_service.py:ssä
+                data = generate_image_bytes(prompt, size="1024x1024")
+                if not data:
+                    messages.error(request, "API-avain puuttuu tai generointi ei palauttanut dataa.")
+                else:
+                    from django.core.files.base import ContentFile
+                    mi = MaterialImage.objects.create(
+                        material=m,
+                        image=ContentFile(data, name="gen.png"),
+                        caption=caption,
+                        created_by=request.user,
+                    )
+                    append_image_to_content(mi.image.url, caption)
+                    messages.success(request, "Generoitu kuva lisätty sisältöön.")
+                    return redirect("material_detail", material_id=m.id)
+            except Exception as e:
+                messages.error(request, f"Kuvan generointi epäonnistui: {e}")
                 return redirect("material_detail", material_id=m.id)
-            messages.error(request, "Kuvan generointi epäonnistui (puuttuuko API-avain?).")
+
+        messages.error(request, "Valitse tiedosto tai anna generointikehote.")
+        return redirect("material_detail", material_id=m.id)
 
     return render(request, "materials/add_image.html", {"material": m, "form": form})
+
 
 @login_required
 def edit_material_view(request, material_id):
@@ -720,10 +775,90 @@ def unassign_assignment(request, assignment_id):  # assignment_id on UUID, koska
 
 @require_POST
 def generate_image_view(request):
-    # --- 1) Lue payload sekä JSON- että form-encoded -pyynnöistä ---
     if request.content_type and "application/json" in request.content_type:
         try:
-            payload = json.loads(request.body.decode("utf-8") or "{}")
+            payload = json.loads((request.body or b"").decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+    else:
+        payload = request.POST
+
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        return JsonResponse({"error": "Tyhjä prompt"}, status=400)
+
+    size_str = "1024x1024"
+    rel_dir = "ai_images"
+    os.makedirs(os.path.join(settings.MEDIA_ROOT, rel_dir), exist_ok=True)
+    filename = f"{uuid.uuid4().hex}.png"
+    rel_path = os.path.join(rel_dir, filename)
+    abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+
+    try:
+        image_bytes = generate_image_bytes(prompt=prompt, size=size_str)
+        if not image_bytes:
+            return JsonResponse({"error": "Generointi palautti tyhjän tuloksen."}, status=502)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=502)
+
+    with open(abs_path, "wb") as f:
+        f.write(image_bytes)
+
+    image_url = urljoin(settings.MEDIA_URL, rel_path.replace(os.sep, "/"))
+    return JsonResponse({"image_url": image_url}, status=201)
+
+def material_detail_view(request, material_id):
+    material = get_object_or_404(Material, pk=material_id)
+    rendered = mark_safe(md.markdown(material.content or "", extensions=["extra"]))
+    return render(request, "materials/material_detail.html", {
+        "material": material,
+        "rendered_content": rendered,
+    })
+
+@login_required
+@require_POST
+def delete_material_image_view(request, image_id):
+    img = get_object_or_404(MaterialImage.objects.select_related("material"), pk=image_id)
+
+    # vain materiaalin tekijä/opettaja saa poistaa
+    if request.user.role != "TEACHER" or img.material.author_id != request.user.id:
+        return HttpResponseForbidden("Ei oikeutta poistaa kuvaa.")
+
+    material_id = img.material_id
+    img.delete()  # post_delete-signaali poistaa myös tiedoston levyltä
+    messages.success(request, "Kuva poistettu.")
+    return redirect("material_detail", material_id=material_id)
+
+@require_POST
+@login_required(login_url='kirjaudu')
+def material_image_insert_view(request, material_id, image_id):
+    """Lisää valitun galleria-kuvan markdown-tagina materiaalin contentiin."""
+    m = get_object_or_404(Material, pk=material_id)
+    if request.user.role != "TEACHER" or m.author_id != request.user.id:
+        messages.error(request, "Ei oikeutta muokata tämän materiaalin sisältöä.")
+        return redirect("material_detail", material_id=m.id)
+
+    img = get_object_or_404(MaterialImage, pk=image_id, material=m)
+
+    alt = (img.caption or "Kuva").strip()
+    url = img.image.url          # esim. /media/materials/2025/09/kuva.png
+    md  = f"\n\n![{alt}]({url})\n"
+
+    m.content = (m.content or "")
+    if m.content and not m.content.endswith("\n"):
+        m.content += "\n"
+    m.content += md
+    m.save(update_fields=["content"])
+
+    messages.success(request, "Kuva lisättiin sisältöön.")
+    return redirect("material_detail", material_id=m.id)
+
+@require_POST
+def generate_image_view(request):
+    # 1) Payload
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            payload = json.loads((request.body or b"").decode("utf-8") or "{}")
         except json.JSONDecodeError:
             payload = {}
     else:
@@ -731,94 +866,78 @@ def generate_image_view(request):
 
     prompt = (payload.get("prompt") or "").strip()
     size_key = (payload.get("size") or "square").strip().lower()
-
     if not prompt:
         return JsonResponse({"error": "Tyhjä prompt"}, status=400)
 
-    # --- 2) Koon määritys ---
-    size_map = {
-        "square": (1024, 1024),
+    # 2) Haluttu LOPPUTULOS (näytettävä kuva)
+    out_map = {
+        "square":   (1024, 1024),
         "landscape": (1344, 768),
-        "portrait": (768, 1344),
+        "portrait":  (768, 1344),
     }
-    width, height = size_map.get(size_key, size_map["square"])
-    size_str = f"{width}x{height}"
+    out_w, out_h = out_map.get(size_key, out_map["square"])
+    out_size_str = f"{out_w}x{out_h}"
 
-    # --- 3) Tallennuspolku ---
+    # 3) DALL·E 2: generoidaan aina 1024×1024 ja muokataan sitten
+    gen_w, gen_h = 1024, 1024
     rel_dir = "ai_images"
     os.makedirs(os.path.join(settings.MEDIA_ROOT, rel_dir), exist_ok=True)
     filename = f"{uuid.uuid4().hex}.png"
     rel_path = os.path.join(rel_dir, filename)
     abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
 
-    # --- 4) Yritä OpenAI:ta; jos ei onnistu, tee placeholder ---
-    image_bytes = None
     used_placeholder = False
+    last_error = None
+    image_bytes = None
 
     try:
-        if _has_openai and os.environ.get("OPENAI_API_KEY"):
-            client = OpenAI()
-            resp = client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                size=size_str,
-                quality="high",
-                n=1,
-            )
-            b64 = resp.data[0].b64_json
-            image_bytes = base64.b64decode(b64)
+        # bytes DALL·E 2:lta (tai demo-bitti ai_service.py:stä)
+        from .ai_service import generate_image_bytes
+        data = generate_image_bytes(prompt, size=f"{gen_w}x{gen_h}")  # DALL·E 2: vain neliö
+        if data:
+            # 4) Jälkikäsittely: rajaa TAI letterboxaa haluttuun kokoon
+            img = Image.open(io.BytesIO(data)).convert("RGB")
+
+            # a) “Smart crop”: täytetään koko, mahdollinen reunoista leikkaus
+            fitted = ImageOps.fit(img, (out_w, out_h), method=Image.LANCZOS, centering=(0.5, 0.5))
+
+            # Jos haluat letterboxin croppauksen sijaan, korvaa yllä oleva:
+            # contained = ImageOps.contain(img, (out_w, out_h), method=Image.LANCZOS)
+            # canvas = Image.new("RGB", (out_w, out_h), (20,24,28))
+            # x = (out_w - contained.width)//2
+            # y = (out_h - contained.height)//2
+            # canvas.paste(contained, (x,y))
+            # fitted = canvas
+
+            buf = io.BytesIO()
+            fitted.save(buf, "PNG")
+            image_bytes = buf.getvalue()
         else:
             used_placeholder = True
-    except Exception:
-        # Jos API-kutsu epäonnistuu, fallback
+    except Exception as e:
         used_placeholder = True
+        last_error = str(e)
 
     if used_placeholder:
-        # Luo placeholder-kuva, jotta virtaus toimii heti
-        img = Image.new("RGB", (width, height), (20, 24, 28))
+        img = Image.new("RGB", (out_w, out_h), (20, 24, 28))
         draw = ImageDraw.Draw(img)
         try:
-            # järjestelmäfontti; jos ei löydy, PILin default
             font = ImageFont.truetype("DejaVuSans.ttf", size=28)
         except Exception:
             font = ImageFont.load_default()
+        draw.multiline_text(
+            (40, 40),
+            f"AI-kuva ({out_size_str})\n\n{prompt}",
+            font=font, fill=(220, 230, 240), spacing=6
+        )
+        buf = io.BytesIO(); img.save(buf, "PNG"); image_bytes = buf.getvalue()
 
-        margin = 40
-        text = f"AI-kuva ({size_str})\n\n{prompt}"
-        draw.multiline_text((margin, margin), text, font=font, fill=(220, 230, 240), spacing=6)
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        image_bytes = buf.getvalue()
-
-    # --- 5) Tallenna levyyn ja palauta URL ---
+    # 5) Tallenna ja palauta
     with open(abs_path, "wb") as f:
         f.write(image_bytes)
 
-    # MEDIA_URL + suhteellinen polku
-    image_url = settings.MEDIA_URL + rel_path.replace("\\", "/")
-
-    return JsonResponse({"image_url": image_url})
-
-def material_detail_view(request, material_id):
-    material = get_object_or_404(Material, pk=material_id)
-    rendered = mark_safe(md.markdown(material.content, extensions=['extra']))
-    return render(request, 'materials/material_detail.html', {
-        'material': material,
-        'rendered_content': rendered,
-    })
-
-_MD_IMG = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
-
-def render_material_content_to_html(text: str) -> str:
-    """
-    Korvaa Markdown-kuvat <img>-tageiksi ja muuntaa rivinvaihdot <br>-tageiksi.
-    """
-    if not text:
-        return ""
-    html = _MD_IMG.sub(
-        r'<figure class="my-3"><img src="\2" alt="\1" class="img-fluid rounded border"><figcaption class="small text-muted">\1</figcaption></figure>',
-        text,
+    image_url = urljoin(settings.MEDIA_URL, rel_path.replace(os.sep, "/"))
+    return JsonResponse(
+        {"image_url": image_url, "placeholder": used_placeholder, "error": last_error},
+        status=201 if not used_placeholder else 207
     )
-    # Kevyt rivinvaihtojen säilytys
-    html = html.replace("\n", "<br>")
-    return mark_safe(html)

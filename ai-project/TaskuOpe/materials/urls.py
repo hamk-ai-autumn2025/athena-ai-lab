@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+
+
 urlpatterns = [
     # Dashboard
     path("", views.dashboard_view, name='dashboard'),
@@ -40,5 +42,9 @@ urlpatterns = [
 
     # CSV-vienti
     path("palautukset/export.csv", views.export_submissions_csv_view, name="export_submissions_csv"),
+
+    path("materials/images/<int:image_id>/delete/", views.delete_material_image_view,  name="material_image_delete"),
+ 
+    path("materials/<uuid:material_id>/images/<int:image_id>/insert/", views.material_image_insert_view, name="material_image_insert"),
 
 ]

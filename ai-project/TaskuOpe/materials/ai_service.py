@@ -1,6 +1,7 @@
 # materials/ai_service.py
 import os
 from openai import OpenAI
+import os, base64
 
 SYSTEM_FIN = (
     "Kirjoita opetusmateriaalia suomeksi. Palauta TÄSMÄLLEEN tämä muoto:\n"
@@ -50,40 +51,55 @@ def ask_llm(prompt: str, *, user_id: int = 0) -> str:
         # Älä kaada näkymää; palauta demomuoto virheilmoituksella
         return _demo(f"{prompt}\n\n[HUOM: API-virhe: {e}]")
 
-def generate_image_bytes(prompt: str) -> bytes:
+def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
     """
-    Palauttaa PNG-binaarit. Jos OPENAI_API_KEY puuttuu, luodaan demo-kuva Pillowilla.
+    DALL·E 2 (vain neliö: 256/512/1024). Palauttaa PNG-binaarit.
+    Jos OPENAI_API_KEY puuttuu → demokuva Pillowilla.
+    Huom: DALL·E 2 voi palauttaa joko b64_json TAI url → käsittele molemmat.
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        # DEMO: generoidaan yksinkertainen PNG teksteineen
-        try:
-            from PIL import Image, ImageDraw, ImageFont
-        except Exception:
-            raise RuntimeError("Pillow ei ole asennettu (pip install Pillow).")
-        img = Image.new("RGB", (1024, 576), color=(28, 33, 40))
-        draw = ImageDraw.Draw(img)
-        text = f"DEMO IMAGE\n{prompt[:80]}"
-        # Fontti valinnaisesti järjestelmästä; käytä oletusta jos ei löydy
+        # DEMO-kuva
+        from PIL import Image, ImageDraw, ImageFont
+        import io
+        img = Image.new("RGB", (1024, 1024), (28, 33, 40))
+        d = ImageDraw.Draw(img)
         try:
             font = ImageFont.truetype("DejaVuSans.ttf", 28)
         except Exception:
             font = ImageFont.load_default()
-        w, h = draw.multiline_textbbox((0, 0), text, font=font)[2:]
-        draw.multiline_text(((1024 - w) // 2, (576 - h) // 2), text, fill=(230, 230, 230), font=font, align="center")
-        import io
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        return buf.getvalue()
+        d.multiline_text((40, 40), f"DEMO IMAGE\n{prompt[:120]}", font=font, fill=(230, 230, 230), spacing=6)
+        buf = io.BytesIO(); img.save(buf, "PNG"); return buf.getvalue()
 
-    # Oikea generointi OpenAI:lla (voit vaihtaa mallia esim. "gpt-image-1")
+    if size not in {"256x256", "512x512", "1024x1024"}:
+        raise ValueError("DALL·E 2 tukee vain neliötä: 256/512/1024")
+
+    from openai import OpenAI
     client = OpenAI(api_key=api_key)
-    resp = client.images.generate(
-        model="gpt-image-1",
-        prompt=prompt,
-        size="1024x576",
-        response_format="b64_json",
-    )
-    import base64
-    b64 = resp.data[0].b64_json
-    return base64.b64decode(b64)
+    try:
+        resp = client.images.generate(
+            model="dall-e-2",
+            prompt=prompt,
+            size=size,
+            n=1,
+        )
+        item = resp.data[0]
+
+        # 1) Yritä base64
+        b64 = getattr(item, "b64_json", None)
+        if b64:
+            return base64.b64decode(b64)
+
+        # 2) Muutoin hae URL
+        url = getattr(item, "url", None)
+        if url:
+            import requests
+            r = requests.get(url, timeout=30)
+            r.raise_for_status()
+            return r.content
+
+        # 3) Ei kumpaakaan → virhe
+        raise RuntimeError("DALL·E 2 ei palauttanut b64_json- tai url-kenttää.")
+
+    except Exception as e:
+        raise RuntimeError(f"DALL·E 2 virhe: {e}") from e

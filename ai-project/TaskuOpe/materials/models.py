@@ -6,6 +6,10 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
 
+# ↓ lisää nämä importit jos eivät jo ole
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
 
 class Prompt(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -320,3 +324,15 @@ class MaterialImage(models.Model):
     caption = models.CharField(max_length=255, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.caption or self.image.name
+
+# ⬇ HUOM: tämä on luokan ULKOPUOLELLA
+@receiver(post_delete, sender=MaterialImage)
+def delete_image_file(sender, instance, **kwargs):
+    """
+    Kun MaterialImage-tietue poistetaan, poista myös kuvatiedosto levystä.
+    """
+    if instance.image:
+        instance.image.delete(save=False)
