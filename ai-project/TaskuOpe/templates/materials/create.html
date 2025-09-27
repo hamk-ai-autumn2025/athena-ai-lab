@@ -123,12 +123,14 @@
                 <div class="mb-3">
                   <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
                   {{ form.title }}
+                  <span id="error-title" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
                   <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
                   {{ form.subject }}
+                  <span id="error-subject" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
                 </div>
               </div>
             </div>
@@ -138,12 +140,14 @@
                 <div class="mb-3">
                   <label for="{{ form.grade_level.id_for_label }}" class="form-label">{{ form.grade_level.label }}</label>
                   {{ form.grade_level }}
+                  <span id="error-grade_level" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
                   <label for="{{ form.material_type.id_for_label }}" class="form-label">{{ form.material_type.label }}</label>
                   {{ form.material_type }}
+                  <span id="error-material_type" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
                 </div>
               </div>
             </div>
@@ -151,10 +155,11 @@
             <div class="mb-3">
               <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
               {{ form.content }}
+              <span id="error-content" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
             </div>
 
             <div class="d-grid mt-4">
-              <button type="submit" name="action" value="save" class="btn btn-primary">
+              <button type="submit" name="action" value="save" class="btn btn-primary" id="save-material-button">
                 Tallenna materiaali
               </button>
             </div>
@@ -211,8 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({
           prompt,
           size,
-          // jos haluat välittää materiaalin UUID:n:
-          // material_id: document.getElementById('ai_image_material')?.value || null,
           return_to: 'create_material'
         })
       });
@@ -241,13 +244,109 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ta || !url) return;
 
     const md = `\n\n![Generoitu kuva](${url})\n`;
-    // lisää kohdistimen kohtaan
     const start = ta.selectionStart ?? ta.value.length;
     const end   = ta.selectionEnd ?? ta.value.length;
     ta.value = ta.value.slice(0, start) + md + ta.value.slice(end);
     ta.focus();
     ta.selectionStart = ta.selectionEnd = start + md.length;
   });
+});
+</script>
+
+<!-- New Validation Script -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const saveButton = document.getElementById('save-material-button');
+
+  // Get references to fields and their error spans
+  const fields = {
+    title: document.getElementById('{{ form.title.id_for_label }}'),
+    subject: document.getElementById('{{ form.subject.id_for_label }}'),
+    grade_level: document.getElementById('{{ form.grade_level.id_for_label }}'),
+    material_type: document.getElementById('{{ form.material_type.id_for_label }}'),
+    content: document.getElementById('{{ form.content.id_for_label }}'),
+  };
+
+  const errorSpans = {
+    title: document.getElementById('error-title'),
+    subject: document.getElementById('error-subject'),
+    grade_level: document.getElementById('error-grade_level'),
+    material_type: document.getElementById('error-material_type'),
+    content: document.getElementById('error-content'),
+  };
+
+  // Function to show an error for a specific field
+  function showError(fieldElement, errorSpanElement) {
+    fieldElement.classList.add('is-invalid'); // Add Bootstrap's invalid style
+    errorSpanElement.classList.remove('d-none'); // Show the error message
+  }
+
+  // Function to hide an error for a specific field
+  function hideError(fieldElement, errorSpanElement) {
+    fieldElement.classList.remove('is-invalid'); // Remove Bootstrap's invalid style
+    errorSpanElement.classList.add('d-none'); // Hide the error message
+  }
+
+  saveButton.addEventListener('click', (event) => {
+    let hasErrors = false;
+
+    // Reset all errors before re-validating
+    for (const key in fields) {
+      hideError(fields[key], errorSpans[key]);
+    }
+
+    // Validate Title
+    if (!fields.title.value.trim()) {
+      showError(fields.title, errorSpans.title);
+      hasErrors = true;
+    }
+
+    // Validate Subject
+    if (!fields.subject.value.trim()) {
+      showError(fields.subject, errorSpans.subject);
+      hasErrors = true;
+    }
+
+    // Validate Grade Level (select field)
+    if (!fields.grade_level.value) {
+      showError(fields.grade_level, errorSpans.grade_level);
+      hasErrors = true;
+    }
+
+    // Validate Material Type (select field)
+    if (!fields.material_type.value) {
+      showError(fields.material_type, errorSpans.material_type);
+      hasErrors = true;
+    }
+
+    // Validate Content
+    if (!fields.content.value.trim()) {
+      showError(fields.content, errorSpans.content);
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      event.preventDefault(); // Stop form submission if there are errors
+    }
+    // If no errors, form will submit normally
+  });
+
+  // Optional: Hide errors as user types/interacts
+  for (const key in fields) {
+    fields[key].addEventListener('input', () => {
+      if (fields[key].value.trim()) {
+        hideError(fields[key], errorSpans[key]);
+      }
+    });
+    // For select fields, 'change' event is more appropriate
+    if (fields[key].tagName === 'SELECT') {
+        fields[key].addEventListener('change', () => {
+            if (fields[key].value) {
+                hideError(fields[key], errorSpans[key]);
+            }
+        });
+    }
+  }
 });
 </script>
 
