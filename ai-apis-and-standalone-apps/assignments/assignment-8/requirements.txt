@@ -1,0 +1,19 @@
+﻿# Core
+gradio>=4.0.0
+numpy>=1.24
+soundfile>=0.12
+librosa>=0.10
+scipy>=1.10
+
+# STT
+faster-whisper>=1.0.0
+ctranslate2>=4.3.0
+
+# LLM
+openai>=1.40.0
+
+# (Valinnainen) TTS
+pyttsx3>=2.90
+
+# (Valinnainen, jos teet paikallisen ääninauhoituksen)
+# sounddevice>=0.4
