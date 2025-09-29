@@ -1,5 +1,5 @@
 /* ================================================= */
-/*          1. THEME DEFINITIONS                     */
+/* 1. THEME DEFINITIONS                     */
 /* ================================================= */
 
 /* --- LIGHT THEME (DEFAULT) --- */
@@ -32,7 +32,7 @@
 }
 
 /* ================================================= */
-/*           2. LAYOUT & COMPONENTS                  */
+/* 2. LAYOUT & COMPONENTS                  */
 /* ================================================= */
 .sidebar {
   background-color: var(--card-bg-color);
@@ -108,7 +108,7 @@
 }
 
 /* ================================================= */
-/*        3. GRADING PAGE & RESPONSIVE STYLES        */
+/* 3. GRADING PAGE & RESPONSIVE STYLES        */
 /* ================================================= */
 
 /* Prevent overflow */
@@ -169,7 +169,7 @@
 }
 
 /* ================================================= */
-/*  LIGHT THEME: nav/offcanvas/dropdown tekstit mustiksi  */
+/* LIGHT THEME: nav/offcanvas/dropdown tekstit mustiksi  */
 /* ================================================= */
 [data-bs-theme="light"] .navbar {
   /* Bootstrappin muuttujat navbarin väreille */
@@ -209,7 +209,7 @@
 }
 
 /* ================================================= */
-/*  LIGHT THEME: hamburger-kuvakkeen viivat mustiksi */
+/* LIGHT THEME: hamburger-kuvakkeen viivat mustiksi */
 /* ================================================= */
 [data-bs-theme="light"] .navbar {
   /* Korvataan Bootstrapin oletus-SVG mustalla viivalla */
@@ -253,6 +253,9 @@
     position: sticky;
     top: 0;
     z-index: 1030;  /* header korttien yläpuolelle */
+    
+    /* TÄMÄ ON KORJAUS: Lasketaan yläpalkille oikea leveys */
+    width: calc(100% - var(--sidebar-w)); 
   }
 }
 
@@ -378,4 +381,64 @@
   background: var(--bg-color, #0d1117);
   color: var(--text-color, #c9d1d9);
   border-color: var(--bs-border-color, #303d3d);
+}
+
+/* =======================================================
+   Materiaalin kuvien koon ja asettelun hallinta
+   ======================================================= */
+   
+/* Kohdistetaan sääntö kaikkiin kuviin, jotka ovat .card-body -elementin sisällä.
+   Tämä kattaa sekä opettajan että opiskelijan näkymät. */
+.card-body img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  
+  /* Asetetaan maksimileveys 70%:iin kortin leveydestä */
+  max-width: 70%;
+  
+  height: auto;
+}
+
+/* Mobiilinäkymässä annetaan kuvan kuitenkin täyttää koko leveys */
+@media (max-width: 767px) {
+  .card-body img {
+    max-width: 100%;
+  }
+}
+
+/* =======================================================
+   Pääasettelun korjaukset (Sidebar & Main Content)
+   ======================================================= */
+
+/* --- Mobiili ensin (< 992px) --- */
+/* Koska mobiilissa on kiinteä yläpalkki (navbar), pääsisällön 
+   sisällä olevalle täyte-elementille tarvitaan ylätäytettä. */
+.main-content .page-content-wrapper {
+  padding-top: 60px; /* Noin yläpalkin korkeus */
+}
+
+
+/* --- Työpöytänäkymä (≥ 992px) --- */
+@media (min-width: 992px) {
+  /* Sivupalkki pysyy paikallaan vasemmassa reunassa */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    height: 100vh;
+  }
+  
+  /* Pääsisältöalueelle luodaan vasen marginaali, 
+     joka on sivupalkin levyinen. */
+  .main-content {
+    margin-left: 240px;
+  }
+  
+  /* Mobiilinäkymän vaatima ylätäyte nollataan työpöytänäkymässä,
+     koska kiinteää yläpalkkia ei ole. */
+  .main-content .page-content-wrapper {
+    padding-top: 0;
+  }
 }

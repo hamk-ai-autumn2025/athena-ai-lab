@@ -13,4 +13,12 @@ class CustomUser(AbstractUser):
         STUDENT = 'STUDENT', 'Student'
 
     # This is the new field we are adding
-    role = models.CharField(max_length=50, choices=Role.choices)
+    role = models.CharField(max_length=50, choices=Role.choices, default=Role.STUDENT)
+
+    grade_class = models.PositiveSmallIntegerField(
+        verbose_name="Luokka-aste",
+        null=True,  # Salli tyhjä arvo (esim. opettajat)
+        blank=True, # Ei pakollinen lomakkeissa
+        choices=[(i, f"{i}. luokka") for i in range(1, 10)] # Valinnat 1-9
+    )
+   

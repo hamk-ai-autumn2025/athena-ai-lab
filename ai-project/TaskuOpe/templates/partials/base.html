@@ -81,12 +81,26 @@
                   <i class="bi bi-card-checklist me-2"></i>Palautukset
                 </a>
               </li>
-            {% endif %}
+             <li class="nav-item">
+                    <a class="nav-link {% if nm == 'view_all_submissions' %}active{% endif %}" href="{% url 'view_all_submissions' %}">
+                      <i class="bi bi-card-checklist me-2"></i>Palautukset
+                    </a>
+                  </li>
+
+                  <li class="nav-item">
+                    <a class="nav-link {% if nm == 'teacher_student_list' %}active{% endif %}" href="{% url 'teacher_student_list' %}">
+                      <i class="bi bi-people-fill me-2"></i>Opiskelijat
+                    </a>
+                  </li>
+              {% endif %}
 
             <!-- Profiili -->
             <li class="nav-item dropdown mt-3">
               <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                 Hei, {{ user.get_full_name|default:user.username }}!
+                    {% if user.is_authenticated and user.role == 'STUDENT' and user.grade_class %}
+                    <span class="badge bg-secondary fw-normal">{{ user.get_grade_class_display }}</span>
+                    {% endif %}
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="#">Profiili</a></li>
@@ -146,9 +160,12 @@
               </a>
               <a href="{% url 'view_all_submissions' %}" class="nav-link {% if nm == 'view_all_submissions' %}active{% endif %}">
                 <i class="bi bi-card-checklist me-2"></i>Palautukset
-              </a>
-            {% endif %}
-          </nav>
+              </a> 
+                  <a href="{% url 'teacher_student_list' %}" class="nav-link {% if nm == 'teacher_student_list' %}active{% endif %}">
+                    <i class="bi bi-people-fill me-2"></i>Opiskelijat
+                  </a>
+                  {% endif %}
+              </nav>
           {% endwith %}
 
           <div class="mt-auto text-center pb-3">
@@ -168,6 +185,9 @@
           <div class="dropdown">
             <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
               <strong>Hei, {{ user.get_full_name|default:user.username }}!</strong>
+                {% if user.is_authenticated and user.role == 'STUDENT' and user.grade_class %}
+                <small class="ms-2 badge bg-secondary fw-normal">{{ user.get_grade_class_display }}</small>
+                {% endif %}
             </a>
             <ul class="dropdown-menu dropdown-menu-end text-small shadow">
               <li><a class="dropdown-item" href="#">Profiili</a></li>
@@ -182,7 +202,7 @@
           </div>
         </header>
 
-        <div class="p-4">
+        <div class="p-4 page-content-wrapper">
           <!-- Spacer vain mobiilissa, jotta fixed-top navbar ei peitä sisältöä -->
           <div style="height: 56px;" class="d-lg-none"></div>
           {% include "partials/messages.html" %}

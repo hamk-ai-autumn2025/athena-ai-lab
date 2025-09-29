@@ -47,4 +47,5 @@ urlpatterns = [
  
     path("materials/<uuid:material_id>/images/<int:image_id>/insert/", views.material_image_insert_view, name="material_image_insert"),
 
+    path('students/', views.teacher_student_list_view, name='teacher_student_list'),
 ]

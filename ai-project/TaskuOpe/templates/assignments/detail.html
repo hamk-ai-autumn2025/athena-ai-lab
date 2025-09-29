@@ -51,8 +51,7 @@
     <div class="col-lg-5">
       <div class="card shadow-sm sticky-top" style="top: 20px;">
 
-        {% if readonly %}
-          <!-- Lukutila: palautettu/arvioitu -->
+{% if readonly %}
           <div class="card-header">
             <h5 class="mb-0">Vastaus lähetetty</h5>
           </div>
@@ -63,9 +62,13 @@
 
             {% with submission=assignment.submissions.last %}
               {% if submission %}
-                <h6 class="text-muted mt-4">Oma vastauksesi:</h6>
+                
+                <div class="d-flex justify-content-between align-items-baseline mt-4">
+                  <h6 class="text-muted">Oma vastauksesi:</h6>
+                  <small id="word-count-display" class="text-muted"></small>
+                </div>
                 <div class="p-3 border rounded bg-light mb-4">
-                  <pre style="white-space: pre-wrap; font-family: inherit;">{{ submission.response }}</pre>
+                  <pre id="submission-response-text" style="white-space: pre-wrap; font-family: inherit;">{{ submission.response }}</pre>
                 </div>
 
                 {% if submission.submitted_at %}
@@ -85,18 +88,21 @@
                         {% if submission.score is not None %}{{ submission.score|floatformat:"-2" }}{% else %}–{% endif %}{% if submission.max_score is not None %} / {{ submission.max_score|floatformat:"-2" }}{% endif %}
                       </span>
                     </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                      Opettajan palaute
-                      <span class="text-break ms-3">
-                        {% if submission.feedback %}
-                          {{ submission.feedback|linebreaksbr }}
-                        {% else %}
-                          –
-                        {% endif %}
-                      </span>
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span>Opettajan palaute</span>
+                            <span class="text-break ms-3 text-end">
+                                {% if submission.feedback %}
+                                {{ submission.feedback|linebreaksbr }}
+                                {% else %}
+                                –
+                                {% endif %}
+                            </span>
+                        </div>
                     </li>
                   </ul>
                 {% endif %}
+
               {% endif %}
             {% endwith %}
           </div>
@@ -178,4 +184,29 @@
     </div>
   </div>
 </div>
+{# LISÄÄ TÄMÄ SCRIPT-LOHKO TÄHÄN #}
+{% if readonly and assignment.submissions.last %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Etsi elementti, joka sisältää vastauksen tekstin
+  const responseElement = document.getElementById('submission-response-text');
+  
+  // Etsi elementti, johon sanamäärä tulostetaan
+  const displayElement = document.getElementById('word-count-display');
+
+  if (responseElement && displayElement) {
+    // Hae teksti ja poista ylimääräiset välilyönnit
+    const text = responseElement.textContent.trim();
+    
+    // Laske sanat: jaa teksti välilyöntien kohdalta ja suodata tyhjät pois
+    const words = text.split(/\s+/).filter(word => word.length > 0);
+    const wordCount = text === '' ? 0 : words.length;
+    
+    // Näytä tulos
+    displayElement.textContent = `Sanoja: ${wordCount}`;
+  }
+});
+</script>
+{% endif %}
 {% endblock content %}
+

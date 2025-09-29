@@ -946,15 +946,43 @@ _MD_IMG = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
 
 def render_material_content_to_html(text: str) -> str:
     """
-    Kevyt renderöinti: muutetaan Markdown-kuvat <img>-tageiksi ja säilytetään rivinvaihdot.
-    Jos haluat täyden markdown-renderöinnin, korvaa tämä md.markdown()-kutsulla.
+    Muutetaan Markdown-kuvat responsiivisiksi <img>-tageiksi ja säilytetään rivinvaihdot.
     """
     if not text:
         return ""
+    
     html = _MD_IMG.sub(
-        r'<figure class="my-3"><img src="\2" alt="\1" class="img-fluid rounded border">'
-        r'<figcaption class="small text-muted">\1</figcaption></figure>',
+        r'<img src="\2" alt="\1" class="img-fluid rounded border my-3">',
         text,
     )
+    
     html = html.replace("\n", "<br>")
     return mark_safe(html)
+
+@login_required
+def teacher_student_list_view(request):
+    if request.user.role != 'TEACHER':
+        messages.error(request, "Vain opettajat voivat hallita opiskelijoita.")
+        return redirect('dashboard')
+
+    if request.method == 'POST' and request.POST.get('action') == 'update_grades':
+        for key, value in request.POST.items():
+            if key.startswith('student-'):
+                student_id = int(key.split('-')[1])
+                try:
+                    student = CustomUser.objects.get(id=student_id, role='STUDENT')
+                    student.grade_class = int(value) if value else None
+                    student.save(update_fields=['grade_class'])
+                except (CustomUser.DoesNotExist, ValueError):
+                    continue
+        messages.success(request, "Oppilaiden luokkatiedot päivitetty.")
+        return redirect('teacher_student_list')
+
+    students = CustomUser.objects.filter(role='STUDENT').order_by('last_name', 'first_name')
+    grade_choices = CustomUser._meta.get_field('grade_class').choices
+
+    context = {
+        'students': students,
+        'grade_choices': grade_choices,
+    }
+    return render(request, 'materials/teacher_student_list.html', context)
