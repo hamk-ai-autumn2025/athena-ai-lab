@@ -412,6 +412,39 @@ def view_submissions(request, material_id):
         'assignments': assignments
     })
 
+# Arvosanan laskenta pistemäärästä
+
+def _calculate_grade_from_score(score, max_score):
+    """
+    Converts a score into a grade (4-10) based on the percentage.
+    NOTE: You can edit the percentage thresholds to fit your needs!
+    """
+    # Ensure the values are numbers and avoid division by zero
+    try:
+        score_num = float(score)
+        max_score_num = float(max_score)
+        if max_score_num == 0:
+            return None
+    except (TypeError, ValueError):
+        return None  # Return None if score is not defined
+
+    percentage = (score_num / max_score_num) * 100
+
+    if percentage < 40:
+        return 4
+    elif percentage < 50:
+        return 5
+    elif percentage < 60:
+        return 6
+    elif percentage < 70:
+        return 7
+    elif percentage < 80:
+        return 8
+    elif percentage < 90:
+        return 9
+    else:
+        return 10
+
 
 @login_required(login_url='kirjaudu')
 @transaction.atomic
@@ -424,63 +457,74 @@ def grade_submission_view(request, submission_id):
     assignment = submission.assignment
     material = assignment.material
 
+    # Authorization check
     if request.user.role != "TEACHER" or material.author_id != request.user.id:
-        messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
+        messages.error(request, "You are not authorized to grade this submission.")
         return redirect('dashboard')
 
-    # --- AI-rubriikkiarviointi: luonti napista ---
+    # --- AI rubric grading: generate from button press ---
     if request.method == 'POST' and 'run_ai_grade' in request.POST:
         try:
             ag = create_or_update_ai_grade(submission)
-            messages.success(request, f"AI-arviointiehdotus luotu ({ag.total_points:.1f} p).")
+            messages.success(request, f"AI grade suggestion created ({ag.total_points:.1f} points).")
         except Exception as e:
-            messages.error(request, f"AI-arviointi epäonnistui: {e}")
+            messages.error(request, f"AI grading failed: {e}")
         return redirect('grade_submission', submission_id=submission.id)
 
-    # --- AI-rubriikkiarviointi: hyväksy ehdotus kenttiin ---
+    # --- AI rubric grading: accept suggestion into fields ---
     if request.method == 'POST' and 'accept_ai_grade' in request.POST:
         ag = getattr(submission, 'ai_grade', None)
         if not ag:
-            messages.error(request, "AI-arviointiehdotusta ei ole.")
+            messages.error(request, "AI grade suggestion does not exist.")
             return redirect('grade_submission', submission_id=submission.id)
 
-        # Kopioi kriteerikohtaiset pisteet ja palautteet submissionin kenttiin
+        # Copy criterion-specific scores and feedback to submission fields
         max_total = sum(int(c.get("max", 0)) for c in ag.details.get("criteria", []))
         submission.score = ag.total_points
         submission.max_score = max_total or None
 
+        # Format the feedback text
         lines = []
         for c in ag.details.get("criteria", []):
             lines.append(f"- {c.get('name')}: {c.get('points')}/{c.get('max')} – {c.get('feedback')}")
-        gen = ag.details.get("general_feedback") or ""
-        if gen:
+        gen_feedback = ag.details.get("general_feedback") or ""
+        if gen_feedback:
             lines.append("")
-            lines.append(gen)
+            lines.append(gen_feedback)
         submission.feedback = "\n".join(lines).strip()
-        submission.save(update_fields=["score", "max_score", "feedback"])
 
-        messages.success(request, "AI-ehdotus kopioitu arviointikenttiin. Voit vielä muokata ja tallentaa.")
+        # --- ADDED PART ---
+        # Calculate and set the grade using the new helper function
+        calculated_grade = _calculate_grade_from_score(submission.score, submission.max_score)
+        if calculated_grade is not None:
+            submission.grade = calculated_grade
+        # --- END OF ADDED PART ---
+
+        # --- MODIFIED LINE: Added 'grade' to the list of fields to save ---
+        submission.save(update_fields=["score", "max_score", "feedback", "grade"])
+
+        messages.success(request, "AI suggestion copied to grading fields. You can now edit and save.")
         return redirect('grade_submission', submission_id=submission.id)
 
-    # 👉 Plagiointitarkistus napista (ei automaattisesti)
+    # --- Plagiarism check from button press ---
     if request.method == 'POST' and 'run_plagiarism' in request.POST:
         try:
             report = build_or_update_report(submission)
             if report.suspected_source:
                 messages.success(
                     request,
-                    f"Alkuperäisyysraportti päivitetty. Samankaltaisuus: {report.score:.2f}"
+                    f"Originality report updated. Similarity: {report.score:.2f}"
                 )
             else:
                 messages.info(
                     request,
-                    "Raportti päivitetty. Merkittävää samankaltaisuutta ei löytynyt."
+                    "Report updated. No significant similarity was found."
                 )
         except Exception as e:
-            messages.error(request, f"Raportin luonti epäonnistui: {e}")
-        # Redirect, jotta POST ei toistu (PRG-malli)
+            messages.error(request, f"Failed to generate report: {e}")
         return redirect('grade_submission', submission_id=submission.id)
 
+    # --- Final form submission (saving the manual grade) ---
     if request.method == 'POST':
         form = GradingForm(request.POST, instance=submission)
         if form.is_valid():
@@ -491,12 +535,12 @@ def grade_submission_view(request, submission_id):
             assignment.status = Assignment.Status.GRADED
             assignment.save(update_fields=['status'])
 
-            messages.success(request, "Arviointi tallennettu.")
+            messages.success(request, "Grade saved successfully.")
             return redirect('view_submissions', material_id=material.id)
     else:
         form = GradingForm(instance=submission)
 
-    # Viedään mahdolliset raportit/ehdotukset templaatille
+    # Pass potential reports and suggestions to the template
     plagiarism_report = getattr(submission, "plagiarism_report", None)
     ai_grade = getattr(submission, "ai_grade", None)
 
