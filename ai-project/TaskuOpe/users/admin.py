@@ -1,33 +1,53 @@
+# ai-project/users/admin.py
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser
+# TUO OMAT LOMAKKEESI
+from .forms import CustomUserCreationForm, CustomUserChangeForm
 
+# Käytetään @admin.register-dekoraattoria, kuten aiemminkin
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     """
-    Show the CustomUser with the extra 'role' and 'grade_class' fields 
-    and keep the standard Django auth admin behavior.
+    LOPULLINEN ADMIN-MÄÄRITYS:
+    - Käyttää omia, turvallisia lomakkeita (`CustomUserCreationForm`, `CustomUserChangeForm`).
+    - Näyttää kaikki halutut kentät (`role`, `grade_class`, `email`, yms.) sekä lista- että muokkausnäkymissä.
     """
 
-    # --- MUUTETUT KOHDAT ---
+    # --- UUDET, TIETOTURVAA PARANTAVAT LISÄYKSET ---
+    # Nämä ottavat omat lomakkeesi käyttöön admin-paneelissa.
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = CustomUser
 
-    # 1. Lisätty 'grade_class' listanäkymään
+    # --- OLEMASSA OLEVAT, HYVÄT ASETUKSESI (SÄILYTETTY) ---
     list_display = ("username", "email", "first_name", "last_name", "role", "grade_class", "is_staff", "is_active")
-    
-    # 2. Lisätty 'grade_class' suodattimiin
     list_filter = ("role", "grade_class", "is_staff", "is_superuser", "is_active")
-
-    # 3. Sallitaan luokan muokkaus suoraan listasta
     list_editable = ("grade_class",)
+    search_fields = ("username", "email", "first_name", "last_name")
+    ordering = ("username",)
 
-    # 4. Lisätty 'grade_class' muokkaus- ja lisäysnäkymiin 'role'-kentän viereen
+    # --- PÄIVITETYT KENTTÄMÄÄRITYKSET ---
+
+    # 1. Muokkausnäkymä (fieldsets) on jo kunnossa, säilytetään se ennallaan.
     fieldsets = UserAdmin.fieldsets + (
         ("Rooli ja luokka", {"fields": ("role", "grade_class")}),
     )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ("Rooli ja luokka", {"fields": ("role", "grade_class")}),
-    )
 
-    # --- AIEMMAT ASETUKSET (säilytetty) ---
-    search_fields = ("username", "email", "first_name", "last_name")
-    ordering = ("username",)
+    # 2. Uuden käyttäjän luontinäkymä (add_fieldsets) on nyt TÄYDENNETTY.
+    #    Tämä näyttää salasanakenttien LISÄKSI myös nimen, sähköpostin ja roolin/luokan.
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        (
+            "Käyttäjän perustiedot",
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "email",
+                    "role",
+                    "grade_class",
+                )
+            },
+        ),
+    )
