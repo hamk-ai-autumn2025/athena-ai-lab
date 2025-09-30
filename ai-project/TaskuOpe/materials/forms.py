@@ -1,5 +1,6 @@
 from django import forms
 from decimal import Decimal, InvalidOperation
+from django.core.exceptions import ValidationError
 
 # Import the models we need to build forms from
 from .models import Material, Submission, Assignment
@@ -25,23 +26,15 @@ class MaterialForm(forms.ModelForm):
             "grade_level": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        grade_choices = self.fields['grade_level'].choices
-        self.fields['grade_level'].choices = [('', 'Valitse luokka')] + list(grade_choices)[1:]
-        type_choices = self.fields['material_type'].choices
-        self.fields['material_type'].choices = [('', 'Valitse materiaalin tyyppi')] + list(type_choices)[1:]
-
-
-    # This method adds the custom placeholders to the dropdowns
+    # KORJATTU: Molemmat aiemmat __init__-metodit on nyt yhdistetty tähän yhteen.
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # For the Class Grade dropdown
+        # Lisää "Valitse luokka" -vaihtoehdon pudotusvalikkoon
         grade_choices = self.fields['grade_level'].choices
         self.fields['grade_level'].choices = [('', 'Valitse luokka')] + list(grade_choices)[1:]
 
-        # For the Material Type dropdown
+        # Lisää "Valitse materiaalin tyyppi" -vaihtoehdon pudotusvalikkoon
         type_choices = self.fields['material_type'].choices
         self.fields['material_type'].choices = [('', 'Valitse materiaalin tyyppi')] + list(type_choices)[1:]
 
@@ -114,11 +107,32 @@ class GradingForm(forms.ModelForm):
         instance = kwargs.get("instance")
         self.fields["grade"].initial = str(instance.grade) if instance and instance.grade is not None else ''
 
+    # LISÄTTY: Kenttien välinen validointi, joka estää loogiset virheet.
+
+    def clean(self):
+        cleaned_data = super().clean()
+        score = cleaned_data.get("score")
+        max_score = cleaned_data.get("max_score")
+
+        # Tarkistetaan, että molemmat kentät on täytetty, ennen kuin verrataan
+        if score is not None and max_score is not None:
+            if score > max_score:
+                # KORVATTU: Käytetään add_error-metodia, joka liittää virheen
+                # suoraan 'score'-kenttään. Tämä näkyy templaatissa.
+                self.add_error('score', "Saadut pisteet eivät voi olla suuremmat kuin maksimipisteet.")
+        
+        return cleaned_data
 
 
 class AddImageForm(forms.Form):
     upload = forms.ImageField(required=False, label="Lataa kuva")
-    gen_prompt = forms.CharField(required=False, label="Kuvaile generoitu kuva")
+    # LISÄTTY: max_length rajoittaa syötteen pituutta ja parantaa turvallisuutta.
+    gen_prompt = forms.CharField(
+        required=False, 
+        label="Kuvaile generoitu kuva",
+        max_length=1000, 
+        widget=forms.Textarea(attrs={'rows': 3})
+    )
     caption = forms.CharField(required=False, max_length=255, label="Kuvateksti")
 
     def clean(self):
@@ -126,6 +140,7 @@ class AddImageForm(forms.Form):
         if not cleaned.get("upload") and not cleaned.get("gen_prompt"):
             raise forms.ValidationError("Valitse joko tiedoston lataus tai kirjoita generointikehote.")
         return cleaned
+
 
 class AssignForm(forms.Form):
     students = forms.ModelMultipleChoiceField(

@@ -51,147 +51,231 @@
       </div>
     </div>
 
-<!-- Right Column -->
-<div class="col-12 col-lg-4 d-flex">
-  <div class="card flex-grow-1 w-100">
-    <div class="card-header fw-bold">Arviointi</div>
-    <div class="card-body ai-suggest">  {# <<< WRAPPER LISÄTTY #}
+    <!-- Right Column -->
+    <div class="col-12 col-lg-4 d-flex">
+      <div class="card flex-grow-1 w-100">
+        <div class="card-header fw-bold">Arviointi</div>
+        <div class="card-body ai-suggest">
 
-      <!-- Alkuperäisyystarkistus (olemassa) -->
-      {% if user.is_authenticated and user.role == 'TEACHER' %}
-        <form method="post" class="mb-2">
-          {% csrf_token %}
-          <button type="submit" name="run_plagiarism" class="btn btn-outline-danger w-100">
-            Tarkista alkuperäisyys (AI)
-          </button>
-        </form>
-        <div class="text-muted small mb-3">
-          Tämä tarkistus arvioi tekoälyn avulla, onko vastaus mahdollisesti
-          <strong>tekoälyn tuottama</strong> ja löytyykö siitä
-          <strong>samankaltaisuutta</strong> muihin saman tehtävän palautuksiin verrattuna.
-          Tulosta käytetään opettajan tukena – se <em>ei tee päätöksiä puolestasi</em>.
-        </div>
-
-        {% if plagiarism_report %}
-          <div class="mb-3 ai-box p-3">  {# <<< LAATIKKO TUMMAKSI #}
-            <div class="fw-semibold">Alkuperäisyysraportti</div>
-            <div class="mb-1">
-              Arvioitu plagiointiriski (0–1): <strong>{{ plagiarism_report.score|floatformat:2 }}</strong>
+          <!-- ... (AI- ja plagiointiosiot pysyvät täysin samoina) ... -->
+          {% if user.is_authenticated and user.role == 'TEACHER' %}
+            <form method="post" class="mb-2">
+              {% csrf_token %}
+              <button type="submit" name="run_plagiarism" class="btn btn-outline-danger w-100">
+                Tarkista alkuperäisyys (AI)
+              </button>
+            </form>
+            <div class="text-muted small mb-3">
+              Tämä tarkistus arvioi tekoälyn avulla, onko vastaus mahdollisesti
+              <strong>tekoälyn tuottama</strong> ja löytyykö siitä
+              <strong>samankaltaisuutta</strong> muihin saman tehtävän palautuksiin verrattuna.
+              Tulosta käytetään opettajan tukena – se <em>ei tee päätöksiä puolestasi</em>.
             </div>
-            <div class="text-muted small mb-2">
-              <strong>Tulkinta:</strong> 0.00–0.29 = matala, 0.30–0.59 = kohtalainen, 0.60–1.00 = korkea.
-            </div>
-            {% if plagiarism_report.suspected_source %}
-              <div class="mb-2">
-                Mahdollinen lähde: {{ plagiarism_report.suspected_source.student.username }}
-              </div>
-            {% endif %}
-            {% if plagiarism_report.highlights %}
-              <details class="mt-2">
-                <summary>Näytä AI:n huomiot ja esimerkit</summary>
-                <div class="ai-box p-2 mt-2" style="white-space:pre-wrap;">  {# <<< TUMMA #}
-                  {{ plagiarism_report.highlights|safe }}
+    
+            {% if plagiarism_report %}
+              <div class="mb-3 ai-box p-3">
+                <div class="fw-semibold">Alkuperäisyysraportti</div>
+                <div class="mb-1">
+                  Arvioitu plagiointiriski (0–1): <strong>{{ plagiarism_report.score|floatformat:2 }}</strong>
                 </div>
-              </details>
-            {% endif %}
-          </div>
-        {% endif %}
-      {% endif %}
-      <!-- /Alkuperäisyystarkistus -->
-
-      <hr class="my-3">
-
-      <!-- AI-rubriikkiarvioinnin EHDOTUS -->
-      {% if user.is_authenticated and user.role == 'TEACHER' %}
-        <form method="post" class="mb-2">
-          {% csrf_token %}
-          <button type="submit" name="run_ai_grade" class="btn btn-outline-primary w-100">
-            Luo tekoälyn arviointiehdotus
-          </button>
-        </form>
-
-        {% if ai_grade %}
-          <button class="btn btn-outline-secondary w-100 text-start" type="button"
-                  data-bs-toggle="collapse" data-bs-target="#aiGradePanel"
-                  aria-expanded="true" aria-controls="aiGradePanel">
-            <span class="fw-semibold">AI-arviointiehdotus</span>
-            <span class="text-muted"> – yhteispisteet {{ ai_grade.total_points|floatformat:"-1" }}</span>
-          </button>
-
-          <div class="collapse show" id="aiGradePanel">
-            <div class="ai-box p-3 mt-2">  {# <<< TUMMA LAATIKKO #}
-              <div class="small text-muted mb-2">
-                Ehdotus on suuntaa-antava. Tarkista ja muokkaa tarvittaessa ennen tallennusta.
-              </div>
-
-              <ul class="list-group mb-2">
-                {% for c in ai_grade.details.criteria %}
-                  <li class="list-group-item">
-                    <div class="d-flex justify-content-between">
-                      <strong class="me-2">{{ c.name }}</strong>
-                      <span>{{ c.points }}/{{ c.max }}</span>
+                <div class="text-muted small mb-2">
+                  <strong>Tulkinta:</strong> 0.00–0.29 = matala, 0.30–0.59 = kohtalainen, 0.60–1.00 = korkea.
+                </div>
+                {% if plagiarism_report.suspected_source %}
+                  <div class="mb-2">
+                    Mahdollinen lähde: {{ plagiarism_report.suspected_source.student.username }}
+                  </div>
+                {% endif %}
+                {% if plagiarism_report.highlights %}
+                  <details class="mt-2">
+                    <summary>Näytä AI:n huomiot ja esimerkit</summary>
+                    <div class="ai-box p-2 mt-2" style="white-space:pre-wrap;">
+                      {{ plagiarism_report.highlights|safe }}
                     </div>
-                    {% if c.feedback %}
-                      <div class="small text-muted mt-1" style="white-space:pre-wrap;">{{ c.feedback }}</div>
-                    {% endif %}
-                  </li>
-                {% empty %}
-                  <li class="list-group-item text-muted">Ei kriteereitä.</li>
-                {% endfor %}
-              </ul>
+                  </details>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endif %}
+          <hr class="my-3">
+          {% if user.is_authenticated and user.role == 'TEACHER' %}
+            <form method="post" class="mb-2">
+              {% csrf_token %}
+              <button type="submit" name="run_ai_grade" class="btn btn-outline-primary w-100">
+                Luo tekoälyn arviointiehdotus
+              </button>
+            </form>
+    
+            {% if ai_grade %}
+              <button class="btn btn-outline-secondary w-100 text-start" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#aiGradePanel"
+                      aria-expanded="true" aria-controls="aiGradePanel">
+                <span class="fw-semibold">AI-arviointiehdotus</span>
+                <span class="text-muted"> – yhteispisteet {{ ai_grade.total_points|floatformat:"-1" }}</span>
+              </button>
+    
+              <div class="collapse show" id="aiGradePanel">
+                <div class="ai-box p-3 mt-2">
+                  <div class="small text-muted mb-2">
+                    Ehdotus on suuntaa-antava. Tarkista ja muokkaa tarvittaessa ennen tallennusta.
+                  </div>
+    
+                  <ul class="list-group mb-2">
+                    {% for c in ai_grade.details.criteria %}
+                      <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                          <strong class="me-2">{{ c.name }}</strong>
+                          <span>{{ c.points }}/{{ c.max }}</span>
+                        </div>
+                        {% if c.feedback %}
+                          <div class="small text-muted mt-1" style="white-space:pre-wrap;">{{ c.feedback }}</div>
+                        {% endif %}
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-muted">Ei kriteereitä.</li>
+                    {% endfor %}
+                  </ul>
+    
+                  {% if ai_grade.details.general_feedback %}
+                    <div class="ai-box p-2 mb-2" style="white-space:pre-wrap;">
+                      {{ ai_grade.details.general_feedback }}
+                    </div>
+                  {% endif %}
+    
+                  <form method="post" class="d-grid">
+                    {% csrf_token %}
+                    <button type="submit" name="accept_ai_grade" class="btn btn-outline-success">
+                      Hyväksy ehdotus arviointikenttiin
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endif %}
+          {% endif %}
+          <hr class="my-3">
 
-              {% if ai_grade.details.general_feedback %}
-                <div class="ai-box p-2 mb-2" style="white-space:pre-wrap;">  {# <<< KORVAA bg-light #}
-                  {{ ai_grade.details.general_feedback }}
+          <!-- Varsinainen arviointilomake -->
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- NÄYTÄ DJANGON LOMAKEVIRHEET (esim. pisteiden vertailu) -->
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+            {% for field in form %}
+              {% if field.errors %}
+                <div class="alert alert-danger" role="alert">
+                  <strong>{{ field.label }}:</strong> {{ field.errors.as_text }}
                 </div>
               {% endif %}
+            {% endfor %}
 
-              <form method="post" class="d-grid">
-                {% csrf_token %}
-                <button type="submit" name="accept_ai_grade" class="btn btn-outline-success">
-                  Hyväksy ehdotus arviointikenttiin
-                </button>
-              </form>
+            <div class="mb-3">
+              <label for="{{ form.grade.id_for_label }}" class="form-label">Arvosana (4–10) – valinnainen</label>
+              {{ form.grade }}
             </div>
-          </div>
-        {% endif %}
-      {% endif %}
-      <!-- /AI-rubriikkiarvioinnin EHDOTUS -->
 
-      <hr class="my-3">
+            <div class="mb-3">
+              <label for="{{ form.score.id_for_label }}" class="form-label">Saadut pisteet</label>
+              {{ form.score }}
+              <!-- LISÄTTY: Virheviesti pisteille -->
+              <span id="error-score" class="text-danger small d-none"></span>
+            </div>
 
-      <!-- Varsinainen arviointilomake -->
-      <form method="post">
-        {% csrf_token %}
+            <div class="mb-3">
+              <label for="{{ form.max_score.id_for_label }}" class="form-label">Maksimipisteet</label>
+              {{ form.max_score }}
+            </div>
 
-        <div class="mb-3">
-          <label for="{{ form.grade.id_for_label }}" class="form-label">Arvosana (4–10) – valinnainen</label>
-          {{ form.grade }}
+            <div class="mb-3">
+              <label for="{{ form.feedback.id_for_label }}" class="form-label">Palaute</label>
+              {{ form.feedback }}
+              <!-- LISÄTTY: Virheviesti palautteelle -->
+              <span id="error-feedback" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
+            </div>
+
+            <button class="btn btn-primary w-100" type="submit" id="save-grade-button">Tallenna arviointi</button>
+          </form>
         </div>
-
-        <div class="mb-3">
-          <label for="{{ form.score.id_for_label }}" class="form-label">Saadut pisteet</label>
-          {{ form.score }}
-        </div>
-
-        <div class="mb-3">
-          <label for="{{ form.max_score.id_for_label }}" class="form-label">Maksimipisteet</label>
-          {{ form.max_score }}
-        </div>
-
-        <div class="mb-3">
-          <label for="{{ form.feedback.id_for_label }}" class="form-label">Palaute</label>
-          {{ form.feedback }}
-        </div>
-
-        <button class="btn btn-primary w-100" type="submit">Tallenna arviointi</button>
-      </form>
-      <!-- /Varsinainen arviointilomake -->
-
+      </div>
     </div>
   </div>
 </div>
 
-  </div>
-</div>
+<!-- LISÄTTY: UUSI VALIDointiSKRIPTI -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const saveButton = document.getElementById('save-grade-button');
+
+  const fields = {
+    score: document.getElementById('{{ form.score.id_for_label }}'),
+    max_score: document.getElementById('{{ form.max_score.id_for_label }}'),
+    feedback: document.getElementById('{{ form.feedback.id_for_label }}'),
+  };
+
+  const errorSpans = {
+    score: document.getElementById('error-score'),
+    feedback: document.getElementById('error-feedback'),
+  };
+
+  function showError(fieldKey, message) {
+    const fieldElement = fields[fieldKey];
+    const errorSpanElement = errorSpans[fieldKey];
+    if (fieldElement && errorSpanElement) {
+      fieldElement.classList.add('is-invalid');
+      errorSpanElement.textContent = message;
+      errorSpanElement.classList.remove('d-none');
+    }
+  }
+
+  function hideError(fieldKey) {
+    const fieldElement = fields[fieldKey];
+    const errorSpanElement = errorSpans[fieldKey];
+    if (fieldElement && errorSpanElement) {
+      fieldElement.classList.remove('is-invalid');
+      errorSpanElement.classList.add('d-none');
+    }
+  }
+
+  saveButton.addEventListener('click', (event) => {
+    let hasErrors = false;
+
+    // Nollaa virheet
+    hideError('score');
+    hideError('feedback');
+
+    // 1. Tarkista pakollinen palaute
+    if (!fields.feedback.value.trim()) {
+      showError('feedback', 'Tämä kenttä on pakollinen.');
+      hasErrors = true;
+    }
+
+    // 2. Tarkista, että pisteet ovat loogisia
+    const scoreVal = parseFloat(fields.score.value);
+    const maxScoreVal = parseFloat(fields.max_score.value);
+
+    // Verrataan vain, jos molemmat ovat validia numeroita
+    if (!isNaN(scoreVal) && !isNaN(maxScoreVal)) {
+      if (scoreVal > maxScoreVal) {
+        showError('score', 'Saadut pisteet eivät voi olla suuremmat kuin maksimipisteet.');
+        hasErrors = true;
+      }
+    }
+
+    if (hasErrors) {
+      event.preventDefault(); // Estä lomakkeen lähetys, jos virheitä löytyi
+    }
+  });
+
+  // Valinnainen: Piilota virheet, kun käyttäjä alkaa korjata niitä
+  for (const key in fields) {
+    fields[key].addEventListener('input', () => {
+      hideError(key);
+    });
+  }
+});
+</script>
+
 {% endblock %}
