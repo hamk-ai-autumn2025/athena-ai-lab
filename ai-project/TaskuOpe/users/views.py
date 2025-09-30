@@ -4,6 +4,8 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 # --- NEW: Import the custom form we created ---
 from .forms import CustomLoginForm
@@ -33,3 +35,18 @@ def simple_logout(request):
     logout(request)
     messages.info(request, "Olet kirjautunut ulos.")
     return redirect("kirjaudu")
+
+@login_required(login_url='kirjaudu')
+def profile_view(request):
+    """Näyttää sisäänkirjautuneen käyttäjän profiilisivun."""
+    
+    # Haetaan käyttäjä suoraan pyynnöstä. Ei tarvitse hakea tietokannasta.
+    user = request.user
+
+    # Välitetään käyttäjäobjekti templatelle 'user'-nimisessä kontekstimuuttujassa.
+    context = {
+        'user': user
+    }
+
+    # Pyydetään Djangoa renderöimään 'profile.html'-sivu ja antamaan sille data.
+    return render(request, 'registration/profile.html', context)

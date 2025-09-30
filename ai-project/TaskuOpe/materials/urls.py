@@ -1,11 +1,17 @@
 from django.urls import path
 from . import views
+from users import views as user_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 
 urlpatterns = [
     # Dashboard
     path("", views.dashboard_view, name='dashboard'),
+
+    #Profiili
+    path('profile/', user_views.profile_view, name='profile'),
 
     # Yleiset
     path("palautukset/", views.view_all_submissions_view, name="view_all_submissions"),
@@ -49,3 +55,8 @@ urlpatterns = [
 
     path('students/', views.teacher_student_list_view, name='teacher_student_list'),
 ]
+
+# LISÄÄ TÄMÄ LOHKO TIEDOSTON LOPPUUN
+# Tämä on tärkeää, jotta voit nähdä esim. profiilikuvat kehitysvaiheessa.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

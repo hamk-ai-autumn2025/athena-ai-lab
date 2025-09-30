@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}TaskuOpettaja{% endblock %}</title>
 
-  <!-- CHANGE 1: Added the favicon link -->
   <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
 
   <script>
@@ -31,7 +30,6 @@
   <!-- MOBILE NAVBAR (vain < lg) -->
   <nav class="navbar fixed-top d-lg-none navbar-dark bg-body">
     <div class="container-fluid">
-      <!-- CHANGE 2: Replaced text with logo in mobile navbar -->
       <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
         <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" height="30">
       </a>
@@ -103,7 +101,8 @@
                     {% endif %}
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#">Profiili</a></li>
+                <!-- === KORJATTU LINKKI 1 === -->
+                <li><a class="dropdown-item" href="{% url 'profile' %}">Profiili</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <a href="#" class="dropdown-item"
                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -132,7 +131,6 @@
       <!-- DESKTOP SIDEBAR (vain ≥ lg) -->
       <aside class="col-lg-2 d-none d-lg-flex sidebar position-fixed flex-column h-100">
         <div class="flex-column w-100">
-          <!-- CHANGE 3: Replaced h3 text with a clickable logo image -->
           <a href="{% url 'dashboard' %}" class="px-3 pt-3 d-block">
             <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" class="img-fluid">
           </a>
@@ -190,7 +188,8 @@
                 {% endif %}
             </a>
             <ul class="dropdown-menu dropdown-menu-end text-small shadow">
-              <li><a class="dropdown-item" href="#">Profiili</a></li>
+              <!-- === KORJATTU LINKKI 2 === -->
+              <li><a class="dropdown-item" href="{% url 'profile' %}">Profiili</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
               <a href="#" class="dropdown-item"
