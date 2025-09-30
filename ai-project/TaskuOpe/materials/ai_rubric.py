@@ -41,12 +41,25 @@ def _ensure_default_rubric(material: Material) -> Rubric:
 
 
 def _build_prompt(material: Material, submission: Submission, criteria: List[RubricCriterion]) -> str:
+    # --- MUUTOS ALKAA TÄSTÄ ---
+    # Haetaan tehtävän luokkataso materiaalin tiedoista turvallisesti.
+    grade_level_prompt_line = ""
+    try:
+        # Polku on submission -> assignment -> material -> grade_level
+        grade_level = submission.assignment.material.grade_level
+        if grade_level:
+            # Muotoillaan selkeä ohje tekoälylle.
+            grade_level_prompt_line = f"HUOMIOITAVA LUOKKATASO: Tämä tehtävä on suunniteltu {grade_level}. luokan oppilaalle. Arvioi vastaus tämän ikätason vaatimusten mukaisesti.\n"
+    except Exception:
+        # Jos tietoa ei jostain syystä löydy, jatketaan ilman sitä.
+        pass
+    # --- MUUTOS PÄÄTTYY TÄHÄN ---
+
     criterialines = []
     for c in criteria:
         criterialines.append(f'- "{c.name}" (max {c.max_points} p): {c.guidance or ""}'.strip())
 
     material_excerpt = (material.content or "").strip()
-    # Pidä prompt siistinä: tarpeen mukaan lyhennä pitkää materiaalia
     if len(material_excerpt) > 2500:
         material_excerpt = material_excerpt[:2500] + " …"
 
@@ -56,6 +69,7 @@ def _build_prompt(material: Material, submission: Submission, criteria: List[Rub
 Tehtävä: Arvioi oppilaan vastaus rubriikin perusteella ja anna pisteet kullekin kriteerille.
 Pisteytys vain kokonaislukuna välillä 0..max kriteerikohtaisesti. Anna lisäksi lyhyt palaute.
 
+{grade_level_prompt_line} # <-- TÄSSÄ LISÄTTY TIETO LUOKKATASOSTA
 MATERIAALIN OTSIKKO: {material.title}
 TEHTÄVÄN KUVAUS (ote):
 \"\"\"{material_excerpt}\"\"\"
@@ -86,11 +100,9 @@ def _extract_json_block(text: str) -> Dict[str, Any]:
     Yrittää löytää ja jäsentää ensimmäisen JSON-lohkon vastauksesta.
     Palauttaa dictin tai {}.
     """
-    # Etsi koodiaidan sisällä oleva JSON tai suora JSON-objekti
     fence = re.search(r"```(?:json)?\s*({.*?})\s*```", text, flags=re.S)
     raw = fence.group(1) if fence else None
     if not raw:
-        # fallback: ensimmäinen aaltosulkeilla alkava objekti
         m = re.search(r"(\{.*\})", text, flags=re.S)
         raw = m.group(1) if m else None
     if not raw:
@@ -98,7 +110,6 @@ def _extract_json_block(text: str) -> Dict[str, Any]:
     try:
         return json.loads(raw)
     except Exception:
-        # Kevyt siivous: poista mahdollisia trailing-kommentteja
         cleaned = re.sub(r"//.*", "", raw)
         try:
             return json.loads(cleaned)
@@ -111,48 +122,34 @@ def _extract_json_block(text: str) -> Dict[str, Any]:
 def create_or_update_ai_grade(submission: Submission) -> AIGrade:
     """
     Luo tai päivittää AI:n arviointiehdotuksen (AIGrade) tälle palautukselle.
-    Ei välitä mallin nimestä ai_service:lle (se määräytyy ai_service.py:ssä).
     """
     material = submission.assignment.material
-
-    # Varmista rubriikki (automaattinen oletus, jos puuttuu)
     rubric = _ensure_default_rubric(material)
     criteria = list(rubric.criteria.order_by("order", "id"))
-
-    # Rakenna prompt ja kysy LLM:ltä
     prompt = _build_prompt(material, submission, criteria)
-    # HUOM: ei malliparametria — ai_service päättää mallin
     llm_text = ask_llm(prompt, user_id=getattr(submission.assignment.assigned_by, "id", 0))
-
     data = _extract_json_block(llm_text)
 
-    # Jäsennä pisteet turvallisesti
     criteria_out = []
     total = 0.0
     max_total = 0
     by_name = {c.name.lower(): c for c in criteria}
-
     items = data.get("criteria") if isinstance(data, dict) else None
+
     if isinstance(items, list):
         for item in items:
             try:
                 name = str(item.get("name", "")).strip()
                 points = int(item.get("points", 0))
-                # sovita oikeaan kriteeriin nimen perusteella (case-insensitive)
                 matched = by_name.get(name.lower())
                 if matched is None:
-                    # jos nimeä ei tunnisteta, mapataan ensimmäiseen käyttämättömään
                     matched = next((c for c in criteria if c.name.lower() not in {i["name"].lower() for i in criteria_out}), None)
                     if matched is None:
                         continue
-
                 max_p = int(matched.max_points)
-                # rajoita 0..max
                 points = max(0, min(points, max_p))
-
                 total += points
                 max_total += max_p
-
                 criteria_out.append({
                     "name": matched.name,
                     "points": points,
@@ -162,7 +159,6 @@ def create_or_update_ai_grade(submission: Submission) -> AIGrade:
             except Exception:
                 continue
 
-    # Jos LLM ei tuottanut kelvollista listaa, tee tyhjä ehdotus rakenteella
     if not criteria_out:
         for c in criteria:
             max_total += int(c.max_points)
@@ -187,14 +183,11 @@ def create_or_update_ai_grade(submission: Submission) -> AIGrade:
         "generated_at": timezone.now().isoformat(),
     }
 
-    # Tallenna AIGrade
     ag, _created = AIGrade.objects.get_or_create(submission=submission)
     ag.rubric = rubric
-    # Mallin nimi määritellään ai_service.py:ssä; jätetään mahdolliseen oletukseen/models defaultiin
-    # Halutessasi voit pitää aiemmin tallennetun nimen ennallaan.
     ag.total_points = float(round(total, 2))
     ag.details = details
-    ag.teacher_confirmed = False  # uusi ehdotus ei ole vielä vahvistettu
+    ag.teacher_confirmed = False
     ag.save()
 
     return ag
