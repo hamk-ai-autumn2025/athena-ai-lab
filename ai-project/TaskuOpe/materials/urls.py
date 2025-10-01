@@ -36,6 +36,9 @@ urlpatterns = [
     # Kuvagenerointi
     path("image/generate/", views.generate_image_view, name="generate_image"),
 
+    #Puheengenerointi
+    path("assignment/<uuid:assignment_id>/tts/", views.assignment_tts_view, name="assignment_tts"),
+
     # Submission URLs
     path("submission/<uuid:submission_id>/grade/", views.grade_submission_view, name="grade_submission"),
 

@@ -20,6 +20,7 @@ from .ai_service import ask_llm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import json
+from .ai_service import generate_speech
 
 # 👉 Plagiointitarkistuspalvelu (UUSI)
 from .plagiarism import build_or_update_report
@@ -1030,3 +1031,35 @@ def teacher_student_list_view(request):
         'grade_choices': grade_choices,
     }
     return render(request, 'materials/teacher_student_list.html', context)
+
+# Text-to-Speech for assignment content -> Poistetaan ym regexillä
+@login_required(login_url='kirjaudu')
+@require_POST
+def assignment_tts_view(request, assignment_id):
+    """
+    Generoi äänitiedoston tehtävänannon sisällöstä (ilman kuvatekstejä) ja palauttaa sen.
+    """
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+
+    if assignment.student != request.user:
+        return HttpResponseForbidden("You are not authorized to access this resource.")
+
+    raw_text = assignment.material.content
+    if not raw_text:
+        return JsonResponse({"error": "No content to read."}, status=400)
+
+    # === KORJATTU SÄÄNNÖLLINEN LAUSEKE ===
+    # Tämä on tarkempi ja poistaa vain oikeat Markdown-kuvat.
+    clean_text = re.sub(r'!\[[^\]]*\]\([^\)]*\)\s*', '', raw_text)
+
+    # Varmistetaan, että tekstiä jäi jäljelle siivouksen jälkeen
+    if not clean_text.strip():
+        # Jos jäljelle jäi vain tyhjää, palautetaan virhe.
+        return JsonResponse({"error": "No readable text found after cleaning."}, status=400)
+
+    audio_bytes = generate_speech(clean_text)
+
+    if audio_bytes:
+        return HttpResponse(audio_bytes, content_type='audio/mpeg')
+    else:
+        return JsonResponse({"error": "Failed to generate audio."}, status=500)

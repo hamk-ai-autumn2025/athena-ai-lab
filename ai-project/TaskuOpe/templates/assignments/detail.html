@@ -1,4 +1,5 @@
 {% extends 'partials/base.html' %}
+{% load tz %}
 
 {% block title %}{{ assignment.material.title }}{% endblock %}
 
@@ -29,8 +30,13 @@
     <!-- Left Column: Assignment Content -->
     <div class="col-lg-7 mb-4 mb-lg-0">
       <div class="card shadow-sm h-100">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Tehtävänanto</h5>
+          <!-- === KUUNTELU-NAPPI LISÄTTY TÄHÄN === -->
+          <button id="listen-button" class="btn btn-sm btn-outline-secondary" data-tts-url="{% url 'assignment_tts' assignment_id=assignment.id %}">
+            <i id="listen-icon" class="bi bi-volume-up-fill me-1"></i>
+            <span id="listen-button-text">Kuuntele</span>
+          </button>
         </div>
         <div class="card-body">
           {# Renderöity opettajan sisältö (kuvat, linkit, ym.) #}
@@ -137,7 +143,6 @@
             const statusEl = document.getElementById('autosave-status');
             if (!textarea || !statusEl) return;
 
-            // CSRF helper
             function getCookie(name) {
               const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)'); 
               return m ? m.pop() : '';
@@ -173,8 +178,6 @@
                 saving = false;
               }
             }
-
-            // 5 sek välein, vain jos sisältö muuttunut
             setInterval(autosave, 5000);
           })();
           </script>
@@ -184,29 +187,106 @@
     </div>
   </div>
 </div>
-{# LISÄÄ TÄMÄ SCRIPT-LOHKO TÄHÄN #}
+
+{# Sanalaskuri-skripti säilytetty ennallaan #}
 {% if readonly and assignment.submissions.last %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Etsi elementti, joka sisältää vastauksen tekstin
   const responseElement = document.getElementById('submission-response-text');
-  
-  // Etsi elementti, johon sanamäärä tulostetaan
   const displayElement = document.getElementById('word-count-display');
-
   if (responseElement && displayElement) {
-    // Hae teksti ja poista ylimääräiset välilyönnit
     const text = responseElement.textContent.trim();
-    
-    // Laske sanat: jaa teksti välilyöntien kohdalta ja suodata tyhjät pois
     const words = text.split(/\s+/).filter(word => word.length > 0);
     const wordCount = text === '' ? 0 : words.length;
-    
-    // Näytä tulos
     displayElement.textContent = `Sanoja: ${wordCount}`;
   }
 });
 </script>
 {% endif %}
-{% endblock content %}
 
+<!-- === TTS JAVASCRIPT LISÄTTY TÄHÄN LOPPUUN === -->
+<script>
+// CSRF-tokenin haku on jo olemassa autosave-skriptissä, mutta varmistetaan se täälläkin
+function getCsrfToken() {
+    const m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)'); 
+    return m ? m.pop() : '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const listenButton = document.getElementById('listen-button');
+    if (!listenButton) return;
+
+    const buttonText = document.getElementById('listen-button-text');
+    const listenIcon = document.getElementById('listen-icon');
+    const ttsUrl = listenButton.dataset.ttsUrl;
+    
+    let audio = null;
+    let isPlaying = false;
+    let isLoading = false;
+
+    function resetToDefault() {
+        isPlaying = false;
+        isLoading = false;
+        listenButton.disabled = false;
+        listenIcon.className = 'bi bi-volume-up-fill me-1';
+        buttonText.textContent = 'Kuuntele';
+        audio = null;
+    }
+
+    listenButton.addEventListener('click', async () => {
+        if (isLoading) return; // Estä toiminnot, kun ladataan
+
+        // Jos ääntä jo toistetaan, keskeytä se
+        if (isPlaying && audio) {
+            audio.pause();
+            audio.currentTime = 0;
+            resetToDefault();
+            return;
+        }
+
+        isLoading = true;
+        listenButton.disabled = true;
+        listenIcon.className = 'spinner-border spinner-border-sm me-1';
+        buttonText.textContent = 'Ladataan...';
+
+        try {
+            const response = await fetch(ttsUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+            });
+
+            if (!response.ok) {
+                throw new Error('Äänen generointi epäonnistui.');
+            }
+
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            audio = new Audio(audioUrl);
+
+            audio.onplay = () => {
+                isPlaying = true;
+                isLoading = false;
+                listenButton.disabled = false;
+                listenIcon.className = 'bi bi-stop-circle-fill me-1';
+                buttonText.textContent = 'Pysäytä';
+            };
+
+            audio.onended = resetToDefault;
+            audio.onerror = () => {
+                alert('Äänitiedoston toisto epäonnistui.');
+                resetToDefault();
+            };
+            
+            audio.play();
+
+        } catch (error) {
+            console.error('TTS Error:', error);
+            alert('Äänen lataus epäonnistui. Yritä myöhemmin uudelleen.');
+            resetToDefault();
+        }
+    });
+});
+</script>
+
+{% endblock content %}

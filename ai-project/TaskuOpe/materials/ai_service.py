@@ -1,5 +1,6 @@
 # materials/ai_service.py
 import os
+from django.conf import settings
 from openai import OpenAI
 import os, base64
 
@@ -103,3 +104,31 @@ def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
 
     except Exception as e:
         raise RuntimeError(f"DALL·E 2 virhe: {e}") from e
+
+#Puheen generointi OpenAI:n TTS:llä
+def generate_speech(text_to_speak: str) -> bytes | None:
+    """
+    Muuntaa annetun tekstin puheeksi käyttäen OpenAI:n TTS-rajapintaa.
+    Palauttaa äänidatan (MP3) bitteinä tai None, jos virhe tapahtuu.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY") or getattr(settings, "OPENAI_API_KEY", None)
+    if not api_key:
+        print("Text-to-Speech Error: OPENAI_API_KEY is not set.")
+        return None
+
+    try:
+        client = OpenAI(api_key=api_key)
+        
+        response = client.audio.speech.create(
+            model="tts-1",       # Voit kokeilla myös mallia "tts-1-hd"
+            voice="fable",       # Voit kokeilla muita ääniä: 'echo', 'fable', 'onyx', 'nova', 'shimmer'
+            input=text_to_speak,
+            speed=0.95           # Säädä puheen nopeutta (0.25 - 4.0)
+        )
+        
+        # Palautetaan raaka äänidata
+        return response.content
+
+    except Exception as e:
+        print(f"An error occurred during TTS generation: {e}")
+        return None
