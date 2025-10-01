@@ -76,6 +76,13 @@ from .models import MaterialImage
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import io
 
+#JSON chunkit
+from TaskuOpe.ops_chunks import retrieve_chunks, get_facets
+from django.views.decorators.http import require_GET
+
+#Opetus suunnitelman haku
+from .ai_service import ask_llm, ask_llm_with_ops
+
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
 def dashboard_view(request):
@@ -200,59 +207,82 @@ def material_list_view(request):
     return render(request, 'materials/list.html', {'materials': materials})
 
 
+# materials/views.py
+
+# Varmista, että tämä import on tiedoston alussa muiden importien kanssa
+from TaskuOpe.ops_chunks import get_facets
+
+# ... muut näkymäsi ...
+
 @login_required(login_url='kirjaudu')
 def create_material_view(request):
     """Manual material creation + AI helper."""
     if request.user.role != 'TEACHER':
         return redirect('dashboard')
 
+    # Haetaan dynaamiset valinnat OPS-datasta
+    ops_facets = get_facets() # <-- LISÄYS: Haetaan kaikki aineet ja luokat
+
     ai_reply = None
     ai_prompt_val = ""
+    ops_vals = {
+        'use_ops': request.POST.get('use_ops') == 'on',
+        'ops_subject': request.POST.get('ops_subject', ''),
+        'ops_grade': request.POST.get('ops_grade', ''),
+    }
 
     if request.method == 'POST':
         action = request.POST.get('action')
+        form = MaterialForm(request.POST)
+
         if action == 'ai':
             ai_prompt_val = (request.POST.get('ai_prompt') or '').strip()
+            
             if ai_prompt_val:
-                ai_reply = ask_llm(ai_prompt_val, user_id=request.user.id)
-            form = MaterialForm(request.POST or None)
+                if ops_vals['use_ops'] and ops_vals['ops_subject'] and ops_vals['ops_grade']:
+                    result = ask_llm_with_ops(
+                        question=ai_prompt_val,
+                        subjects=[ops_vals['ops_subject']],
+                        grades=[ops_vals['ops_grade']],
+                        user_id=request.user.id
+                    )
+                    ai_reply = result.get('answer', '[Virhe haettaessa OPS-dataa]')
+                else:
+                    ai_reply = ask_llm(ai_prompt_val, user_id=request.user.id)
+
             return render(request, 'materials/create.html', {
                 'form': form,
                 'ai_prompt': ai_prompt_val,
-                'ai_reply': ai_reply
+                'ai_reply': ai_reply,
+                'ops_vals': ops_vals,
+                'ops_facets': ops_facets # <-- LISÄYS: Välitetään data templatelle
             })
 
         if action == 'save' or action is None:
-            form = MaterialForm(request.POST)
             if form.is_valid():
                 material = form.save(commit=False)
                 material.author = request.user
                 material.status = Material.Status.DRAFT
                 material.save()
-                messages.success(request, f"Material '{material.title}' was created successfully.")
+                messages.success(request, f"Materiaali '{material.title}' luotu onnistuneesti.")
                 return redirect('dashboard')
+            
             return render(request, 'materials/create.html', {
                 'form': form,
                 'ai_prompt': request.POST.get('ai_prompt', ''),
-                'ai_reply': None
+                'ai_reply': None,
+                'ops_vals': ops_vals,
+                'ops_facets': ops_facets # <-- LISÄYS: Välitetään data templatelle myös tässä
             })
 
+    # GET-pyynnön käsittely
     form = MaterialForm()
-    return render(request, 'materials/create.html', {'form': form, 'ai_prompt': '', 'ai_reply': None})
-
-
-@login_required(login_url='kirjaudu')
-def material_detail_view(request, material_id):
-    """Shows material details for the teacher."""
-    material = get_object_or_404(Material, id=material_id)
-    if material.author != request.user:
-        return redirect('dashboard')
-
-    content_html = render_material_content_to_html(material.content)
-
-    return render(request, 'materials/detail.html', {
-        'material': material,
-        'content_html': content_html,
+    return render(request, 'materials/create.html', {
+        'form': form, 
+        'ai_prompt': '', 
+        'ai_reply': None,
+        'ops_vals': {'use_ops': False, 'ops_subject': '', 'ops_grade': ''},
+        'ops_facets': ops_facets # <-- LISÄYS: Välitetään data templatelle
     })
 
 
@@ -1063,3 +1093,21 @@ def assignment_tts_view(request, assignment_id):
         return HttpResponse(audio_bytes, content_type='audio/mpeg')
     else:
         return JsonResponse({"error": "Failed to generate audio."}, status=500)
+    
+    #JSON Chunks lataus tekoälylle
+@require_GET
+def ops_facets(request):
+    return JsonResponse(get_facets())
+
+@require_GET
+def ops_search(request):
+    q = request.GET.get("q", "")
+    try:
+        k = int(request.GET.get("k", "8") or 8)
+    except ValueError:
+        k = 8
+    subjects = request.GET.getlist("subject")  # voi toistua
+    grades   = request.GET.getlist("grade")
+    ctypes   = request.GET.getlist("ctype")
+    results = retrieve_chunks(q, k=k, subjects=subjects, grades=grades, ctypes=ctypes)
+    return JsonResponse({"results": results})

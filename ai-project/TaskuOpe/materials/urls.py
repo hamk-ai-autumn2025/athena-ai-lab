@@ -3,6 +3,7 @@ from . import views
 from users import views as user_views
 from django.conf import settings
 from django.conf.urls.static import static
+from .views import ops_facets, ops_search
 
 
 
@@ -57,6 +58,10 @@ urlpatterns = [
     path("materials/<uuid:material_id>/images/<int:image_id>/insert/", views.material_image_insert_view, name="material_image_insert"),
 
     path('students/', views.teacher_student_list_view, name='teacher_student_list'),
+
+    # JSON chunkit
+    path("api/ops/facets", ops_facets, name="ops_facets"),
+    path("api/ops/search", ops_search, name="ops_search"),
 ]
 
 # LISÄÄ TÄMÄ LOHKO TIEDOSTON LOPPUUN

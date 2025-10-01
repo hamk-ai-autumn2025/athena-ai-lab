@@ -1,8 +1,10 @@
 # materials/ai_service.py
-import os
 from django.conf import settings
 from openai import OpenAI
 import os, base64
+
+#Chunk toiminta kirjastot
+from typing import List, Optional
 
 SYSTEM_FIN = (
     "Kirjoita opetusmateriaalia suomeksi. Palauta TÄSMÄLLEEN tämä muoto:\n"
@@ -132,3 +134,81 @@ def generate_speech(text_to_speak: str) -> bytes | None:
     except Exception as e:
         print(f"An error occurred during TTS generation: {e}")
         return None
+    
+# --- OPS-konteksti LLM:lle ---
+try:
+    # Hakee chunkit JSONista
+    from TaskuOpe.ops_chunks import retrieve_chunks, format_for_llm
+    _HAS_OPS = True
+except Exception:
+    _HAS_OPS = False
+
+
+def _build_prompt_with_context(question: str, context_block: str) -> str:
+    """
+    Rakentaa käyttäjän promptin + OPS-kontekstin selkeämmäksi kokonaisuudeksi.
+    """
+    return (
+        "Olet opettajan tekoälyavustaja. Tehtäväsi on luoda opetusmateriaalia alla olevan pyynnön ja opetussuunnitelman (OPS) otteiden pohjalta.\n\n"
+        "Käytä AINOASTAAN annettua OPS-kontekstia materiaalisi perustana. Älä keksi tai lisää tietoa, jota kontekstissa ei ole.\n\n"
+        "--- OPS-KONTEKSTI ---\n"
+        f"{context_block}\n"
+        "--- KONTEKSTI LOPPUU ---\n\n"
+        f"Käyttäjän pyyntö: \"{question}\"\n\n"
+        "Laadi opetusmateriaali pyydetyssä muodossa (Otsikkoehdotus, Tavoitteet, Luonnosteksti)."
+    )
+
+def ask_llm_with_ops(
+    question: str,
+    *,
+    ops_query: str = "",
+    subjects: Optional[List[str]] = None,
+    grades: Optional[List[str]] = None,
+    ctypes: Optional[List[str]] = None,
+    k: int = 6,
+    user_id: int = 0,
+    max_chars: int = 8000
+) -> dict:
+    """
+    Hakee OPS-chunkit ja syöttää ne LLM:lle.
+    Palauttaa: {'answer': <str>, 'used_chunks': <list>}
+    """
+    if not _HAS_OPS:
+        return {"answer": ask_llm(question, user_id=user_id), "used_chunks": []}
+
+    chunks = retrieve_chunks(
+        query=ops_query or "",
+        k=k,
+        subjects=subjects or [],
+        grades=grades or [],
+        ctypes=ctypes or [],
+    )
+    context = format_for_llm(chunks)
+    prompt = _build_prompt_with_context(question, context)
+
+    if len(prompt) > max_chars:
+        prompt = prompt[:max_chars] + "\n\n[Katkaistu konteksti]"
+
+    return {"answer": ask_llm(prompt, user_id=user_id), "used_chunks": chunks}
+
+def ask_llm_with_given_chunks(
+    question: str,
+    chunks: List[dict],
+    *,
+    user_id: int = 0,
+    max_chars: int = 8000
+) -> dict:
+    """
+    Käytä tätä, jos UI on jo valinnut tietyt chunkit.
+    Palauttaa: {'answer': <str>, 'used_chunks': <list>}
+    """
+    if not chunks:
+        return {"answer": ask_llm(question, user_id=user_id), "used_chunks": []}
+
+    context = format_for_llm(chunks)
+    prompt = _build_prompt_with_context(question, context)
+
+    if len(prompt) > max_chars:
+        prompt = prompt[:max_chars] + "\n\n[Katkaistu konteksti]"
+
+    return {"answer": ask_llm(prompt, user_id=user_id), "used_chunks": chunks}
