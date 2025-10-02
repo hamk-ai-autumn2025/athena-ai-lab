@@ -7,12 +7,21 @@ import os, base64
 from typing import List, Optional
 
 SYSTEM_FIN = (
+    #Muutin tätä, et sain ops käytön toimii t. Mirka
+    "Olet tekoäly, joka laatii opetusmateriaaleja ja tehtäviä suoraan oppilaille suomeksi. Palauta TÄSMÄLLEEN tämä muoto:"
+    "Kirjoita selkeällä suomen kielellä. Palauta TÄSMÄLLEEN tämä muoto:\n"
+    "Otsikkoehdotus: <lyhyt otsikko>\n"
+    "Tavoitteet:\n"
+    "1) ...\n2) ...\n3) ...\n\n"
+    "Luonnosteksti:\n- <Tähän varsinainen tehtävä tai tehtävät, jotka osoitetaan suoraan oppilaalle. Voit käyttää otsikointia, kuten 'Tehtävä 1:'.>"
+)
+''' Vanha SYSTEM_FIN = (
     "Kirjoita opetusmateriaalia suomeksi. Palauta TÄSMÄLLEEN tämä muoto:\n"
     "Otsikkoehdotus: <lyhyt otsikko>\n"
     "Tavoitteet:\n"
     "1) ...\n2) ...\n3) ...\n\n"
     "Luonnosteksti:\n- <varsinainen sisältö, luettelona tai kappaleina>"
-)
+)'''
 
 def _demo(prompt: str) -> str:
     p = (prompt or '').strip()[:300]

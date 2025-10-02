@@ -33,7 +33,6 @@ KEEP_SUBJECTS = [
     "yhteiskuntaoppi",
     "äidinkieli ja kirjallisuus" # Kattaa kaikki äidinkielen oppimäärät
 ]
-# Huom: Biologia ja Ympäristöoppi on nyt jätetty pois tämän listan mukaisesti.
 
 def get_text(value: Any, lang: str = "fi") -> str:
     if value is None: return ""

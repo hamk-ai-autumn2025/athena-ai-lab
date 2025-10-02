@@ -1,3 +1,5 @@
+# ai_rubric.py
+
 import json
 import re
 from typing import List, Dict, Any
@@ -7,13 +9,14 @@ from django.utils import timezone
 from .models import Rubric, RubricCriterion, AIGrade, Material, Submission
 from .ai_service import ask_llm
 
+from TaskuOpe.ops_chunks import retrieve_chunks, format_for_llm
+
 
 # ---------- Apurit ----------
 
 def _ensure_default_rubric(material: Material) -> Rubric:
     """
     Luo materiaalille yksinkertaisen oletusrubriikin, jos sellaista ei ole.
-    Kolme peruskriteeriä (5 p / kriteeri): Sisältö, Rakenne, Kieli.
     """
     rubric = material.rubrics.first()
     if rubric:
@@ -40,39 +43,47 @@ def _ensure_default_rubric(material: Material) -> Rubric:
     return rubric
 
 
+# ======================================================================
+# === TÄMÄ ON PÄIVITETTY VERSIO FUNKTIOSTA ===
+# ======================================================================
 def _build_prompt(material: Material, submission: Submission, criteria: List[RubricCriterion]) -> str:
-    # --- MUUTOS ALKAA TÄSTÄ ---
-    # Haetaan tehtävän luokkataso materiaalin tiedoista turvallisesti.
-    grade_level_prompt_line = ""
-    try:
-        # Polku on submission -> assignment -> material -> grade_level
-        grade_level = submission.assignment.material.grade_level
-        if grade_level:
-            # Muotoillaan selkeä ohje tekoälylle.
-            grade_level_prompt_line = f"HUOMIOITAVA LUOKKATASO: Tämä tehtävä on suunniteltu {grade_level}. luokan oppilaalle. Arvioi vastaus tämän ikätason vaatimusten mukaisesti.\n"
-    except Exception:
-        # Jos tietoa ei jostain syystä löydy, jatketaan ilman sitä.
-        pass
-    # --- MUUTOS PÄÄTTYY TÄHÄN ---
-
-    criterialines = []
-    for c in criteria:
-        criterialines.append(f'- "{c.name}" (max {c.max_points} p): {c.guidance or ""}'.strip())
-
-    material_excerpt = (material.content or "").strip()
-    if len(material_excerpt) > 2500:
-        material_excerpt = material_excerpt[:2500] + " …"
-
+    """
+    Rakentaa promptin tekoälylle, joka on nyt ohjeistettu olemaan kannustavampi
+    ja ottamaan oppilaan ikätason huomioon.
+    """
+    material_excerpt = (material.content or "").strip()[:2000] + "…"
     student_answer = (submission.response or "").strip()
+    ops_context_str = ""
 
+    try:
+        subject, grade_level = material.subject, material.grade_level
+        if subject and grade_level:
+            ops_chunks = retrieve_chunks(query=material.title, subjects=[subject], grades=[grade_level], k=3)
+            if ops_chunks:
+                formatted_ops = format_for_llm(ops_chunks)
+                ops_context_str = f"""
+OPETUSSUUNNITELMAN RELEVANTIT TAVOITTEET/SISÄLLÖT TÄLLE TEHTÄVÄLLE:
+\"\"\"
+{formatted_ops}
+\"\"\"
+"""
+    except Exception as e:
+        print(f"DEBUG (ai_rubric): Could not retrieve OPS chunks: {e}")
+        pass
+
+    criterialines = [f'- "{c.name}" (max {c.max_points} p): {c.guidance or ""}'.strip() for c in criteria]
+
+    # --- TÄSSÄ ON UUSI, PARANNETTU OHJEISTUS TEKOÄLYLLE ---
     prompt = f"""
-Tehtävä: Arvioi oppilaan vastaus rubriikin perusteella ja anna pisteet kullekin kriteerille.
-Pisteytys vain kokonaislukuna välillä 0..max kriteerikohtaisesti. Anna lisäksi lyhyt palaute.
+Tehtäväsi on toimia kannustavana opettajan apulaisena. Arvioi oppilaan vastaus lempeästi ja rohkaisevasti, ottaen huomioon, että kyseessä on peruskoululainen. Palautteen tulee auttaa oppilasta ymmärtämään, missä hän onnistui ja miten hän voi kehittyä.
 
-{grade_level_prompt_line} # <-- TÄSSÄ LISÄTTY TIETO LUOKKATASOSTA
+Pisteytä reilusti. Älä vähennä pisteitä pienistä virheistä, jos pääasia on ymmärretty. Keskity kokonaisuuteen.
+
 MATERIAALIN OTSIKKO: {material.title}
 TEHTÄVÄN KUVAUS (ote):
 \"\"\"{material_excerpt}\"\"\"
+
+{ops_context_str}
 
 OPPILAAN VASTAUS:
 \"\"\"{student_answer}\"\"\"
@@ -81,16 +92,12 @@ RUBRIIKKI (kriteerit):
 {chr(10).join(criterialines)}
 
 Palauta vastaus TÄSMÄLLE JSON-muodossa ilman muuta tekstiä:
-
 {{
   "criteria": [
-    {{"name": "<kriteerin nimi>", "points": <int>, "max": <int>, "feedback": "<yksi–kaksi virkettä>"}}
-    // ... jokaisesta kriteeristä oma objekti
+    {{"name": "<kriteerin nimi>", "points": <int>, "max": <int>, "feedback": "<kannustava ja rakentava palaute>"}}
   ],
-  "general_feedback": "<2–4 virkkeen yhteispalaute>"
+  "general_feedback": "<Ystävällinen ja rohkaiseva yhteenveto>"
 }}
-
-Huomioi: käytä vain sallittua rakennetta ja pidä pisteet kokonaislukuina.
 """
     return prompt.strip()
 
@@ -98,7 +105,6 @@ Huomioi: käytä vain sallittua rakennetta ja pidä pisteet kokonaislukuina.
 def _extract_json_block(text: str) -> Dict[str, Any]:
     """
     Yrittää löytää ja jäsentää ensimmäisen JSON-lohkon vastauksesta.
-    Palauttaa dictin tai {}.
     """
     fence = re.search(r"```(?:json)?\s*({.*?})\s*```", text, flags=re.S)
     raw = fence.group(1) if fence else None
@@ -117,7 +123,7 @@ def _extract_json_block(text: str) -> Dict[str, Any]:
             return {}
 
 
-# ---------- Julkinen API ----------
+# ---------- Julkinen API (ei muutoksia tähän) ----------
 
 def create_or_update_ai_grade(submission: Submission) -> AIGrade:
     """
@@ -141,19 +147,15 @@ def create_or_update_ai_grade(submission: Submission) -> AIGrade:
             try:
                 name = str(item.get("name", "")).strip()
                 points = int(item.get("points", 0))
-                matched = by_name.get(name.lower())
-                if matched is None:
-                    matched = next((c for c in criteria if c.name.lower() not in {i["name"].lower() for i in criteria_out}), None)
-                    if matched is None:
-                        continue
+                matched = by_name.get(name.lower()) or next((c for c in criteria if c.name.lower() not in {i["name"].lower() for i in criteria_out}), None)
+                if not matched: continue
+                
                 max_p = int(matched.max_points)
                 points = max(0, min(points, max_p))
                 total += points
                 max_total += max_p
                 criteria_out.append({
-                    "name": matched.name,
-                    "points": points,
-                    "max": max_p,
+                    "name": matched.name, "points": points, "max": max_p,
                     "feedback": str(item.get("feedback", "")).strip(),
                 })
             except Exception:
@@ -162,25 +164,13 @@ def create_or_update_ai_grade(submission: Submission) -> AIGrade:
     if not criteria_out:
         for c in criteria:
             max_total += int(c.max_points)
-            criteria_out.append({
-                "name": c.name,
-                "points": 0,
-                "max": int(c.max_points),
-                "feedback": "",
-            })
-        total = 0.0
+            criteria_out.append({"name": c.name, "points": 0, "max": int(c.max_points), "feedback": ""})
 
-    general_feedback = ""
-    if isinstance(data, dict):
-        gf = data.get("general_feedback")
-        if isinstance(gf, str):
-            general_feedback = gf.strip()
+    general_feedback = str(data.get("general_feedback", "")).strip() if isinstance(data, dict) else ""
 
     details = {
-        "criteria": criteria_out,
-        "general_feedback": general_feedback,
-        "rubric_title": rubric.title,
-        "generated_at": timezone.now().isoformat(),
+        "criteria": criteria_out, "general_feedback": general_feedback,
+        "rubric_title": rubric.title, "generated_at": timezone.now().isoformat(),
     }
 
     ag, _created = AIGrade.objects.get_or_create(submission=submission)
