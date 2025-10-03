@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     # Project apps
     'users.apps.UsersConfig',
     'materials.apps.MaterialsConfig',
+
+    'imagekit'
 ]
 
 MIDDLEWARE = [

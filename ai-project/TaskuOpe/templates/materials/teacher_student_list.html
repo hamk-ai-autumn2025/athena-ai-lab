@@ -15,39 +15,41 @@
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_grades">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
+
+        <!-- MUUTOS 1: Poistettu .table-responsive ja lisätty .tasks-luokka tableen -->
+        <table class="table table-hover align-middle tasks">
+          <thead class="table-light">
+            <tr>
+              <th>Oppilas</th>
+              <th>Nykyinen luokka</th>
+              <th>Vaihda luokkaa</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
               <tr>
-                <th>Oppilas</th>
-                <th>Nykyinen luokka</th>
-                <th>Vaihda luokkaa</th>
+                <!-- MUUTOS 2: Lisätty data-labelit jokaiseen soluun -->
+                <td data-label="Oppilas">{{ student.get_full_name|default:student.username }}</td>
+                <td data-label="Nykyinen luokka">{{ student.get_grade_class_display|default:"Ei asetettu" }}</td>
+                <td data-label="Vaihda luokkaa">
+                  <select name="student-{{ student.id }}" class="form-select form-select-sm" style="max-width: 200px;">
+                    <option value="">— Poista luokalta —</option>
+                    {% for grade, display in grade_choices %}
+                      <option value="{{ grade }}" {% if student.grade_class == grade %}selected{% endif %}>
+                        {{ display }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {% for student in students %}
-                <tr>
-                  <td>{{ student.get_full_name|default:student.username }}</td>
-                  <td>{{ student.get_grade_class_display|default:"Ei asetettu" }}</td>
-                  <td>
-                    <select name="student-{{ student.id }}" class="form-select form-select-sm" style="max-width: 200px;">
-                      <option value="">— Poista luokalta —</option>
-                      {% for grade, display in grade_choices %}
-                        <option value="{{ grade }}" {% if student.grade_class == grade %}selected{% endif %}>
-                          {{ display }}
-                        </option>
-                      {% endfor %}
-                    </select>
-                  </td>
-                </tr>
-              {% empty %}
-                <tr>
-                  <td colspan="3" class="text-center text-muted py-4">Järjestelmässä ei ole opiskelijoita.</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted py-4">Järjestelmässä ei ole opiskelijoita.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
         <div class="mt-3 text-end">
           <button type="submit" class="btn btn-primary">Tallenna muutokset</button>
         </div>

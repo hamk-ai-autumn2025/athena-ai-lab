@@ -3,50 +3,79 @@
 {% block title %}Lisää kuva{% endblock %}
 {% block content %}
 <div class="container-fluid">
-  <h1 class="h4">Lisää kuva: {{ material.title }}</h1>
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <h1 class="h2 mb-0">Lisää kuva materiaaliin</h1>
+    <p class="text-muted mb-0">{{ material.title }}</p>
+    <a href="{% url 'material_detail' material_id=material.id %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Takaisin materiaaliin
+    </a>
+  </div>
 
-  {# Näytä Django-viestit #}
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags|default:'info' }} mb-3">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <form id="addImgForm" method="post" enctype="multipart/form-data" class="card shadow-sm">
+        <div class="card-body p-4">
+          {% csrf_token %}
 
-  <form id="addImgForm" method="post" enctype="multipart/form-data" class="card p-3">
-    {% csrf_token %}
+          {# Näytä mahdolliset virheviestit #}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
 
-    <div class="mb-3">
-      <label class="form-label">Lataa kuva</label>
-      {{ form.upload }}  {# input[type=file] #}
-      <div class="form-text">Voit myös generoida kuvan alla ja se täytetään tähän automaattisesti.</div>
+          <!-- OSA 1: Kuvan lataus -->
+          <div class="mb-3">
+            <label for="{{ form.upload.id_for_label }}" class="form-label fw-bold">{{ form.upload.label }}</label>
+            {{ form.upload }}
+            <div class="form-text">Voit myös generoida kuvan alla, jolloin se täytetään tähän kenttään automaattisesti.</div>
+          </div>
+
+          <div class="text-center my-3 text-muted">— tai —</div>
+
+          <!-- OSA 2: Kuvan generointi -->
+          <div class="mb-3">
+            <label for="{{ form.gen_prompt.id_for_label }}" class="form-label fw-bold">{{ form.gen_prompt.label }}</label>
+            {{ form.gen_prompt }}
+            <div class="d-flex gap-2 mt-2">
+              <select id="genSize" class="form-select" style="max-width: 240px;">
+                <option value="square">Neliö (1024×1024)</option>
+                <option value="landscape">Vaaka (1792×1024)</option>
+                <option value="portrait">Pysty (1024×1792)</option>
+              </select>
+              <button type="button" id="genBtn" class="btn btn-secondary">Generoi kuva</button>
+            </div>
+            <div id="genMsg" class="form-text mt-2" aria-live="polite"></div>
+            <img id="genPreview" class="img-fluid mt-2 d-none rounded border" alt="Generoidun kuvan esikatselu">
+          </div>
+          
+          <hr class="my-4">
+
+          <!-- OSA 3: Yhteiset asetukset -->
+          <div class="mb-3">
+            <label for="{{ form.caption.id_for_label }}" class="form-label">{{ form.caption.label }}</label>
+            {{ form.caption }}
+          </div>
+          
+          <div class="mb-4">
+            <label for="{{ form.size.id_for_label }}" class="form-label">{{ form.size.label }}</label>
+            {{ form.size }}
+          </div>
+
+          <div class="mb-4">
+            <label for="{{ form.alignment.id_for_label }}" class="form-label">{{ form.alignment.label }}</label>
+            {{ form.alignment }} 
+          </div>
+          
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Tallenna ja lisää kuva sisältöön</button>
+          </div>
+
+        </div>
+      </form>
     </div>
-
-    <div class="text-center my-2">— tai —</div>
-
-    <div class="mb-3">
-      <label class="form-label">Generoi kuva (prompt)</label>
-      {{ form.gen_prompt }}
-      <div class="d-flex gap-2 mt-2">
-        <select id="genSize" class="form-select" style="max-width:240px">
-          <option value="square">Neliö (1024×1024)</option>
-          <option value="landscape">Vaaka (1792×1024)</option>
-          <option value="portrait">Pysty (1024×1792)</option>
-        </select>
-        <button type="button" id="genBtn" class="btn btn-secondary">Generoi kuva</button>
-      </div>
-      <div id="genMsg" class="form-text mt-2"></div>
-      <img id="genPreview" class="img-fluid mt-2 d-none rounded border" alt="Esikatselu">
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Kuvateksti</label>
-      {{ form.caption }}
-    </div>
-
-    <button class="btn btn-primary">Tallenna</button>
-  </form>
+  </div>
 </div>
 
+<!-- Kuvageneroinnin skripti pysyy täysin ennallaan -->
 <script>
 (function(){
   const form = document.getElementById('addImgForm');
@@ -54,10 +83,8 @@
   const genSize = document.getElementById('genSize');
   const genMsg  = document.getElementById('genMsg');
   const genPreview = document.getElementById('genPreview');
-
-  // hae viite tiedostokenttään (Django form field name = "upload")
   const fileInput = form.querySelector('input[type="file"][name$="upload"]');
-  const promptInput = form.querySelector('[name$="gen_prompt"]');
+  const promptInput = form.querySelector('textarea[name$="gen_prompt"]'); // Korjattu valitsin
 
   function getCsrfToken() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -70,7 +97,7 @@
 
     genMsg.textContent = 'Generoidaan…';
     genPreview.classList.add('d-none');
-    genPreview.removeAttribute('src');
+    genPreview.src = ''; // Korjattu, ettei vanha kuva näy hetkeä
 
     if (!prompt) {
       genMsg.textContent = 'Anna generointikehote.';
@@ -80,10 +107,7 @@
     try {
       const res = await fetch("{% url 'generate_image' %}", {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken(),
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ prompt, size }),
       });
       const data = await res.json().catch(() => ({}));
@@ -97,21 +121,17 @@
         return;
       }
 
-      // Näytä esikatselu (cache-buster)
       const url = data.image_url + `?t=${Date.now()}`;
       genPreview.src = url;
       genPreview.classList.remove('d-none');
-      genMsg.textContent = data.placeholder
-        ? 'Näytetään placeholder (API-avain puuttuu/virhe).'
-        : 'Kuva valmis.';
+      genMsg.textContent = data.placeholder ? 'Näytetään placeholder (API-avain puuttuu/virhe).' : 'Kuva valmis.';
 
-      // Lataa kuva Blobiksi ja täytä file input automaattisesti
       const imgRes = await fetch(url);
       const blob = await imgRes.blob();
       const file = new File([blob], 'generated.png', { type: blob.type || 'image/png' });
       const dt = new DataTransfer();
       dt.items.add(file);
-      fileInput.files = dt.files; // nyt "Tallenna" lähettää generoidun kuvan
+      fileInput.files = dt.files;
 
     } catch (e) {
       genMsg.textContent = `Kutsu epäonnistui: ${e}`;
@@ -120,4 +140,3 @@
 })();
 </script>
 {% endblock %}
-

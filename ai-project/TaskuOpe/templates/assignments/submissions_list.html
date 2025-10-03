@@ -6,22 +6,19 @@
 {% block content %}
 <div class="container-fluid">
 
-  <!-- Otsikko + takaisin-nappi -->
-<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4 border-bottom pb-3">
-  <h1 class="h2 mb-0">Kaikki palautukset ja tehtävänannot</h1>
-  <div class="d-flex gap-2">
-    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
-    </a>
-    <a class="btn btn-outline-primary"
-       href="{% url 'export_submissions_csv' %}?q={{ q|urlencode }}&status={{ status|urlencode }}">
-       <i class="bi bi-download me-1"></i> Lataa CSV
-    </a>
-  </div>  
-</div>
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <h1 class="h2 mb-0">Kaikki palautukset ja tehtävänannot</h1>
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+      </a>
+      <a class="btn btn-outline-primary"
+         href="{% url 'export_submissions_csv' %}?q={{ q|urlencode }}&status={{ status|urlencode }}">
+         <i class="bi bi-download me-1"></i> Lataa CSV
+      </a>
+    </div>  
+  </div>
 
-
-  <!-- Haku + statusfiltteri -->
   <form class="row g-2 align-items-end mb-3" method="get" action=".">
     <div class="col-12 col-md-6">
       <label class="form-label">Haku</label>
@@ -41,87 +38,74 @@
     </div>
   </form>
 
-  <!-- Lista -->
   <section class="assignments-list">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead class="table-light">
-          <tr>
-            <th scope="col">Oppilas</th>
-            <th scope="col">Materiaali</th>
-            <th scope="col">Määräaika</th>
-            <th scope="col">Tila</th>
-            <th scope="col">Toiminnot</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for assignment in assignments %}
-          <tr>
-            <td>{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
-            <td>{{ assignment.material.title }}</td>
-            <td>{{ assignment.due_at|date:"d.m.Y H:i"|default:"-" }}</td>
-            <td>
-              <span class="badge 
-                {% if assignment.status == 'GRADED' %}bg-success
-                {% elif assignment.status == 'SUBMITTED' %}bg-primary
-                {% elif assignment.status == 'IN_PROGRESS' %}bg-warning text-dark
-                {% else %}bg-secondary{% endif %}">
-                {{ assignment.get_status_display }}
-              </span>
-            </td>
-            <td>
-              {% with sub=assignment.submissions.last %}
-                {% if sub %}
-                  <a class="btn btn-sm btn-primary" href="{% url 'grade_submission' submission_id=sub.id %}">
-                    Tarkastele palautusta
-                  </a>
-                {% else %}
-                  <button class="btn btn-sm btn-secondary" disabled>Ei palautusta</button>
-                {% endif %}
-              {% endwith %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="text-center">
-              <div class="alert alert-secondary mb-0">Yhtään tehtävää ei ole vielä annettu.</div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <table class="table table-hover align-middle tasks">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Oppilas</th>
+          <th scope="col">Materiaali</th>
+          <th scope="col">Määräaika</th>
+          <th scope="col">Tila</th>
+          <th scope="col">Toiminnot</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for assignment in assignments %}
+        <tr>
+          <!-- KORJATTU RIVI ALLA: väliviiva (-) on vaihdettu alaviivaan (_) -->
+          <td data-label="Oppilas">{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
+          <td data-label="Materiaali">{{ assignment.material.title }}</td>
+          <td data-label="Määräaika">{{ assignment.due_at|date:"d.m.Y H:i"|default:"-" }}</td>
+          <td data-label="Tila">
+            <span class="badge 
+              {% if assignment.status == 'GRADED' %}bg-success
+              {% elif assignment.status == 'SUBMITTED' %}bg-primary
+              {% elif assignment.status == 'IN_PROGRESS' %}bg-warning text-dark
+              {% else %}bg-secondary{% endif %}">
+              {{ assignment.get_status_display }}
+            </span>
+          </td>
+          <td data-label="Toiminnot" class="d-grid gap-2 d-md-block">
+            {% with sub=assignment.submissions.last %}
+              {% if sub %}
+                <a class="btn btn-sm btn-primary" href="{% url 'grade_submission' submission_id=sub.id %}">
+                  Tarkastele palautusta
+                </a>
+              {% else %}
+                <button class="btn btn-sm btn-secondary" disabled>Ei palautusta</button>
+              {% endif %}
+            {% endwith %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center">
+            <div class="alert alert-secondary mb-0">Yhtään tehtävää ei ole vielä annettu.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-    <!-- Sivutus -->
-    {% if assignments.paginator %}
-      {% if assignments.paginator.num_pages > 1 %}
-      <nav aria-label="Sivutus" class="mt-3">
+    <!-- Sivutus ... -->
+    {% if assignments.paginator.num_pages > 1 %}
+    <nav aria-label="Sivutus" class="mt-3">
         <ul class="pagination">
           {% if assignments.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ assignments.previous_page_number }}&q={{ q }}&status={{ status }}">Edellinen</a>
-            </li>
+            <li class="page-item"><a class="page-link" href="?page={{ assignments.previous_page_number }}&q={{ q }}&status={{ status }}">Edellinen</a></li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Edellinen</span></li>
           {% endif %}
-
-          <li class="page-item disabled">
-            <span class="page-link">Sivu {{ assignments.number }} / {{ assignments.paginator.num_pages }}</span>
-          </li>
-
+          <li class="page-item disabled"><span class="page-link">Sivu {{ assignments.number }} / {{ assignments.paginator.num_pages }}</span></li>
           {% if assignments.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ assignments.next_page_number }}&q={{ q }}&status={{ status }}">Seuraava</a>
-            </li>
+            <li class="page-item"><a class="page-link" href="?page={{ assignments.next_page_number }}&q={{ q }}&status={{ status }}">Seuraava</a></li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Seuraava</span></li>
           {% endif %}
         </ul>
       </nav>
-      {% endif %}
     {% endif %}
 
   </section>
-
 </div>
 {% endblock %}

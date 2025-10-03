@@ -12,7 +12,6 @@
         Tila: {{ material.get_status_display }} | Aihe: {{ material.subject|default:'Ei määritelty' }}
       </p>
     </div>
-
     <div class="d-flex gap-2">
       {% if request.user == material.author %}
         <a href="{% url 'material_edit' material_id=material.id %}" class="btn btn-primary btn-sm">
@@ -31,6 +30,7 @@
       <h5 class="mb-0">Materiaalin sisältö</h5>
     </div>
     <div class="card-body">
+      <!-- Tämä kutsuu nyt uutta, älykästä renderöintifunktiotasi -->
       {{ rendered_content|safe }}
     </div>
   </div>
@@ -39,51 +39,54 @@
   <div class="d-flex gap-2 mb-3">
     {% if request.user == material.author %}
       <a href="{% url 'material_add_image' material_id=material.id %}" class="btn btn-outline-secondary btn-sm">
-        Lisää kuva
-      </a>
-      <a href="{% url 'material_edit' material_id=material.id %}#content" class="btn btn-outline-secondary btn-sm">
-        Muokkaa sisältöä
+        Lisää uusi kuva
       </a>
     {% endif %}
   </div>
 
-<!-- Kuvagalleria -->
-<div class="row g-3">
-  {% for img in material.images.all %}
-    <div class="col-6 col-md-4 col-lg-3">
-      <div class="card h-100">
-        <a href="{{ img.image.url }}" target="_blank" rel="noopener">
-          <img class="card-img-top" src="{{ img.image.url }}" alt="{{ img.caption|default:'Kuva' }}">
-        </a>
-        <div class="card-body py-2 small d-flex justify-content-between align-items-center">
-          <span>{{ img.caption }}</span>
+  <!-- Kuvagalleria -->
+  <h2 class="h5 mb-3">Materiaalin kuvat</h2>
+  <div class="row g-3">
+    {% for img in material.images.all %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100 shadow-sm">
+          <a href="{{ img.image.url }}" target="_blank" rel="noopener">
+            <img class="card-img-top" src="{{ img.thumbnail.url }}" alt="{{ img.caption|default:'Kuva' }}" style="object-fit: cover; height: 150px;">
+          </a>
+          <div class="card-body py-2 small d-flex flex-column">
+            <p class="flex-grow-1">{{ img.caption|default:"Ei kuvatekstiä" }}</p>
 
-          {% if request.user.id == material.author_id and request.user.role == "TEACHER" %}
-            <div class="d-flex gap-2">
-              <!-- LISÄÄ SISÄLTÖÖN -->
-              <form method="post"
-                    action="{% url 'material_image_insert' material_id=material.id image_id=img.id %}">
-                {% csrf_token %}
-                <button class="btn btn-sm btn-outline-primary">Lisää sisältöön</button>
-              </form>
+            {% if request.user.id == material.author_id and request.user.role == "TEACHER" %}
+              <div class="mt-auto">
+                <form method="post" action="{% url 'material_image_insert' material_id=material.id image_id=img.id %}" class="d-flex gap-2 mb-2">
+                  {% csrf_token %}
+                  <select name="size_{{ img.id }}" class="form-select form-select-sm">
+                    <option value="size-md">Keskikoko</option>
+                    <option value="size-sm">Pieni</option>
+                    <option value="size-lg">Suuri</option>
+                  </select>
+                  <select name="align_{{ img.id }}" class="form-select form-select-sm">
+                    <option value="align-center">Keskitetty</option>
+                    <option value="align-left">Vasemmalle</option>
+                    <option value="align-right">Oikealle</option>
+                  </select>
+                  <button type="submit" class="btn btn-sm btn-outline-primary flex-shrink-0" title="Lisää sisältöön">Lisää</button>
+                </form>
 
-              <!-- POISTA -->
-              <form method="post"
-                    action="{% url 'material_image_delete' image_id=img.id %}"
-                    onsubmit="return confirm('Poistetaanko kuva?');">
-                {% csrf_token %}
-                <button class="btn btn-sm btn-outline-danger">Poista</button>
-              </form>
-            </div>
-          {% endif %}
+                <form method="post" action="{% url 'material_image_delete' image_id=img.id %}" onsubmit="return confirm('Poistetaanko kuva pysyvästi?');" class="d-grid">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Poista</button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
         </div>
       </div>
-    </div>
-  {% empty %}
-    <div class="text-muted small">Ei kuvia.</div>
-  {% endfor %}
-</div>
+    {% empty %}
+      <div class="col">
+        <div class="text-muted small">Tähän materiaaliin ei ole liitetty kuvia.</div>
+      </div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}
-
-

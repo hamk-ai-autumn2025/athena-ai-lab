@@ -14,6 +14,25 @@
     </a>
   </div>
 
+  <!--Suodatin-->
+    <form method="get" class="row g-2 align-items-end p-3 rounded mb-4 border">
+    <div class="col-md-4">
+      <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
+      <select name="subject" id="subject-filter" class="form-select">
+        <option value="">Kaikki aiheet</option>
+        {% for subject in subjects %}
+          <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
+            {{ subject }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-8 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Suodata</button>
+      <a href="{% url 'material_list' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+    </div>
+  </form>
+
   <section class="materials-list">
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
 

@@ -9,7 +9,9 @@ from django.contrib.auth.models import AbstractUser
 # ↓ lisää nämä importit jos eivät jo ole
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFill
+import re
 
 class Prompt(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -119,7 +121,33 @@ class Material(models.Model):
 
     def __str__(self):
         return f"{self.title} (v{self.version})"
+    
+    def save(self, *args, **kwargs):
+        """
+        Ylikirjoitettu save-metodi, joka varmistaa, että aiheen (subject)
+        ensimmäinen kirjain on aina iso.
+        """
+        # Muunna aiheen ensimmäinen kirjain isoksi, jos aihe on määritelty
+        if self.subject:
+            self.subject = self.subject.capitalize()
+            
+        # Kutsu alkuperäistä save-metodia, jotta tallennus tapahtuu oikein
+        super().save(*args, **kwargs)
 
+
+@property
+def content_without_images(self):
+        """
+        Palauttaa sisällön ilman Markdown-kuvalinkkejä ja siistittynä.
+        Täydellinen korttien esikatselua varten.
+        """
+        if not self.content:
+            return ""
+        # Poistetaan Markdown-kuvat ja ylimääräiset rivinvaihdot
+            no_images = re.sub(r'!\[[^\]]*\]\([^\)]+\)', '', self.content)
+    # Poistetaan peräkkäiset tyhjät rivit ja palautetaan siistitty teksti
+            cleaned_text = re.sub(r'\n\s*\n', '\n', no_images).strip()
+            return cleaned_text
 
 class MaterialRevision(models.Model):
     material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='revisions', verbose_name=_("Materiaali"))
@@ -325,6 +353,12 @@ class MaterialImage(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Tämä luo automaattisesti pienennetyn version kuvasta.
+    # Se tallennetaan CACHE/images/materials/... -kansioon.
+    thumbnail = ImageSpecField(source='image',
+                                      processors=[ResizeToFill(400, 250)], # Rajaa kuvan kokoon 400x250
+                                      format='JPEG',
+                                      options={'quality': 85}) # Pakkaa JPEG-kuvaksi hyvällä laadulla
     def __str__(self):
         return self.caption or self.image.name
 

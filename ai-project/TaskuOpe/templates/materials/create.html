@@ -3,7 +3,6 @@
 
 {% block content %}
 <div class="container-fluid">
-  <!-- Page Header -->
   <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
     <div>
       <h1 class="h2 mb-0">Luo uusi materiaali</h1>
@@ -14,7 +13,6 @@
     </a>
   </div>
 
-  <!-- KOKO LOMAKE -->
   <form method="post" novalidate>
     {% csrf_token %}
 
@@ -25,7 +23,6 @@
     {% endif %}
 
     <div class="row">
-      <!-- VASEN SARAKE: TEKOÄLYTYÖKALUT -->
       <div class="col-lg-5 col-xl-4 mb-4 mb-lg-0">
         <div class="card shadow-sm h-100">
           <div class="card-header">
@@ -38,9 +35,9 @@
             </div>
 
             <!-- ======================================================= -->
-            <!-- === TÄMÄ ON KORJATTU JA TOIMIVA LOHKO === -->
+            <!-- === MUUTOS TÄSSÄ: Poistettu "bg-light"-luokka         === -->
             <!-- ======================================================= -->
-            <div class="card bg-light p-3 mb-3">
+            <div class="card p-3 mb-3">
               <h6 class="mb-2">Opetussuunnitelma-avustin</h6>
               <div class="form-check form-switch mb-2">
                   <input class="form-check-input" type="checkbox" role="switch" id="use_ops_checkbox" name="use_ops" {% if ops_vals.use_ops %}checked{% endif %}>
@@ -99,7 +96,6 @@
 
             <hr class="my-4">
             
-            <!-- KUVAGENEROINTI -->
             <h6 class="mb-2">Kuvagenerointi</h6>
             <div id="ai-image-tool" class="ai-image-panel border rounded p-3" data-generate-url="{% url 'generate_image' %}" data-target-textarea="{{ form.content.id_for_label }}">
               <div class="mb-2">
@@ -126,7 +122,6 @@
         </div>
       </div>
 
-      <!-- OIKEA SARAKE: MATERIAALIN TIEDOT -->
       <div class="col-lg-7 col-xl-8">
         <div class="card shadow-sm h-100">
           <div class="card-header">
@@ -173,11 +168,10 @@
           </div>
         </div>
       </div>
-    </div><!-- /.row -->
+    </div>
   </form>
 </div>
 
-<!-- Kaikki Javascript-skriptit säilyvät ennallaan -->
 <script>
 // CSRF-tokenin haku
 function getCookie(name) {

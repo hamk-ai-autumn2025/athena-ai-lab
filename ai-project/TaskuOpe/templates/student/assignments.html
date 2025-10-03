@@ -10,33 +10,39 @@
       <i class="bi bi-award me-1"></i> Palautukset & arvioinnit
     </a>
   </div>
-
-  {# Suodatus (jos käytössä) #}
-  {% if filter_form %}
-    <form method="get" class="row g-2 align-items-end mb-3">
-      {{ filter_form }}
-      <div class="col-12 col-sm-auto">
-        <button class="btn btn-primary">Suodata</button>
-      </div>
-      <div class="col-12 col-sm-auto">
-        <a class="btn btn-outline-secondary" href=".">Tyhjennä</a>
-      </div>
-    </form>
-  {% endif %}
+  
+  <!--Suodatin-->
+    <form method="get" class="row g-2 align-items-end p-3 rounded mb-4 border">
+    <div class="col-md-4">
+      <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
+      <select name="subject" id="subject-filter" class="form-select">
+        <option value="">Kaikki aiheet</option>
+        {% for subject in subjects %}
+          <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
+            {{ subject }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-8 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Suodata</button>
+      <a href="{% url 'student_assignments' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+    </div>
+  </form>
 
   {# Uudet #}
   <section class="student-section stack-flow mb-4">
     <h2 class="h5 mb-2">Uudet</h2>
     <div class="student-cards">
       {% for a in assigned %}
-        <article class="card shadow-sm student-card">
+        <!-- MUUTOS TÄSSÄ: h-100-luokka lisätty -->
+        <article class="card shadow-sm student-card h-100">
           <div class="card-body d-flex flex-column">
 
-            {# Pikkukuva, jos materiaalissa on kuvia #}
             {% for img in a.material.images.all|slice:":1" %}
               <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="mb-2 d-block">
-                <img src="{{ img.image.url }}" alt="{{ img.caption|default:'Liitekuva' }}"
-                     class="img-fluid rounded border" style="max-height: 140px; object-fit: cover; width: 100%;">
+                 <img src="{{ img.thumbnail.url }}" alt="{{ img.caption|default:'Liitekuva' }}"
+                  class="img-fluid rounded border" style="max-height: 140px; object-fit: cover; width: 100%;">
               </a>
             {% endfor %}
 
@@ -52,7 +58,7 @@
               {% endif %}
             </p>
             {% if a.material.content %}
-              <div class="text-muted text-truncate-3 mb-3">{{ a.material.content }}</div>
+              <div class="text-muted text-truncate-3 mb-3">{{ a.material.content_without_images }}</div>
             {% endif %}
             <div class="mt-auto d-flex gap-2">
               <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="btn btn-sm btn-primary">Avaa</a>
@@ -71,14 +77,14 @@
     <h2 class="h5 mb-2">Kesken</h2>
     <div class="student-cards">
       {% for a in in_progress %}
-        <article class="card shadow-sm student-card">
+        <!-- MUUTOS TÄSSÄ: h-100-luokka lisätty -->
+        <article class="card shadow-sm student-card h-100">
           <div class="card-body d-flex flex-column">
 
-            {# Pikkukuva, jos materiaalissa on kuvia #}
             {% for img in a.material.images.all|slice:":1" %}
               <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="mb-2 d-block">
-                <img src="{{ img.image.url }}" alt="{{ img.caption|default:'Liitekuva' }}"
-                     class="img-fluid rounded border" style="max-height: 140px; object-fit: cover; width: 100%;">
+                <img src="{{ img.thumbnail.url }}" alt="{{ img.caption|default:'Liitekuva' }}"
+                    class="img-fluid rounded border" style="max-height: 140px; object-fit: cover; width: 100%;">
               </a>
             {% endfor %}
 
@@ -94,7 +100,7 @@
               {% endif %}
             </p>
             {% if a.material.content %}
-              <div class="text-muted text-truncate-3 mb-3">{{ a.material.content }}</div>
+              <div class="text-muted text-truncate-3 mb-3">{{ a.material.content_without_images }}</div>
             {% endif %}
             <div class="mt-auto d-flex gap-2">
               <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="btn btn-sm btn-primary">Jatka</a>

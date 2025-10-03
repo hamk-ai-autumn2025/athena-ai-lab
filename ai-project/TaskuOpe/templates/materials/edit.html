@@ -1,13 +1,136 @@
-{# templates/materials/edit.html #}
 {% extends 'partials/base.html' %}
 {% block title %}Muokkaa materiaalia{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-  <h1 class="h4">Muokkaa: {{ material.title }}</h1>
-  <form method="post" class="card p-3">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary">Tallenna muutokset</button>
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <h1 class="h2 mb-0">Muokkaa materiaalia</h1>
+    <a href="{% url 'material_detail' material_id=material.id %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Takaisin
+    </a>
+  </div>
+
+  <form method="post" class="card shadow-sm">
+    <div class="card-header">
+      <h5 class="mb-0">{{ material.title }}</h5>
+    </div>
+    <div class="card-body">
+      {% csrf_token %}
+
+      <!-- MUUTETTU ASETTELU: Rivi sisältää nyt kaksi täysleveää saraketta, jotka pinoutuvat -->
+      <div class="row g-3">
+        <!-- Editori: Nyt täysleveä -->
+        <div class="col-12">
+          <h6 class="text-muted">Sisältö (Markdown)</h6>
+          {% for field in form %}{% if field.name == 'content' %}
+          <div class="mb-3">
+            {{ field }}
+            {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors }}</div>{% endif %}
+          </div>
+          {% else %}<div class="visually-hidden">{{ field }}</div>{% endif %}{% endfor %}
+        </div>
+
+        <!-- Esikatselu: Nyt täysleveä ja editorin alapuolella, lisätty marginaali ylös -->
+        <div class="col-12 mt-4">
+          <h6 class="text-muted">Esikatselu</h6>
+          <div id="markdown-preview" class="p-3 border rounded" style="min-height: 400px; overflow-y: auto;">
+            <!-- Esikatselu renderöidään tähän -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Tallenna muutokset</button>
+      </div>
+    </div>
   </form>
 </div>
+
+<!-- JavaScript-osio pysyy täysin ennallaan -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const editor = document.querySelector('textarea[name="content"]');
+  const preview = document.getElementById('markdown-preview');
+  
+  const SIZES = ['size-md', 'size-lg', 'size-sm'];
+  const ALIGNS = ['align-center', 'align-left', 'align-right'];
+
+  function updatePreview() {
+    if (!editor || !preview) return;
+    
+    const markdownText = editor.value;
+    const html = marked.parse(markdownText, { breaks: true });
+    preview.innerHTML = html;
+
+    preview.querySelectorAll('img').forEach((img, index) => {
+      img.dataset.imageIndex = index;
+      img.classList.add('clickable-image');
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('image-preview-wrapper', 'image-wrapper');
+      
+      const controls = document.createElement('div');
+      controls.classList.add('image-controls');
+      controls.innerHTML = `
+        <button type="button" class="btn btn-sm btn-secondary" data-align="align-left" title="Aseta vasemmalle"><i class="bi bi-align-start"></i></button>
+        <button type="button" class="btn btn-sm btn-secondary" data-align="align-center" title="Keskitä"><i class="bi bi-align-center"></i></button>
+        <button type="button" class="btn btn-sm btn-secondary" data-align="align-right" title="Aseta oikealle"><i class="bi bi-align-end"></i></button>
+      `;
+      
+      img.parentNode.insertBefore(wrapper, img);
+      wrapper.appendChild(controls);
+      wrapper.appendChild(img);
+
+      const url = new URL(img.src, window.location.origin);
+      const fragment = url.hash.substring(1);
+      const sizeClass = (fragment.match(/size-(sm|md|lg)/) || ['size-md'])[0];
+      const alignClass = (fragment.match(/align-(left|center|right)/) || ['align-center'])[0];
+      
+      wrapper.classList.add(alignClass);
+      img.classList.add('img-fluid', 'rounded', 'border', 'my-3', 'img-scaled', sizeClass);
+    });
+  }
+
+  function handlePreviewClick(event) {
+    const target = event.target;
+    const img = target.closest('img.clickable-image');
+    const alignButton = target.closest('.image-controls button');
+    if (!img && !alignButton) return;
+
+    const wrapper = (img || alignButton).closest('.image-preview-wrapper');
+    const imageToModify = wrapper.querySelector('img');
+    const imageIndex = parseInt(imageToModify.dataset.imageIndex, 10);
+    const markdownImages = editor.value.match(/!\[.*?\]\([^)]+\)/g) || [];
+    const oldMarkdown = markdownImages[imageIndex];
+    if (!oldMarkdown) return;
+
+    const oldUrl = oldMarkdown.match(/\(([^)]+)\)/)[1];
+    const oldFragment = (oldUrl.split('#')[1] || '');
+    let currentSize = (oldFragment.match(/size-(sm|md|lg)/) || ['size-md'])[0];
+    let currentAlign = (oldFragment.match(/align-(left|center|right)/) || ['align-center'])[0];
+
+    if (img) {
+      const nextIndex = (SIZES.indexOf(currentSize) + 1) % SIZES.length;
+      currentSize = SIZES[nextIndex];
+    }
+    
+    if (alignButton) {
+      currentAlign = alignButton.dataset.align;
+    }
+
+    const newFragment = `${currentSize}-${currentAlign}`;
+    const baseUrl = oldUrl.split('#')[0];
+    const newUrl = `${baseUrl}#${newFragment}`;
+    const newMarkdown = oldMarkdown.replace(oldUrl, newUrl);
+    
+    editor.value = editor.value.replace(oldMarkdown, newMarkdown);
+    updatePreview();
+  }
+
+  editor.addEventListener('input', updatePreview);
+  preview.addEventListener('click', handlePreviewClick);
+  updatePreview();
+});
+</script>
 {% endblock %}

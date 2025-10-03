@@ -61,7 +61,7 @@
                 </p>
 
                 {% if sub.feedback %}
-                  <div class="p-3 border rounded bg-light">
+                  <div class="p-3 border rounded">
                     <strong class="d-block mb-1">Palaute:</strong>
                     {{ sub.feedback|linebreaksbr }}
                   </div>
@@ -70,7 +70,7 @@
                 {% if sub.response %}
                   <details class="mt-3">
                     <summary>Näytä opiskelijan vastaus</summary>
-                    <div class="p-2 mt-2 border rounded bg-light">
+                    <div class="p-2 mt-2 border rounded">
                       <pre style="white-space: pre-wrap; font-family: inherit;">{{ sub.response }}</pre>
                     </div>
                   </details>

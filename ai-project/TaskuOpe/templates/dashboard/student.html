@@ -3,16 +3,15 @@
 
 {% block content %}
 
+<!-- LISÄÄ TÄMÄ RIVI -->
 <div class="container-fluid">
+
   <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-4 border-bottom pb-3">
     <div>
       <h1 class="h2 mb-0">Tervetuloa</h1>
-      
-      {# Tässä on oikea paikka luokkatiedolle #}
       {% if user.grade_class %}
         <p class="text-muted mb-0 mt-1"><strong>{{ user.get_grade_class_display }}</strong></p>
       {% endif %}
-      
     </div>
     <div class="btn-group mt-3 mt-sm-0">
       <a href="{% url 'student_assignments' %}" class="btn btn-outline-primary">Omat tehtävät</a>
@@ -20,6 +19,7 @@
     </div>
   </div>
 
+  <!-- TÄMÄ ROW-ELEMENTTI TOIMII NYT OIKEIN, KOSKA SE ON CONTAINERIN SISÄLLÄ -->
   <div class="row g-3 mb-4">
     <div class="col-12 col-md-4">
       <div class="card shadow-sm h-100">
@@ -61,6 +61,7 @@
       </div>
     </div>
   </div>
+</div>
 
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="h5 mb-0">Lähestyvät eräpäivät</h2>

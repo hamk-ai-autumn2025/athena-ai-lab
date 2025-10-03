@@ -125,8 +125,20 @@ class GradingForm(forms.ModelForm):
 
 
 class AddImageForm(forms.Form):
+
+    IMAGE_SIZES = (
+        ('size-medium', 'Keskikokoinen (oletus)'),
+        ('size-small', 'Pieni'),
+        ('size-large', 'Suuri'),
+    )
+
+    ALIGN_CHOICES = (
+        ('align-center', 'Keskitetty (oletus)'),
+        ('align-left', 'Vasen'),
+        ('align-right', 'Oikea'),
+    )
+
     upload = forms.ImageField(required=False, label="Lataa kuva")
-    # LISÄTTY: max_length rajoittaa syötteen pituutta ja parantaa turvallisuutta.
     gen_prompt = forms.CharField(
         required=False, 
         label="Kuvaile generoitu kuva",
@@ -134,6 +146,22 @@ class AddImageForm(forms.Form):
         widget=forms.Textarea(attrs={'rows': 3})
     )
     caption = forms.CharField(required=False, max_length=255, label="Kuvateksti")
+    
+    size = forms.ChoiceField(
+        choices=IMAGE_SIZES, # <-- Nyt tämä toimii
+        required=True,
+        label="Kuvan koko sisällössä",
+        initial='size-md',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    alignment = forms.ChoiceField(
+        choices=ALIGN_CHOICES,
+        required=True,
+        label="Kuvan sijainti",
+        initial='align-center',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     def clean(self):
         cleaned = super().clean()
@@ -158,7 +186,7 @@ class AssignForm(forms.Form):
     class_number = forms.TypedChoiceField(
         required=False,
         coerce=int,
-        choices=[("", "— Valitse luokka —")] + [(i, f"{i}. luokka") for i in range(1, 10)],
+        choices=[("", "— Valitse luokka —")] + [(i, f"{i}. luokka") for i in range(1, 7)],
         label="Luokka"
     )
 
@@ -170,3 +198,4 @@ class AssignForm(forms.Form):
         # if teacher is not None:
         #     qs = qs.filter(classgroup__teacher=teacher).distinct()
         self.fields["students"].queryset = qs.order_by("username")
+

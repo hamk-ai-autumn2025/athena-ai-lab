@@ -35,7 +35,7 @@ from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
 from .models import AIGrade, Rubric
 from .ai_rubric import create_or_update_ai_grade
 
-from urllib.parse import urljoin
+from urllib.parse import urlparse, urljoin, parse_qs, urlunparse
 from django.core.files.base import ContentFile
 from .forms import AddImageForm
 from .models import MaterialImage
@@ -52,6 +52,8 @@ from .forms import AddImageForm
 from .models import MaterialImage
 import re
 from django.utils.safestring import mark_safe
+
+from TaskuOpe.ops_chunks import get_facets
 
 try:
     from openai import OpenAI
@@ -126,33 +128,33 @@ def dashboard_view(request):
 
     return redirect('kirjaudu')
 
-
-# --- Student views ---
 @login_required(login_url='kirjaudu')
 def student_assignments_view(request):
     user = request.user
     if user.role != 'STUDENT':
         return redirect('dashboard')
 
-    qs = (Assignment.objects
-          .select_related('material', 'assigned_by')
-          .filter(student=user))
+    selected_status = request.GET.get('status', '')
+    selected_subject = request.GET.get('subject', '')
 
-    status = request.GET.get('status') or ""
-    order = request.GET.get('order') or "due_at"
+    qs = Assignment.objects.select_related('material', 'assigned_by').filter(student=user)
 
-    if status:
-        qs = qs.filter(status=status)
+    #Suodatus
+    subjects = qs.exclude(material__subject__isnull=True).exclude(material__subject='').values_list('material__subject', flat=True).distinct().order_by('material__subject')
 
-    if order:
-        qs = qs.order_by(order)
+    if selected_status:
+        qs = qs.filter(status=selected_status)
+    
+    if selected_subject:
+        qs = qs.filter(material__subject=selected_subject)
 
     ctx = {
         "assigned": qs.filter(status="ASSIGNED"),
         "in_progress": qs.filter(status="IN_PROGRESS"),
         "submitted": qs.filter(status__in=["SUBMITTED", "GRADED"]),
-        "status": status,
-        "order": order,
+        "subjects": subjects,
+        "selected_subject": selected_subject,
+        "selected_status": selected_status,
         "now": timezone.now(),
     }
     return render(request, 'student/assignments.html', ctx)
@@ -195,24 +197,28 @@ def student_grades_view(request):
         'now': timezone.now(),
     })
 
-# --- Materials ---
 @login_required(login_url='kirjaudu')
 def material_list_view(request):
-    """Lists all materials created by the teacher."""
+    """Lists all materials created by the teacher, with subject filtering."""
     if request.user.role != 'TEACHER':
         messages.error(request, "Vain opettajat voivat nähdä tämän sivun.")
         return redirect('dashboard')
 
-    materials = Material.objects.filter(author=request.user)
-    return render(request, 'materials/list.html', {'materials': materials})
+    selected_subject = request.GET.get('subject', '')
+    materials_qs = Material.objects.filter(author=request.user)
 
+    #Kysely
+    subjects = materials_qs.exclude(subject__isnull=True).exclude(subject='').values_list('subject', flat=True).distinct().order_by('subject')
 
-# materials/views.py
+    if selected_subject:
+        materials_qs = materials_qs.filter(subject=selected_subject)
 
-# Varmista, että tämä import on tiedoston alussa muiden importien kanssa
-from TaskuOpe.ops_chunks import get_facets
-
-# ... muut näkymäsi ...
+    context = {
+        'materials': materials_qs,
+        'subjects': subjects,
+        'selected_subject': selected_subject,
+    }
+    return render(request, 'materials/list.html', context)
 
 @login_required(login_url='kirjaudu')
 def create_material_view(request):
@@ -221,7 +227,7 @@ def create_material_view(request):
         return redirect('dashboard')
 
     # Haetaan dynaamiset valinnat OPS-datasta
-    ops_facets = get_facets() # <-- LISÄYS: Haetaan kaikki aineet ja luokat
+    ops_facets = get_facets()
 
     ai_reply = None
     ai_prompt_val = ""
@@ -716,51 +722,53 @@ def add_material_image_view(request, material_id):
         messages.error(request, "Ei oikeutta.")
         return redirect("material_detail", material_id=m.id)
 
-    form = AddImageForm(request.POST or None, request.FILES or None)
-    if request.method == "POST" and form.is_valid():
-        upload  = form.cleaned_data["upload"]
-        prompt  = (form.cleaned_data["gen_prompt"] or "").strip()
-        caption = form.cleaned_data["caption"] or ""
+    if request.method == "POST":
+        form = AddImageForm(request.POST, request.FILES)
+        if form.is_valid():
+            upload = form.cleaned_data.get("upload")
+            prompt = (form.cleaned_data.get("gen_prompt") or "").strip()
+            caption = form.cleaned_data.get("caption") or ""
+            size_fragment = form.cleaned_data.get("size")
+            alignment = form.cleaned_data.get("alignment")
+            
+            def append_image_to_content(image_url: str, cap: str, size_frag: str, align_frag: str):
+                final_url = f"{image_url}#{size_frag}-{align_frag}"
+                md_img = f"![{cap or 'Kuva'}]({final_url})"
+                m.content = (m.content or "").rstrip() + f"\n\n{md_img}\n"
+                m.save(update_fields=["content"])
 
-        def append_image_to_content(image_url: str, cap: str):
-            md_img = f"![{cap or 'Kuva'}]({image_url})"
-            m.content = (m.content or "").rstrip()
-            m.content += (("\n\n" if m.content else "") + md_img + "\n")
-            m.save(update_fields=["content"])
-
-        # 1) Tiedosto
-        if upload:
-            mi = MaterialImage.objects.create(
-                material=m, image=upload, caption=caption, created_by=request.user
-            )
-            append_image_to_content(mi.image.url, caption)
-            messages.success(request, "Kuva lisätty sisältöön.")
-            return redirect("material_detail", material_id=m.id)
-
-        # 2) Generointi (käyttää ai_service.py:n funktiota)
-        if prompt:
-            try:
-                from .ai_service import generate_image_bytes  # AI-koodi pysyy ai_service.py:ssä
-                data = generate_image_bytes(prompt, size="1024x1024")
-                if not data:
-                    messages.error(request, "API-avain puuttuu tai generointi ei palauttanut dataa.")
-                else:
-                    from django.core.files.base import ContentFile
-                    mi = MaterialImage.objects.create(
-                        material=m,
-                        image=ContentFile(data, name="gen.png"),
-                        caption=caption,
-                        created_by=request.user,
-                    )
-                    append_image_to_content(mi.image.url, caption)
-                    messages.success(request, "Generoitu kuva lisätty sisältöön.")
-                    return redirect("material_detail", material_id=m.id)
-            except Exception as e:
-                messages.error(request, f"Kuvan generointi epäonnistui: {e}")
+            # Tapaus 1: Käyttäjä latasi tiedoston
+            if upload:
+                mi = MaterialImage.objects.create(material=m, image=upload, caption=caption, created_by=request.user)
+                append_image_to_content(mi.image.url, caption, size_fragment, align_fragment)
+                messages.success(request, "Ladattu kuva lisätty sisältöön.")
                 return redirect("material_detail", material_id=m.id)
 
-        messages.error(request, "Valitse tiedosto tai anna generointikehote.")
-        return redirect("material_detail", material_id=m.id)
+            # Tapaus 2: Käyttäjä generoi kuvan
+            if prompt:
+                try:
+                    image_data = generate_image_bytes(prompt, size="1024x1024")
+                    if not image_data:
+                        messages.error(request, "Kuvan generointi ei palauttanut dataa (tarkista API-avain).")
+                    else:
+                        mi = MaterialImage.objects.create(
+                            material=m,
+                            image=ContentFile(image_data, name="gen.png"),
+                            caption=caption,
+                            created_by=request.user,
+                        )
+                        append_image_to_content(mi.image.url, caption, size_fragment, align_fragment)
+                        messages.success(request, "Generoitu kuva lisätty sisältöön.")
+                        return redirect("material_detail", material_id=m.id)
+                except Exception as e:
+                    messages.error(request, f"Kuvan generointi epäonnistui: {e}")
+                
+                # Ohjataan takaisin, jos generointi epäonnistui tai ei palauttanut dataa
+                return redirect("material_add_image", material_id=m.id)
+
+    # GET-pyyntö tai virheellinen POST
+    else:
+        form = AddImageForm()
 
     return render(request, "materials/add_image.html", {"material": m, "form": form})
 
@@ -884,10 +892,11 @@ def generate_image_view(request):
 
 def material_detail_view(request, material_id):
     material = get_object_or_404(Material, pk=material_id)
-    rendered = mark_safe(md.markdown(material.content or "", extensions=["extra"]))
+    rendered_content = render_material_content_to_html(material.content)
+    
     return render(request, "materials/material_detail.html", {
         "material": material,
-        "rendered_content": rendered,
+        "rendered_content": rendered_content,
     })
 
 @login_required
@@ -914,10 +923,15 @@ def material_image_insert_view(request, material_id, image_id):
         return redirect("material_detail", material_id=m.id)
 
     img = get_object_or_404(MaterialImage, pk=image_id, material=m)
+    
+    # Lue koko POST-datasta, oletuksena keskikokoinen
+    size_fragment = request.POST.get(f'size_{image_id}', 'size-md')
+    align_fragment = request.POST.get(f'align_{image_id}', 'align-center')
 
     alt = (img.caption or "Kuva").strip()
-    url = img.image.url          # esim. /media/materials/2025/09/kuva.png
-    md  = f"\n\n![{alt}]({url})\n"
+    # Yhdistetään tiedot fragmenttiin
+    final_url = f"{img.image.url}#{size_fragment}-{align_fragment}"
+    md  = f"\n\n![{alt}]({final_url})\n"
 
     m.content = (m.content or "")
     if m.content and not m.content.endswith("\n"):
@@ -1017,21 +1031,45 @@ def generate_image_view(request):
         status=201 if not used_placeholder else 207
     )
 
-_MD_IMG = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
+# Päivitä render_material_content_to_html-funktio
+_MD_IMG_RE = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
 
 def render_material_content_to_html(text: str) -> str:
     """
-    Muutetaan Markdown-kuvat responsiivisiksi <img>-tageiksi ja säilytetään rivinvaihdot.
+    Muuntaa Markdown-tekstin HTML:ksi käyttäen kunnollista parseria.
+    Esikäsittelee kustomoidut kuvatagit ja antaa sitten kirjaston
+    hoitaa kappaleiden, listojen yms. luomisen oikein.
     """
     if not text:
         return ""
-    
-    html = _MD_IMG.sub(
-        r'<img src="\2" alt="\1" class="img-fluid rounded border my-3">',
-        text,
-    )
-    
-    html = html.replace("\n", "<br>")
+
+    # 1. Esikäsittelijäfunktio, joka muuttaa meidän kuvatagimme valmiiksi HTML:ksi
+    def replace_custom_image_syntax(match):
+        alt_text = match.group(1)
+        url = match.group(2)
+        
+        parsed_url = urlparse(url)
+        path = parsed_url.path
+        fragment = parsed_url.fragment
+
+        size_match = re.search(r'size-(sm|md|lg)', fragment)
+        align_match = re.search(r'align-(left|center|right)', fragment)
+
+        size_class = size_match.group(0) if size_match else "size-md"
+        align_class = align_match.group(0) if align_match else "align-center"
+        
+        img_tag = f'<img src="{path}" alt="{alt_text}" class="img-fluid rounded border my-3 img-scaled {size_class}">'
+        # Luodaan <div>-kääre, joka hallitsee sijainnin
+        return f'<div class="image-wrapper {align_class}">{img_tag}</div>'
+
+    # 2. Ajetaan esikäsittelijä koko tekstille
+    processed_text = _MD_IMG_RE.sub(replace_custom_image_syntax, text)
+
+    # 3. Annetaan Markdown-kirjaston hoitaa loput.
+    # 'nl2br' muuttaa rivinvaihdot <br>-tageiksi, kuten editorissa.
+    # 'extra' ymmärtää listat ja muut Markdown-laajennukset.
+    html = md.markdown(processed_text, extensions=['nl2br', 'extra'])
+
     return mark_safe(html)
 
 @login_required

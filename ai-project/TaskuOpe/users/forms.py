@@ -1,7 +1,6 @@
 # ai-project/users/forms.py
 
 from django import forms
-# TÄRKEÄÄ: Varmista, että molemmat UserCreationForm ja UserChangeForm on tuotu
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, UserChangeForm
 
 from .models import CustomUser
@@ -9,12 +8,13 @@ from .models import CustomUser
 class CustomLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['username'].widget.attrs.update(
-            {'class': 'form-control', 'placeholder': 'Käyttäjätunnus'}
-        )
-        self.fields['password'].widget.attrs.update(
-            {'class': 'form-control', 'placeholder': 'Salasana'}
-        )
+        
+        self.fields['username'].widget.attrs.update({
+            'class': 'form-control'
+        })
+        self.fields['password'].widget.attrs.update({
+            'class': 'form-control'
+        })
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
