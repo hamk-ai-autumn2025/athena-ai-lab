@@ -36,18 +36,20 @@ class CustomUserAdmin(UserAdmin):
     )
 
     # 2. Uuden käyttäjän luontinäkymä (add_fieldsets) on nyt TÄYDENNETTY.
-    #    Tämä näyttää salasanakenttien LISÄKSI myös nimen, sähköpostin ja roolin/luokan.
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        (
-            "Käyttäjän perustiedot",
-            {
-                "fields": (
-                    "first_name",
-                    "last_name",
-                    "email",
-                    "role",
-                    "grade_class",
-                )
-            },
-        ),
+
+    # HUOM: Tässä määritellään add_fieldsets kokonaan uudelleen (ei peritä UserAdmin.add_fieldsets).
+    # Aiemmin perintä toi mukanaan virheellisen 'usable_password'-kentän, jota CustomUser-mallissa ei ole.
+    # Tämä korjaus poistaa sen ja määrittää uuden käyttäjän luontinäkymän kentät selkeästi ja oikein. //ida
+    add_fieldsets = (
+        (None, {
+            "classes": ("wide",),
+            "fields": ("username", "password1", "password2"),  # tai ("email", "password1", "password2")
+        }),
+        ("Käyttäjän perustiedot", {
+            "fields": ("first_name", 
+                       "last_name", 
+                       "email", 
+                       "role", 
+                       "grade_class"),
+        }),
     )

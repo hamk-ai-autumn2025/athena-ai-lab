@@ -245,6 +245,98 @@ document.addEventListener('DOMContentLoaded', () => {
     fields[key].addEventListener('input', () => validateField(key));
     if (fields[key].tagName === 'SELECT') { fields[key].addEventListener('change', () => validateField(key)); }
   }
+}); 
+
+// Tekoälyn vastauksen siirto lomakkeeseen
+document.addEventListener('DOMContentLoaded', () => {
+  const aiBox = document.getElementById('ai_reply_box');
+  if (!aiBox) return;
+
+  const $title   = document.getElementById('{{ form.title.id_for_label }}');
+  const $subject = document.getElementById('{{ form.subject.id_for_label }}'); // input TAI select
+  const $content = document.getElementById('{{ form.content.id_for_label }}');
+  const opsSubjectSel = document.getElementById('ops_subject');                // fallback aiheen täyttöön
+
+  const raw = (aiBox.innerText || '').trim();
+  if (!raw) return;
+
+  // --- JSON-lohko tai vapaa teksti ---
+  function parseJSONBlock(text) {
+    const SPLIT = '---JSON---';
+    if (!text.includes(SPLIT)) return null;
+    let tail = text.split(SPLIT)[1].trim();
+    tail = tail.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+    try { return JSON.parse(tail); } catch { return null; }
+  }
+  function parseFree(text) {
+    const out = { title:'', subject:'', content:'' };
+    const mTitle = text.match(/^(?:Otsikkoehdotus|Otsikko)\s*:\s*(.+)$/mi);
+    if (mTitle) out.title = mTitle[1].trim();
+
+    const mBody = text.match(/Luonnosteksti:\s*([\s\S]+)$/i);
+    out.content = (mBody ? mBody[1] : text).trim();
+
+    const mSubj = text.match(/^(?:Aihe|Oppiaine)\s*:\s*(.+)$/mi);
+    if (mSubj) out.subject = mSubj[1].trim();
+
+    return out;
+  }
+  function selectByTextOrValue($sel, wanted) {
+    if (!$sel || !wanted) return;
+    const needle = String(wanted).toLowerCase().trim();
+    for (const opt of $sel.options) {
+      if (opt.text.toLowerCase().trim() === needle || (opt.value||'').toLowerCase().trim() === needle) {
+        opt.selected = true;
+        $sel.dispatchEvent(new Event('change'));
+        return;
+      }
+    }
+    for (const opt of $sel.options) {
+      if (opt.text.toLowerCase().includes(needle)) {
+        opt.selected = true;
+        $sel.dispatchEvent(new Event('change'));
+        return;
+      }
+    }
+  }
+
+  const data = parseJSONBlock(raw) || parseFree(raw);
+
+  // Otsikko
+  if ($title && data.title) {
+    $title.value = data.title.trim();
+    $title.dispatchEvent(new Event('input'));
+  }
+
+  // Aihe (AI muuten OPS fallback)
+  if ($subject) {
+    if ($subject.tagName === 'INPUT') {
+      if (data.subject) {
+        $subject.value = data.subject;
+      } else if (opsSubjectSel && opsSubjectSel.value) {
+        $subject.value = opsSubjectSel.options[opsSubjectSel.selectedIndex]?.text || opsSubjectSel.value;
+      }
+      $subject.dispatchEvent(new Event('input'));
+    } else { // select
+      if (data.subject) {
+        selectByTextOrValue($subject, data.subject);
+      } else if (opsSubjectSel && opsSubjectSel.value) {
+        const txt = opsSubjectSel.options[opsSubjectSel.selectedIndex]?.text || opsSubjectSel.value;
+        selectByTextOrValue($subject, txt);
+      }
+    }
+  }
+
+  // SISÄLTÖ: vain Luonnosteksti
+  if ($content) {
+    const body = (data.content || '').trim();
+    if (body) {
+      $content.value = body;
+      $content.dispatchEvent(new Event('input'));
+    }
+  }
 });
+
+
 </script>
 {% endblock %}

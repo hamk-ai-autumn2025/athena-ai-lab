@@ -73,9 +73,13 @@
                   <h6 class="text-muted">Oma vastauksesi:</h6>
                   <small id="word-count-display" class="text-muted"></small>
                 </div>
-                <div class="p-3 border rounded bg-light mb-4">
-                  <pre id="submission-response-text" style="white-space: pre-wrap; font-family: inherit;">{{ submission.response }}</pre>
-                </div>
+
+                
+              <div class="p-3 border rounded bg-light mb-4">
+  <div id="submission-response-html" class="student-response">
+    {{ submission.response|safe }}
+  </div>
+</div>
 
                 {% if submission.submitted_at %}
                   <div class="small text-muted mb-3">Lähetetty: {{ submission.submitted_at|date:"d.m.Y H:i" }}</div>
@@ -129,6 +133,27 @@
                   <div class="text-danger small mt-1">{{ form.response.errors.as_text }}</div>
                 {% endif %}
               </div>
+                        <!-- Piirtotyökalu oppilaalle -->
+      <div class="mb-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#drawArea">
+          ✏️ Piirrä (avaa/sulje)
+        </button>
+      </div>
+
+      <div id="drawArea" class="collapse border rounded p-2 mb-3">
+        <div class="d-flex gap-2 mb-2">
+          <button type="button" class="btn btn-sm btn-secondary" id="penBtn">Kynä</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="eraserBtn">Pyyhin</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="clearBtn">Tyhjennä</button>
+               <button type="button" class="btn btn-sm btn-primary" id="insertToAnswerBtn">
+          Lisää piirros vastaukseen
+        </button>
+        </div>
+        <canvas id="draw-canvas" width="640" height="400" style="border:1px solid #dee2e6;border-radius:8px;"></canvas>
+        <input type="hidden" name="drawing_data" id="drawing_data">
+        <div class="mt-2 small text-muted">Piirros liitetään vastaukseen tallennettaessa/lähetettäessä.</div>
+      </div>
+
               <div class="d-flex justify-content-between">
                 <button type="submit" name="save_draft" value="save" class="btn btn-outline-secondary">Tallenna luonnos</button>
                 <button type="submit" name="submit_final" value="submit" class="btn btn-primary">Lähetä lopullinen vastaus</button>
@@ -287,6 +312,98 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 </script>
+
+<!-- === TINYMCE-INTEGRAATIO LISÄTTY TÄHÄN LOPPUUN === -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.0.0/tinymce.min.js" referrerpolicy="origin"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  tinymce.init({
+    selector: 'textarea[name="response"]',
+    height: 380,
+    plugins: 'table lists',
+    toolbar: 'undo redo | bold italic | bullist numlist | table',
+    menubar: 'table'
+  });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('#submission-response-html table').forEach(t => {
+    t.classList.add('table', 'table-bordered', 'table-sm'); // Bootstrap-tyylit
+    t.style.width = '100%';
+  });
+});
+</script>
+
+{% if not readonly %}
+<!-- Fabric.js (vakaa) + eraser-plugin -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.jsdelivr.net/npm/fabricjs-eraser@0.6.0/dist/fabricjs-eraser.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const el = document.getElementById('draw-canvas');
+  if (!el || !window.fabric) return;
+
+  // Kanvaasi
+  const c = new fabric.Canvas(el, { isDrawingMode: true });
+  c.freeDrawingBrush = new fabric.PencilBrush(c);
+  c.freeDrawingBrush.width = 3;
+  window._drawCanvas = c; // jos muu koodi tarvitsee
+
+  // Kynä
+  document.getElementById('penBtn')?.addEventListener('click', () => {
+    c.isDrawingMode = true;
+    c.freeDrawingBrush = new fabric.PencilBrush(c);
+    c.freeDrawingBrush.width = 3;
+    c.freeDrawingBrush.color = '#000000';
+  });
+
+  // Pyyhin (plugin) + fallback valkoiseen kynään
+  document.getElementById('eraserBtn')?.addEventListener('click', () => {
+    if (fabric.EraserBrush) {
+      c.isDrawingMode = true;
+      c.freeDrawingBrush = new fabric.EraserBrush(c);
+      c.freeDrawingBrush.width = 12;
+    } else {
+      // fallback
+      c.isDrawingMode = true;
+      c.freeDrawingBrush = new fabric.PencilBrush(c);
+      c.freeDrawingBrush.color = '#ffffff';
+      c.freeDrawingBrush.width = 20;
+    }
+  });
+
+  // Tyhjennä
+  document.getElementById('clearBtn')?.addEventListener('click', () => c.clear());
+
+  // Liitä kuva piilokenttään ennen submitia
+  const form = document.querySelector('form[method="post"]');
+  form?.addEventListener('submit', () => {
+    document.getElementById('drawing_data').value = c.toDataURL({ format: 'png' });
+  });
+
+  // Upota piirros suoraan vastaukseen
+  const insertBtn = document.getElementById('insertToAnswerBtn'); // varmista että nappi on templatessa
+  const textarea = document.querySelector('textarea[name="response"]');
+  insertBtn?.addEventListener('click', () => {
+    const dataUrl = c.toDataURL({ format: 'png' });
+    if (window.tinymce && tinymce.activeEditor) {
+      tinymce.activeEditor.insertContent(
+        `<p><img src="${dataUrl}" alt="Piirros" style="max-width:100%;height:auto;border:1px solid #dee2e6;border-radius:6px"/></p>`
+      );
+    } else if (textarea) {
+      textarea.value += `\n\n<img src="${dataUrl}" alt="Piirros"/>\n`;
+      textarea.dispatchEvent(new Event('input'));
+    }
+  });
+});
+</script>
+
+{% endif %}
 
 {% endblock content %}

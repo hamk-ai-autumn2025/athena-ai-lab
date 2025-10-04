@@ -48,7 +48,7 @@ class Material(models.Model):
         APPROVED = 'APPROVED', _('Hyväksytty')
         REJECTED = 'REJECTED', _('Hylätty')
 
-    GRADE_CHOICES = [(str(i), f"{i}. luokka") for i in range(1, 10)]
+    GRADE_CHOICES = [(str(i), f"{i}. luokka") for i in range(1, 7)]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255, verbose_name=_("Otsikko"))
