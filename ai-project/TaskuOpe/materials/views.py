@@ -1155,13 +1155,13 @@ def generate_image_view(request):
 
 def material_detail_view(request, material_id):
     material = get_object_or_404(Material, pk=material_id)
+
     rendered_content = render_material_content_to_html(material.content)
     
     return render(request, "materials/material_detail.html", {
         "material": material,
         "rendered_content": rendered_content,
     })
-
 @login_required
 @require_POST
 def delete_material_image_view(request, image_id):
@@ -1297,42 +1297,41 @@ def generate_image_view(request):
 # Päivitä render_material_content_to_html-funktio
 _MD_IMG_RE = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
 
+_MD_IMG_RE = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
+
 def render_material_content_to_html(text: str) -> str:
     """
-    Muuntaa Markdown-tekstin HTML:ksi käyttäen kunnollista parseria.
-    Esikäsittelee kustomoidut kuvatagit ja antaa sitten kirjaston
-    hoitaa kappaleiden, listojen yms. luomisen oikein.
+    Muuntaa Markdown-tekstin HTML:ksi.
     """
     if not text:
         return ""
 
-    # 1. Esikäsittelijäfunktio, joka muuttaa meidän kuvatagimme valmiiksi HTML:ksi
     def replace_custom_image_syntax(match):
         alt_text = match.group(1)
         url = match.group(2)
-        
         parsed_url = urlparse(url)
         path = parsed_url.path
         fragment = parsed_url.fragment
-
         size_match = re.search(r'size-(sm|md|lg)', fragment)
         align_match = re.search(r'align-(left|center|right)', fragment)
-
         size_class = size_match.group(0) if size_match else "size-md"
         align_class = align_match.group(0) if align_match else "align-center"
-        
         img_tag = f'<img src="{path}" alt="{alt_text}" class="img-fluid rounded border my-3 img-scaled {size_class}">'
-        # Luodaan <div>-kääre, joka hallitsee sijainnin
         return f'<div class="image-wrapper {align_class}">{img_tag}</div>'
 
-    # 2. Ajetaan esikäsittelijä koko tekstille
+    def preprocess_custom_blocks(text_content):
+        # Etsitään kaikki :::note ... ::: -lohkot
+        pattern = re.compile(r':::[ ]?note\n(.*?)\n:::', re.DOTALL)
+        # Korvataan ne HTML-elementillä, jolla on oma CSS-luokka
+        return pattern.sub(r'<p class="custom-block note">\1</p>', text_content)
+
+    # 1. Esikäsitellään kustomoidut kuvat
     processed_text = _MD_IMG_RE.sub(replace_custom_image_syntax, text)
-
-    # 3. Annetaan Markdown-kirjaston hoitaa loput.
-    # 'nl2br' muuttaa rivinvaihdot <br>-tageiksi, kuten editorissa.
-    # 'extra' ymmärtää listat ja muut Markdown-laajennukset.
-    html = md.markdown(processed_text, extensions=['nl2br', 'extra'])
-
+    # 2. Esikäsitellään uudet tekstityylit
+    processed_text = preprocess_custom_blocks(processed_text)
+    
+    # 3. Annetaan Markdown-kirjaston hoitaa loput
+    html = md.markdown(processed_text, extensions=['extra'])
     return mark_safe(html)
 
 @login_required

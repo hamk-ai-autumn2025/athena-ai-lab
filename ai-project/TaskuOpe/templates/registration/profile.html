@@ -1,5 +1,3 @@
-<!-- Tallenna tämä nimellä: templates/registration/profile.html -->
-
 {% extends "partials/base.html" %}
 
 {% block title %}Oma profiili{% endblock %}
@@ -33,7 +31,6 @@
             <p class="fs-5">{{ user.email }}</p>
           </div>
           
-          <!-- === MUUTOS TÄSSÄ LOHKOSSA === -->
           <div class="mb-3">
             <h6 class="text-muted">Rooli</h6>
             <p class="fs-5">
@@ -46,7 +43,6 @@
               {% endif %}
             </p> 
           </div>
-          <!-- === MUUTOS PÄÄTTYY === -->
 
           {% if user.role == 'STUDENT' and user.grade_class %}
             <div class="mb-3">

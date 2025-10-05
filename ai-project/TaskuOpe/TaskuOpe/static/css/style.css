@@ -300,30 +300,33 @@ html, body {
   }
 }
 
+
 /* ======================================================= */
 /* 9. KUVAN SKAALAUS, SIJAINTI & INTERAKTIIVINEN EDITOR    */
 /* ======================================================= */
 
-/* --- Yleiset säännöt, jotka toimivat kaikkialla --- */
+/* --- A. Yleiset säännöt, jotka toimivat kaikkialla --- */
+
+.card-body, #markdown-preview {
+  display: flow-root;
+}
 
 .image-wrapper.align-left,
 .image-preview-wrapper.align-left {
   float: left;
   margin-right: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
   shape-outside: margin-box;
   margin-left: calc(-1 * var(--bs-card-spacer-x));
-  /* LISÄTTY: Vedetään kuva ylös kontin pehmusteen yli */
   margin-top: calc(-1 * var(--bs-card-spacer-y));
 }
 .image-wrapper.align-right,
 .image-preview-wrapper.align-right {
   float: right;
   margin-left: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
   shape-outside: margin-box;
   margin-right: calc(-1 * var(--bs-card-spacer-x));
-  /* LISÄTTY: Vedetään kuva ylös kontin pehmusteen yli */
   margin-top: calc(-1 * var(--bs-card-spacer-y));
 }
 .image-wrapper.align-center,
@@ -332,44 +335,24 @@ html, body {
   margin-left: auto;
   margin-right: auto;
   float: none;
+  margin-bottom: 1rem;
 }
 
-/* Itse kuva hallitsee koon */
 .img-scaled.size-sm { max-width: 30%; }
 .img-scaled.size-md { max-width: 60%; }
 .img-scaled.size-lg { max-width: 90%; }
 
-/* Mobiilissa kaikki kuvat ovat täysleveitä */
-@media (max-width: 767px) {
-  .img-scaled.size-sm,
-  .img-scaled.size-md,
-  .img-scaled.size-lg {
-    max-width: 100%;
-  }
-}
 
-/* Clearfix: Varmistaa, että floatattujen kuvien jälkeinen sisältö asettuu oikein. */
-.card-body:after,
-#markdown-preview:after {
-  content: "";
-  display: table;
-  clear: both;
-}
-
-
-/* --- Vain editorissa näkyvät elementit --- */
+/* --- B. Vain editorissa näkyvät elementit --- */
 .image-preview-wrapper {
   position: relative;
   display: inline-block;
   max-width: 100%;
 }
-.image-preview-wrapper.align-center {
-  display: block;
-}
+.image-preview-wrapper.align-center { display: block; }
 .image-controls {
   position: absolute;
-  top: 1rem;
-  left: 50%;
+  top: 1rem; left: 50%;
   transform: translateX(-50%);
   background-color: rgba(0, 0, 0, 0.7);
   padding: 0.25rem;
@@ -378,9 +361,81 @@ html, body {
   gap: 0.25rem;
   z-index: 10;
 }
-.image-preview-wrapper:hover .image-controls {
-  display: flex;
+.image-preview-wrapper:hover .image-controls { display: flex; }
+#markdown-preview .clickable-image { cursor: pointer; }
+
+
+/* =========================================================== */
+/* === C. MOBIILIKORJAUS ASETTELULLE (LISÄTTY LOHKO)       === */
+/* =========================================================== */
+
+@media (max-width: 767.98px) {
+  /* 
+    Nollataan kaikki float- ja erikoismarginaalit mobiilissa.
+    Tämä pakottaa kuvan käyttäytymään kuin normaali, täysleveä lohko.
+  */
+  .image-wrapper.align-left,
+  .image-preview-wrapper.align-left,
+  .image-wrapper.align-right,
+  .image-preview-wrapper.align-right {
+    float: none;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 0;
+    shape-outside: none;
+  }
+  
+  /* Varmistetaan, että kaikki kuvat voivat olla täysleveitä mobiilissa */
+  .img-scaled.size-sm,
+  .img-scaled.size-md,
+  .img-scaled.size-lg {
+    max-width: 100%;
+  }
 }
-#markdown-preview .clickable-image {
-  cursor: pointer;
+
+/* ======================================================= */
+/* 10. KUSTOMOIDUT TEKSTITYYLIT (HUOMIOLAATIKKO)         */
+/* ======================================================= */
+
+.custom-block {
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border-left: 5px solid;
+  border-radius: 0.375rem;
+}
+
+/* Huomio-tyylin värit */
+.custom-block.note {
+  background-color: rgba(var(--bs-primary-rgb), 0.1);
+  border-color: var(--bs-primary);
+}
+
+/* ======================================================= */
+/* 11. SISÄLLÖN TYPOGRAFIA JA VÄLIT                      */
+/* ======================================================= */
+
+/*
+  Määritellään oletusmarginaalit yleisimmille tekstielementeille.
+  Tämä lisää ilmaa ja parantaa luettavuutta molemmissa näkymissä.
+*/
+#markdown-preview h1, .card-body h1,
+#markdown-preview h2, .card-body h2,
+#markdown-preview h3, .card-body h3,
+#markdown-preview h4, .card-body h4,
+#markdown-preview p, .card-body p,
+#markdown-preview ul, .card-body ul,
+#markdown-preview ol, .card-body ol,
+#markdown-preview blockquote, .card-body blockquote {
+  margin-bottom: 1.25rem; /* Voit säätää tätä arvoa (esim. 1rem tai 1.5rem) */
+}
+
+/* 
+  Varmistetaan, että otsikoiden yläpuolella on myös tilaa,
+  paitsi jos se on aivan kontin ensimmäinen elementti.
+*/
+#markdown-preview h1:not(:first-child), .card-body h1:not(:first-child),
+#markdown-preview h2:not(:first-child), .card-body h2:not(:first-child),
+#markdown-preview h3:not(:first-child), .card-body h3:not(:first-child) {
+    margin-top: 2rem;
 }

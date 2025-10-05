@@ -1,6 +1,10 @@
 {% extends 'partials/base.html' %}
 {% block title %}Muokkaa materiaalia{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
@@ -17,22 +21,21 @@
     <div class="card-body">
       {% csrf_token %}
 
-      <!-- MUUTETTU ASETTELU: Rivi sisältää nyt kaksi täysleveää saraketta, jotka pinoutuvat -->
+      <!-- MUUTETTU ASETTELU: Molemmat sarakkeet ovat nyt täysleveitä -->
       <div class="row g-3">
-        <!-- Editori: Nyt täysleveä -->
+        <!-- Editori -->
         <div class="col-12">
-          <h6 class="text-muted">Sisältö (Markdown)</h6>
+          <h6 class="text-muted">Materiaalin sisältö</h6>
           {% for field in form %}{% if field.name == 'content' %}
-          <div class="mb-3">
-            {{ field }}
-            {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors }}</div>{% endif %}
+          <div class="mb-3" id="editor-container">
+            <textarea name="{{ field.name }}" id="content-editor" class="form-control">{{ field.value|default:"" }}</textarea>
           </div>
           {% else %}<div class="visually-hidden">{{ field }}</div>{% endif %}{% endfor %}
         </div>
 
-        <!-- Esikatselu: Nyt täysleveä ja editorin alapuolella, lisätty marginaali ylös -->
+        <!-- Esikatselu editorin alapuolella -->
         <div class="col-12 mt-4">
-          <h6 class="text-muted">Esikatselu</h6>
+          <h6 class="text-muted">Esikatselu (siirrä kursori kuvan päälle muokataksesi kuvan asettelua ja kokoa)</h6>
           <div id="markdown-preview" class="p-3 border rounded" style="min-height: 400px; overflow-y: auto;">
             <!-- Esikatselu renderöidään tähän -->
           </div>
@@ -46,30 +49,78 @@
   </form>
 </div>
 
-<!-- JavaScript-osio pysyy täysin ennallaan -->
+<!-- KIRJASTOT -->
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const editor = document.querySelector('textarea[name="content"]');
+  // === OSA 1: Alustetaan EasyMDE-editori ILMAN sen omaa esikatselua ===
+  const easyMDE = new EasyMDE({
+      element: document.getElementById('content-editor'),
+      spellChecker: false,
+      toolbar: [
+        "bold", "italic",
+                {
+            name: "underline",
+            action: function(editor){
+                const cm = editor.codemirror;
+                const selectedText = cm.getSelection();
+                cm.replaceSelection(`<u>${selectedText}</u>`);
+            },
+            className: "fa fa-underline",
+            title: "Alleviivaa",
+        },
+        "heading", "|", 
+        "quote", "unordered-list", "ordered-list", "|",
+        "link", 
+        {
+            name: "insertImage",
+            action: () => window.open("{% url 'material_detail' material_id=material.id %}", "_blank"),
+            className: "fa fa-image",
+            title: "Lisää kuva galleriasta (avaa uusi välilehti)",
+        },
+        "|",
+        {
+            name: "huomio",
+            action: function(editor) {
+                const cm = editor.codemirror;
+                const selectedText = cm.getSelection();
+                cm.replaceSelection(`\n:::note\n${selectedText}\n:::\n`);
+            },
+            className: "fa fa-exclamation-circle", // Käytetään huutomerkki-ikonia
+            title: "Luo huomiolaatikko",
+        },
+        "|", // Erotin
+        "guide"
+      ],
+      maxHeight: "500px", 
+      minHeight: "400px",
+  });
+
+  // === OSA 2: Tuodaan takaisin OMA interaktiivinen esikatselumme ===
   const preview = document.getElementById('markdown-preview');
-  
   const SIZES = ['size-md', 'size-lg', 'size-sm'];
-  const ALIGNS = ['align-center', 'align-left', 'align-right'];
 
   function updatePreview() {
-    if (!editor || !preview) return;
+    if (!preview) return;
     
-    const markdownText = editor.value;
+    let markdownText = easyMDE.value();
+    
+    const notePattern = /:::[ ]?note\n(.*?)\n:::/gs;
+    markdownText = markdownText.replace(notePattern, (match, content) => {
+        // Muunnetaan lohkon SISÄLTÖ ensin Markdownista HTML:ksi
+        const innerHtml = marked.parse(content.trim(), { breaks: true });
+        // Palautetaan koko lohko omalla HTML-rakenteellaan
+        return `<div class="custom-block note">${innerHtml}</div>`;
+    });
+
     const html = marked.parse(markdownText, { breaks: true });
     preview.innerHTML = html;
 
     preview.querySelectorAll('img').forEach((img, index) => {
       img.dataset.imageIndex = index;
-      img.classList.add('clickable-image');
-
       const wrapper = document.createElement('div');
       wrapper.classList.add('image-preview-wrapper', 'image-wrapper');
-      
       const controls = document.createElement('div');
       controls.classList.add('image-controls');
       controls.innerHTML = `
@@ -77,18 +128,15 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" class="btn btn-sm btn-secondary" data-align="align-center" title="Keskitä"><i class="bi bi-align-center"></i></button>
         <button type="button" class="btn btn-sm btn-secondary" data-align="align-right" title="Aseta oikealle"><i class="bi bi-align-end"></i></button>
       `;
-      
       img.parentNode.insertBefore(wrapper, img);
       wrapper.appendChild(controls);
       wrapper.appendChild(img);
-
       const url = new URL(img.src, window.location.origin);
       const fragment = url.hash.substring(1);
       const sizeClass = (fragment.match(/size-(sm|md|lg)/) || ['size-md'])[0];
       const alignClass = (fragment.match(/align-(left|center|right)/) || ['align-center'])[0];
-      
       wrapper.classList.add(alignClass);
-      img.classList.add('img-fluid', 'rounded', 'border', 'my-3', 'img-scaled', sizeClass);
+      img.classList.add('img-fluid', 'rounded', 'border', 'my-3', 'img-scaled', sizeClass, 'clickable-image');
     });
   }
 
@@ -101,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrapper = (img || alignButton).closest('.image-preview-wrapper');
     const imageToModify = wrapper.querySelector('img');
     const imageIndex = parseInt(imageToModify.dataset.imageIndex, 10);
-    const markdownImages = editor.value.match(/!\[.*?\]\([^)]+\)/g) || [];
+    const markdownImages = easyMDE.value().match(/!\[.*?\]\([^)]+\)/g) || [];
     const oldMarkdown = markdownImages[imageIndex];
     if (!oldMarkdown) return;
 
@@ -124,12 +172,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const newUrl = `${baseUrl}#${newFragment}`;
     const newMarkdown = oldMarkdown.replace(oldUrl, newUrl);
     
-    editor.value = editor.value.replace(oldMarkdown, newMarkdown);
-    updatePreview();
+    const currentVal = easyMDE.value();
+    easyMDE.value(currentVal.replace(oldMarkdown, newMarkdown));
   }
 
-  editor.addEventListener('input', updatePreview);
+  // === OSA 3: Yhdistetään EasyMDE ja esikatselu ===
+  
+  // Kuunnellaan, kun EasyMDE:n sisältö muuttuu, ja päivitetään oma esikatselumme
+  easyMDE.codemirror.on("change", updatePreview);
+  
+  // Kuunnellaan klikkauksia omassa esikatselussamme
   preview.addEventListener('click', handlePreviewClick);
+
+  // Päivitetään esikatselu kerran heti alussa
   updatePreview();
 });
 </script>
