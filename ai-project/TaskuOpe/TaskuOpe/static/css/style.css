@@ -1,5 +1,5 @@
 /* ================================================= */
-/* 1. TEEMAMÄÄRITYKSET JA MUUTTUJAT                */
+/* 1. TEEMAMÄÄRITYKSET JA MUUTTUJAT                  */
 /* ================================================= */
 
 :root {
@@ -89,7 +89,7 @@ html, body {
 }
 
 /* ================================================= */
-/* 3. YLEISET KOMPONENTIT JA TYYLIT                */
+/* 3. YLEISET KOMPONENTIT JA TYYLIT                  */
 /* ================================================= */
 
 .sidebar .nav-link {
@@ -140,20 +140,14 @@ html, body {
   max-width: 420px;
 }
 
-.card {
-  transition: transform .12s ease, box-shadow .12s ease;
-}
-.card:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--bs-box-shadow);
-}
+
 @media (min-width: 992px) {
   .row.align-items-stretch .card { height: 100%; }
 }
 
 
 /* ================================================= */
-/* 4. APULUOKAT & TEEMAKOHTAISET KORJAUKSET          */
+/* 4. APULUOKAT & TEEMAKOHTAISET KORJAUKSET           */
 /* ================================================= */
 
 .text-truncate-3 {
@@ -205,7 +199,7 @@ html, body {
 
 
 /* ======================================================= */
-/* 5. SOVELLUSKOHTAISET KOMPONENTIT                      */
+/* 5. SOVELLUSKOHTAISET KOMPONENTIT                        */
 /* ======================================================= */
 
 .ai-reply-panel, .ai-image-panel {
@@ -254,7 +248,7 @@ html, body {
   }
 }
 /* ======================================================= */
-/* 7. TEEMAKORJAUKSET KOMPONENTEILLE                     */
+/* 7. TEEMAKORJAUKSET KOMPONENTEILLE                       */
 /* ======================================================= */
 
 /* Korjaa taulukon otsikkorivin värin tummassa teemassa */
@@ -390,4 +384,3 @@ html, body {
 #markdown-preview .clickable-image {
   cursor: pointer;
 }
-

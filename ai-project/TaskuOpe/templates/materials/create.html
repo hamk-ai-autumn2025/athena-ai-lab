@@ -3,340 +3,422 @@
 
 {% block content %}
 <div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <div>
-      <h1 class="h2 mb-0">Luo uusi materiaali</h1>
-      <p class="text-muted mb-0">Täytä tiedot manuaalisesti tai käytä tekoälyä apuna.</p>
-    </div>
-    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
-    </a>
-  </div>
-
-  <form method="post" novalidate>
-    {% csrf_token %}
-
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger" role="alert">
-        {{ form.non_field_errors }}
-      </div>
-    {% endif %}
-
-    <div class="row">
-      <div class="col-lg-5 col-xl-4 mb-4 mb-lg-0">
-        <div class="card shadow-sm h-100">
-          <div class="card-header">
-            <h5 class="mb-0">1. Luo sisältö tekoälyllä (valinnainen)</h5>
-          </div>
-          <div class="card-body d-flex flex-column">
-            <div class="mb-3">
-              <label for="id_ai_prompt" class="form-label">Kirjoita aihe tai ohje</label>
-              <textarea name="ai_prompt" class="form-control" id="id_ai_prompt" rows="3" placeholder="Esim. 'Johdanto prosenttilaskentaan 7.-luokalle...'">{{ ai_prompt }}</textarea>
-            </div>
-
-            <!-- ======================================================= -->
-            <!-- === MUUTOS TÄSSÄ: Poistettu "bg-light"-luokka         === -->
-            <!-- ======================================================= -->
-            <div class="card p-3 mb-3">
-              <h6 class="mb-2">Opetussuunnitelma-avustin</h6>
-              <div class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" role="switch" id="use_ops_checkbox" name="use_ops" {% if ops_vals.use_ops %}checked{% endif %}>
-                  <label class="form-check-label" for="use_ops_checkbox">
-                      Käytä OPS-kontekstia
-                  </label>
-              </div>
-              <div class="row g-2">
-                  <div class="col-md-6">
-                      <label for="ops_subject" class="form-label small">Oppiaine</label>
-                      <select name="ops_subject" id="ops_subject" class="form-select form-select-sm">
-                          <option value="">-- Valitse --</option>
-                          {% for subject_name in ops_facets.subjects %}
-                            <option value="{{ subject_name }}" {% if ops_vals.ops_subject == subject_name %}selected{% endif %}>
-                              {{ subject_name }}
-                            </option>
-                          {% endfor %}
-                      </select>
-                  </div>
-                  <div class="col-md-6">
-                      <label for="ops_grade" class="form-label small">Luokka-aste</label>
-                      <select name="ops_grade" id="ops_grade" class="form-select form-select-sm">
-                          <option value="">-- Valitse --</option>
-                          {% for grade_name in ops_facets.grades %}
-                            <option value="{{ grade_name }}" {% if ops_vals.ops_grade == grade_name %}selected{% endif %}>
-                              {{ grade_name }}
-                            </option>
-                          {% endfor %}
-                      </select>
-                  </div>
-              </div>
-            </div>
-
-            <div class="d-grid">
-              <button type="submit" name="action" value="ai" class="btn btn-info" formnovalidate>
-                Luo sisältöehdotus
-              </button>
-            </div>
-
-            {% if ai_reply %}
-              <hr class="my-4">
-              <div>
-                <h6 class="mb-2">Tekoälyn vastaus</h6>
-                <div class="ai-reply-panel p-3 mt-2 border rounded" style="max-height: 300px; overflow-y: auto;">
-                  <pre id="ai_reply_box" style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ ai_reply }}</pre>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="
-                  const textToCopy = document.getElementById('ai_reply_box').innerText;
-                  const contentField = document.getElementById('{{ form.content.id_for_label }}');
-                  if (contentField) { contentField.value += (contentField.value ? '\n\n' : '') + textToCopy; contentField.focus(); }
-                ">
-                  <i class="bi bi-clipboard-plus me-1"></i> Kopioi sisältökenttään
-                </button>
-              </div>
-            {% endif %}
-
-            <hr class="my-4">
-            
-            <h6 class="mb-2">Kuvagenerointi</h6>
-            <div id="ai-image-tool" class="ai-image-panel border rounded p-3" data-generate-url="{% url 'generate_image' %}" data-target-textarea="{{ form.content.id_for_label }}">
-              <div class="mb-2">
-                <label for="ai_image_prompt" class="form-label">Kuvaus / ohje kuvalle</label>
-                <textarea id="ai_image_prompt" class="form-control" rows="2" placeholder="Esim. 'Yksinkertainen piirros pyramidista'"></textarea>
-              </div>
-              <div class="d-flex gap-2">
-                <select id="ai_image_size" class="form-select form-select-sm">
-                  <option value="square">Neliö</option>
-                  <option value="landscape">Vaaka</option>
-                  <option value="portrait">Pysty</option>
-                </select>
-                <button type="button" id="ai_image_generate" class="btn btn-sm btn-info w-100">Generoi kuva</button>
-              </div>
-              <div id="ai_image_status" class="small text-muted mt-2" aria-live="polite"></div>
-              <div id="ai_image_result" class="d-none mt-2">
-                <img id="ai_image_preview" src="" alt="Generoitu kuva" class="img-fluid rounded border">
-                <div class="d-grid mt-2">
-                  <button type="button" id="ai_image_insert" class="btn btn-sm btn-outline-secondary">Lisää kuva sisältöön</button>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div>
+            <h1 class="h2 mb-0">Luo uusi materiaali</h1>
+            <p class="text-muted mb-0">Täytä tiedot manuaalisesti tai käytä tekoälyä apuna.</p>
         </div>
-      </div>
-
-      <div class="col-lg-7 col-xl-8">
-        <div class="card shadow-sm h-100">
-          <div class="card-header">
-            <h5 class="mb-0">2. Viimeistele ja tallenna materiaali</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
-                {{ form.title }}
-                <span id="error-title" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
-                {{ form.subject }}
-                <span id="error-subject" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="{{ form.grade_level.id_for_label }}" class="form-label">{{ form.grade_level.label }}</label>
-                {{ form.grade_level }}
-                <span id="error-grade_level" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="{{ form.material_type.id_for_label }}" class="form-label">{{ form.material_type.label }}</label>
-                {{ form.material_type }}
-                <span id="error-material_type" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
-              {{ form.content }}
-              <span id="error-content" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
-            </div>
-
-            <div class="d-grid mt-4">
-              <button type="submit" name="action" value="save" class="btn btn-primary" id="save-material-button">
-                Tallenna materiaali
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+        </a>
     </div>
-  </form>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        
+        <input type="hidden" name="structured_content_json" id="id_structured_content_json">
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-lg-5 col-xl-4 mb-4 mb-lg-0">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">1. Luo sisältö tekoälyllä (valinnainen)</h5>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-3">
+                            <label for="id_ai_prompt" class="form-label">Kirjoita aihe tai ohje</label>
+                            <textarea name="ai_prompt" class="form-control" id="id_ai_prompt" rows="3" placeholder="Esim. 'Johdanto prosenttilaskentaan 7.-luokalle...'">{{ ai_prompt }}</textarea>
+                        </div>
+
+                        <div class="card p-3 mb-3">
+                            <h6 class="mb-2">Opetussuunnitelma-avustin</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" role="switch" id="use_ops_checkbox" name="use_ops" {% if ops_vals.use_ops %}checked{% endif %}>
+                                <label class="form-check-label" for="use_ops_checkbox">
+                                    Käytä OPS-kontekstia
+                                </label>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label for="ops_subject" class="form-label small">Oppiaine</label>
+                                    <select name="ops_subject" id="ops_subject" class="form-select form-select-sm">
+                                        <option value="">-- Valitse --</option>
+                                        {% for subject_name in ops_facets.subjects %}
+                                            <option value="{{ subject_name }}" {% if ops_vals.ops_subject == subject_name %}selected{% endif %}>
+                                                {{ subject_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="ops_grade" class="form-label small">Luokka-aste</label>
+                                    <select name="ops_grade" id="ops_grade" class="form-select form-select-sm">
+                                        <option value="">-- Valitse --</option>
+                                        {% for grade_name in ops_facets.grades %}
+                                            <option value="{{ grade_name }}" {% if ops_vals.ops_grade == grade_name %}selected{% endif %}>
+                                                {{ grade_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Valitse tekoälyn toiminto:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="ai_action" id="action_text" value="text" checked>
+                                <label class="form-check-label" for="action_text">
+                                    Luo sisältöehdotus (teksti)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="ai_action" id="action_game" value="game">
+                                <label class="form-check-label" for="action_game">
+                                    Generoi peli
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="ai-action-text-panel" class="d-grid">
+                            <button type="submit" name="action" value="ai" class="btn btn-info" formnovalidate>
+                                Luo sisältöehdotus
+                            </button>
+                        </div>
+
+                        <div id="ai-action-game-panel" class="d-none">
+                            <div id="ai-game-tool" class="border rounded p-3">
+                                <div class="mb-2">
+                                    <label for="ai_game_type" class="form-label">Valitse pelityyppi</label>
+                                    <select id="ai_game_type" class="form-select form-select-sm">
+                                        <option value="quiz">Visa (Lautapeli)</option>
+                                        <option value="hangman">Hirsipuu</option>
+                                        <option value="memory">Muistipeli</option>
+                                    </select>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" id="ai_game_generate_btn" class="btn btn-sm btn-info">Generoi peli</button>
+                                </div>
+                                <div id="ai_game_status" class="small text-muted mt-2" aria-live="polite"></div>
+                            </div>
+                        </div>
+
+                        {% if ai_reply %}
+                        <hr class="my-4">
+                        <div>
+                            <h6 class="mb-2">Tekoälyn vastaus</h6>
+                            <div class="ai-reply-panel p-3 mt-2 border rounded" style="max-height: 300px; overflow-y: auto;">
+                                <pre id="ai_reply_box" style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ ai_reply }}</pre>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="
+                            const textToCopy = document.getElementById('ai_reply_box').innerText;
+                            const contentField = document.getElementById('{{ form.content.id_for_label }}');
+                            if (contentField) { contentField.value += (contentField.value ? '\n\n' : '') + textToCopy; contentField.focus(); }
+                            ">
+                                <i class="bi bi-clipboard-plus me-1"></i> Kopioi sisältökenttään
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        <hr class="my-4">
+
+                        <h6 class="mb-2">Kuvagenerointi</h6>
+                        <div id="ai-image-tool" class="ai-image-panel border rounded p-3" data-generate-url="{% url 'generate_image' %}" data-target-textarea="{{ form.content.id_for_label }}">
+                            <div class="mb-2">
+                                <label for="ai_image_prompt" class="form-label">Kuvaus / ohje kuvalle</label>
+                                <textarea id="ai_image_prompt" class="form-control" rows="2" placeholder="Esim. 'Yksinkertainen piirros pyramidista'"></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <select id="ai_image_size" class="form-select form-select-sm">
+                                    <option value="square">Neliö</option>
+                                    <option value="landscape">Vaaka</option>
+                                    <option value="portrait">Pysty</option>
+                                </select>
+                                <button type="button" id="ai_image_generate" class="btn btn-sm btn-info w-100">Generoi kuva</button>
+                            </div>
+                            <div id="ai_image_status" class="small text-muted mt-2" aria-live="polite"></div>
+                            <div id="ai_image_result" class="d-none mt-2">
+                                <img id="ai_image_preview" src="" alt="Generoitu kuva" class="img-fluid rounded border">
+                                <div class="d-grid mt-2">
+                                    <button type="button" id="ai_image_insert" class="btn btn-sm btn-outline-secondary">Lisää kuva sisältöön</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7 col-xl-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">2. Viimeistele ja tallenna materiaali</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                                {{ form.title }}
+                                <span id="error-title" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
+                                {{ form.subject }}
+                                <span id="error-subject" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.grade_level.id_for_label }}" class="form-label">{{ form.grade_level.label }}</label>
+                                {{ form.grade_level }}
+                                <span id="error-grade_level" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.material_type.id_for_label }}" class="form-label">{{ form.material_type.label }}</label>
+                                {{ form.material_type }}
+                                <span id="error-material_type" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
+                            {{ form.content }}
+                            <span id="error-content" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
+                        </div>
+                        
+                        <div class="d-grid mt-4">
+                            <button type="submit" name="action" value="save" class="btn btn-primary" id="save-material-button">
+                                Tallenna materiaali
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 
 <script>
-// CSRF-tokenin haku
+// CSRF-tokenin haku (tämä on hyvä olla ensimmäisenä)
 function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-// Kuvagenerointi
 document.addEventListener('DOMContentLoaded', () => {
-  const root = document.getElementById('ai-image-tool');
-  if (!root) return;
-  const generateUrl = root.dataset.generateUrl, targetTextareaId = root.dataset.targetTextarea;
-  const promptEl = document.getElementById('ai_image_prompt'), sizeEl = document.getElementById('ai_image_size');
-  const statusEl = document.getElementById('ai_image_status'), resBox = document.getElementById('ai_image_result');
-  const preview = document.getElementById('ai_image_preview'), btnGen = document.getElementById('ai_image_generate');
-  const btnIns = document.getElementById('ai_image_insert');
 
-  btnGen.addEventListener('click', async () => {
-    const prompt = (promptEl.value || '').trim(), size = sizeEl.value || 'square';
-    if (!prompt) { statusEl.textContent = 'Anna ensin kuvaprompti.'; return; }
-    statusEl.textContent = 'Generoidaan kuvaa…'; resBox.classList.add('d-none'); preview.src = '';
-    try {
-      const resp = await fetch(generateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-        body: JSON.stringify({ prompt, size })
-      });
-      if (!resp.ok) { const txt = await resp.text(); throw new Error(`Palvelin: ${resp.status} ${txt}`); }
-      const data = await resp.json();
-      if (!data.image_url) { throw new Error('image_url puuttuu vastauksesta.'); }
-      preview.src = data.image_url; resBox.classList.remove('d-none'); statusEl.textContent = 'Kuva valmis.';
-    } catch (err) { statusEl.textContent = `Virhe: ${err.message}`; }
-  });
+    // --- OSA 1: KUVAGENEROINTI ---
+    const imageToolRoot = document.getElementById('ai-image-tool');
+    if (imageToolRoot) {
+        const generateUrl = imageToolRoot.dataset.generateUrl;
+        const targetTextareaId = imageToolRoot.dataset.targetTextarea;
+        const promptEl = document.getElementById('ai_image_prompt');
+        const sizeEl = document.getElementById('ai_image_size');
+        const statusEl = document.getElementById('ai_image_status');
+        const resBox = document.getElementById('ai_image_result');
+        const preview = document.getElementById('ai_image_preview');
+        const btnGen = document.getElementById('ai_image_generate');
+        const btnIns = document.getElementById('ai_image_insert');
 
-  btnIns.addEventListener('click', () => {
-    const ta = document.getElementById(targetTextareaId), url = preview.getAttribute('src');
-    if (!ta || !url) return;
-    const md = `\n\n![Generoitu kuva](${url})\n`;
-    ta.value += md; ta.focus();
-  });
+        btnGen.addEventListener('click', async () => {
+            const prompt = (promptEl.value || '').trim();
+            const size = sizeEl.value || 'square';
+            if (!prompt) { statusEl.textContent = 'Anna ensin kuvaprompti.'; return; }
+            statusEl.textContent = 'Generoidaan kuvaa…';
+            resBox.classList.add('d-none');
+            preview.src = '';
+            try {
+                const resp = await fetch(generateUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ prompt, size })
+                });
+                if (!resp.ok) { const txt = await resp.text(); throw new Error(`Palvelin: ${resp.status} ${txt}`); }
+                const data = await resp.json();
+                if (!data.image_url) { throw new Error('image_url puuttuu vastauksesta.'); }
+                preview.src = data.image_url;
+                resBox.classList.remove('d-none');
+                statusEl.textContent = 'Kuva valmis.';
+            } catch (err) {
+                statusEl.textContent = `Virhe: ${err.message}`;
+            }
+        });
+
+        btnIns.addEventListener('click', () => {
+            const ta = document.getElementById(targetTextareaId);
+            const url = preview.getAttribute('src');
+            if (!ta || !url) return;
+            const md = `\n\n![Generoitu kuva](${url})\n`;
+            ta.value += md;
+            ta.focus();
+        });
+    }
+
+    // --- OSA 2: LOMAKKEEN PERUSVALIDOINTI ---
+    const saveButton = document.getElementById('save-material-button');
+    if (saveButton) {
+        const fields = {
+            title: document.getElementById('{{ form.title.id_for_label }}'),
+            subject: document.getElementById('{{ form.subject.id_for_label }}'),
+            grade_level: document.getElementById('{{ form.grade_level.id_for_label }}'),
+            material_type: document.getElementById('{{ form.material_type.id_for_label }}'),
+            content: document.getElementById('{{ form.content.id_for_label }}'),
+        };
+        const errorSpans = {
+            title: document.getElementById('error-title'), subject: document.getElementById('error-subject'),
+            grade_level: document.getElementById('error-grade_level'), material_type: document.getElementById('error-material_type'),
+            content: document.getElementById('error-content'),
+        };
+
+        const validateField = (key) => {
+            const field = fields[key];
+            const error = errorSpans[key];
+            if (!field || !error) return true;
+            const isValid = field.tagName === 'SELECT' ? !!field.value : !!field.value.trim();
+            field.classList.toggle('is-invalid', !isValid);
+            error.classList.toggle('d-none', isValid);
+            return isValid;
+        };
+
+        saveButton.addEventListener('click', (event) => {
+            let isFormValid = true;
+
+            // Tarkista aina pakolliset kentät
+            ['title', 'subject', 'grade_level', 'material_type'].forEach(key => {
+            // '&& isFormValid' varmistaa, että jos yksikin on epävalidi, lopputulos pysyy epävalidina
+            isFormValid = validateField(key) && isFormValid;
+          });
+    
+          // Tarkista 'content'-kenttä VAIN, jos materiaaliksi EI ole valittu 'peli'
+          const materialType = fields.material_type.value;
+          if (materialType !== 'peli') {
+          isFormValid = validateField('content') && isFormValid;
+          } else {
+          // Jos tyyppi on 'peli', varmista ettei 'content'-kentässä ole virhettä näkyvissä
+          fields.content.classList.remove('is-invalid');
+          errorSpans.content.classList.add('d-none');
+          }
+
+          if (!isFormValid) {
+          event.preventDefault(); // Estä lomakkeen lähetys, jos validoinnissa on virheitä
+          }
+        });
+
+        for (const key in fields) {
+            if (fields[key]) {
+                fields[key].addEventListener('input', () => validateField(key));
+                if (fields[key].tagName === 'SELECT') {
+                    fields[key].addEventListener('change', () => validateField(key));
+                }
+            }
+        }
+    }
+
+    // --- OSA 3: AI-TEKSTIN SIIRTO LOMAKKEESEEN ---
+    const aiBox = document.getElementById('ai_reply_box');
+    if (aiBox) {
+        const $title   = document.getElementById('{{ form.title.id_for_label }}');
+        const $subject = document.getElementById('{{ form.subject.id_for_label }}');
+        const $content = document.getElementById('{{ form.content.id_for_label }}');
+        const opsSubjectSel = document.getElementById('ops_subject');
+        const raw = (aiBox.innerText || '').trim();
+
+        if (raw) {
+            function parseJSONBlock(text) {
+                const SPLIT = '---JSON---';
+                if (!text.includes(SPLIT)) return null;
+                let tail = text.split(SPLIT)[1].trim();
+                tail = tail.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+                try { return JSON.parse(tail); } catch { return null; }
+            }
+            function parseFree(text) {
+                const out = { title:'', subject:'', content:'' };
+                const mTitle = text.match(/^(?:Otsikkoehdotus|Otsikko)\s*:\s*(.+)$/mi);
+                if (mTitle) out.title = mTitle[1].trim();
+                const mBody = text.match(/Luonnosteksti:\s*([\s\S]+)$/i);
+                out.content = (mBody ? mBody[1] : text).trim();
+                const mSubj = text.match(/^(?:Aihe|Oppiaine)\s*:\s*(.+)$/mi);
+                if (mSubj) out.subject = mSubj[1].trim();
+                return out;
+            }
+            function selectByTextOrValue($sel, wanted) {
+                if (!$sel || !wanted) return;
+                const needle = String(wanted).toLowerCase().trim();
+                for (const opt of $sel.options) {
+                    if (opt.text.toLowerCase().trim() === needle || (opt.value||'').toLowerCase().trim() === needle) {
+                        opt.selected = true; $sel.dispatchEvent(new Event('change')); return;
+                    }
+                }
+            }
+            const data = parseJSONBlock(raw) || parseFree(raw);
+            if ($title && data.title) { $title.value = data.title.trim(); $title.dispatchEvent(new Event('input')); }
+            if ($subject && data.subject) { $subject.value = data.subject.trim(); $subject.dispatchEvent(new Event('input')); }
+            if ($content && data.content) { $content.value = data.content.trim(); $content.dispatchEvent(new Event('input')); }
+        }
+    }
+    
+    // --- OSA 4: UUSI LOGIIKKA AI-TOIMINNON VALINNALLE JA PELIN GENEROINNILLE ---
+    const radioButtons = document.querySelectorAll('input[name="ai_action"]');
+    const textPanel = document.getElementById('ai-action-text-panel');
+    const gameGenPanel = document.getElementById('ai-action-game-panel');
+    const gameToolRoot = document.getElementById('ai-game-tool');
+
+    function toggleAiAction() {
+        const selectedAction = document.querySelector('input[name="ai_action"]:checked').value;
+        textPanel.classList.toggle('d-none', selectedAction !== 'text');
+        gameGenPanel.classList.toggle('d-none', selectedAction !== 'game');
+    }
+    radioButtons.forEach(radio => radio.addEventListener('change', toggleAiAction));
+    toggleAiAction();
+
+    if (gameToolRoot) {
+        const generateBtn = document.getElementById('ai_game_generate_btn');
+        const statusEl = document.getElementById('ai_game_status');
+        const topicTextarea = document.getElementById('id_ai_prompt');
+        const gameTypeSelect = document.getElementById('ai_game_type');
+        const hiddenInput = document.getElementById('id_structured_content_json');
+
+        generateBtn.addEventListener('click', async () => {
+            const topic = (topicTextarea.value || '').trim();
+            const gameType = gameTypeSelect.value;
+            if (!topic) {
+                statusEl.textContent = 'Kirjoita ensin aihe tai ohje ylimpään kenttään.';
+                return;
+            }
+            statusEl.textContent = 'Generoidaan peliä, odota hetki...';
+            generateBtn.disabled = true;
+            try {
+                const response = await fetch("{% url 'generate_game_ajax' %}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ topic: topic, game_type: gameType })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Palvelin vastasi virheellä ${response.status}`);
+                }
+                const data = await response.json();
+                hiddenInput.value = JSON.stringify(data.game_data);
+                statusEl.textContent = `Valmis! Pelisisältö aiheesta '${topic}' on luotu.`;
+                statusEl.classList.remove('text-danger');
+                statusEl.classList.add('text-success');
+            } catch (error) {
+                statusEl.textContent = `Virhe: ${error.message}`;
+                statusEl.classList.remove('text-success');
+                statusEl.classList.add('text-danger');
+            } finally {
+                generateBtn.disabled = false;
+            }
+        });
+    }
+
 });
-
-// Lomakkeen validointi
-document.addEventListener('DOMContentLoaded', () => {
-  const saveButton = document.getElementById('save-material-button');
-  const fields = {
-    title: document.getElementById('{{ form.title.id_for_label }}'), subject: document.getElementById('{{ form.subject.id_for_label }}'),
-    grade_level: document.getElementById('{{ form.grade_level.id_for_label }}'), material_type: document.getElementById('{{ form.material_type.id_for_label }}'),
-    content: document.getElementById('{{ form.content.id_for_label }}'),
-  };
-  const errorSpans = {
-    title: document.getElementById('error-title'), subject: document.getElementById('error-subject'),
-    grade_level: document.getElementById('error-grade_level'), material_type: document.getElementById('error-material_type'),
-    content: document.getElementById('error-content'),
-  };
-
-  const validateField = (key) => {
-    const field = fields[key], error = errorSpans[key];
-    const isValid = field.tagName === 'SELECT' ? !!field.value : !!field.value.trim();
-    field.classList.toggle('is-invalid', !isValid); error.classList.toggle('d-none', isValid);
-    return isValid;
-  };
-
-  saveButton.addEventListener('click', (event) => {
-    const isFormValid = Object.keys(fields).map(validateField).every(v => v);
-    if (!isFormValid) { event.preventDefault(); }
-  });
-
-  for (const key in fields) {
-    fields[key].addEventListener('input', () => validateField(key));
-    if (fields[key].tagName === 'SELECT') { fields[key].addEventListener('change', () => validateField(key)); }
-  }
-}); 
-
-// Tekoälyn vastauksen siirto lomakkeeseen
-document.addEventListener('DOMContentLoaded', () => {
-  const aiBox = document.getElementById('ai_reply_box');
-  if (!aiBox) return;
-
-  const $title   = document.getElementById('{{ form.title.id_for_label }}');
-  const $subject = document.getElementById('{{ form.subject.id_for_label }}'); // input TAI select
-  const $content = document.getElementById('{{ form.content.id_for_label }}');
-  const opsSubjectSel = document.getElementById('ops_subject');                // fallback aiheen täyttöön
-
-  const raw = (aiBox.innerText || '').trim();
-  if (!raw) return;
-
-  // --- JSON-lohko tai vapaa teksti ---
-  function parseJSONBlock(text) {
-    const SPLIT = '---JSON---';
-    if (!text.includes(SPLIT)) return null;
-    let tail = text.split(SPLIT)[1].trim();
-    tail = tail.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
-    try { return JSON.parse(tail); } catch { return null; }
-  }
-  function parseFree(text) {
-    const out = { title:'', subject:'', content:'' };
-    const mTitle = text.match(/^(?:Otsikkoehdotus|Otsikko)\s*:\s*(.+)$/mi);
-    if (mTitle) out.title = mTitle[1].trim();
-
-    const mBody = text.match(/Luonnosteksti:\s*([\s\S]+)$/i);
-    out.content = (mBody ? mBody[1] : text).trim();
-
-    const mSubj = text.match(/^(?:Aihe|Oppiaine)\s*:\s*(.+)$/mi);
-    if (mSubj) out.subject = mSubj[1].trim();
-
-    return out;
-  }
-  function selectByTextOrValue($sel, wanted) {
-    if (!$sel || !wanted) return;
-    const needle = String(wanted).toLowerCase().trim();
-    for (const opt of $sel.options) {
-      if (opt.text.toLowerCase().trim() === needle || (opt.value||'').toLowerCase().trim() === needle) {
-        opt.selected = true;
-        $sel.dispatchEvent(new Event('change'));
-        return;
-      }
-    }
-    for (const opt of $sel.options) {
-      if (opt.text.toLowerCase().includes(needle)) {
-        opt.selected = true;
-        $sel.dispatchEvent(new Event('change'));
-        return;
-      }
-    }
-  }
-
-  const data = parseJSONBlock(raw) || parseFree(raw);
-
-  // Otsikko
-  if ($title && data.title) {
-    $title.value = data.title.trim();
-    $title.dispatchEvent(new Event('input'));
-  }
-
-  // Aihe (AI muuten OPS fallback)
-  if ($subject) {
-    if ($subject.tagName === 'INPUT') {
-      if (data.subject) {
-        $subject.value = data.subject;
-      } else if (opsSubjectSel && opsSubjectSel.value) {
-        $subject.value = opsSubjectSel.options[opsSubjectSel.selectedIndex]?.text || opsSubjectSel.value;
-      }
-      $subject.dispatchEvent(new Event('input'));
-    } else { // select
-      if (data.subject) {
-        selectByTextOrValue($subject, data.subject);
-      } else if (opsSubjectSel && opsSubjectSel.value) {
-        const txt = opsSubjectSel.options[opsSubjectSel.selectedIndex]?.text || opsSubjectSel.value;
-        selectByTextOrValue($subject, txt);
-      }
-    }
-  }
-
-  // SISÄLTÖ: vain Luonnosteksti
-  if ($content) {
-    const body = (data.content || '').trim();
-    if (body) {
-      $content.value = body;
-      $content.dispatchEvent(new Event('input'));
-    }
-  }
-});
-
-
 </script>
 {% endblock %}

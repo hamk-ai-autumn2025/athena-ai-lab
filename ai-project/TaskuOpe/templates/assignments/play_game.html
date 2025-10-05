@@ -1,0 +1,136 @@
+{% extends 'partials/base.html' %}
+{% load static %}
+
+{% block title %}Peli: {{ assignment.material.title }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/game.css' %}">
+{% endblock %}
+
+{% block content %}
+<script>document.body.classList.add('game-page');</script>
+
+<script id="game-data" type="application/json">
+    {{ game_data_json|safe }}
+</script>
+
+<div id="game-info" 
+     data-game-type="{{ game_type }}"
+     data-completion-url="{% url 'complete_game_ajax' assignment_id=assignment.id %}">
+</div>
+
+<div class="game-content-wrapper">
+    <canvas id="space-canvas"></canvas>
+
+    <button id="btnToggleBackground" class="btn btn-sm btn-outline-secondary" 
+            style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+        ⏸️ Pysäytä tausta
+    </button>
+    
+    <div class="container-fluid px-3 px-lg-4 py-4" style="position: relative; z-index: 1;">
+        <!-- Otsikko -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-12 col-xl-10">
+                <div class="card text-center p-3">
+                    <h1 class="main-title">🚀 {{ assignment.material.title }} 🚀</h1>
+                    <p class="main-subtitle mb-0">Aihe: {{ assignment.material.subject }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISA-PELI: Pelilauta + Kysymykset -->
+        <div class="row g-3 g-lg-4 justify-content-center">
+            <!-- Pelilauta vasemmalla isolla näytöllä -->
+            <div class="col-12 col-lg-7 col-xl-6">
+                <div id="quiz-board-card" class="card p-0 overflow-hidden d-none">
+                    <div class="game-board-container">
+                        <svg id="boardSvg" class="board-svg" viewBox="0 0 1200 675"></svg>
+                        <div id="start-image-container">
+                            <img id="start-image" src="{% static 'images/start-image.png' %}" alt="Pelin aloituskuva">
+                        </div>
+                        <div id="hero" class="hero">
+                            <img src="{% static 'images/mascot.png' %}" alt="Pelihahmo">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kysymykset oikealla isolla näytöllä -->
+            <div class="col-12 col-lg-5 col-xl-4">
+                <div id="quiz-card" class="card d-none">
+                    <div class="card-body p-3 p-md-4">
+                        <div id="game">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <span class="badge">Pisteet: <strong id="score">0</strong></span>
+                                <span id="levelBadge" class="badge"></span>
+                                <span class="badge">Aika: <strong id="timer">—</strong></span>
+                            </div>
+                            <h4 id="question" class="mb-3 text-center"></h4>
+                            <div id="choices" class="d-grid gap-2 gap-md-3"></div>
+                            <div id="feedback" class="alert mt-3 d-none" role="alert"></div>
+                            <div class="text-center mt-3">
+                                <button id="btnRestart" class="btn btn-outline-secondary d-none">Pelaa uudestaan</button>
+                                <button id="btnNext" class="btn btn-primary d-none ms-2">Seuraava</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- HIRSIPUU-PELI -->
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8 col-xl-6">
+                <div id="hangman-card" class="card d-none">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <span class="badge">Yritykset jäljellä: <strong id="hmLives">7</strong></span>
+                            <span class="badge">Aihe: <strong id="hmTopic">—</strong></span>
+                        </div>
+                        <div class="hm-canvas d-flex justify-content-center mb-3">
+                            <svg id="hmSvg" viewBox="0 0 200 220" aria-hidden="true"></svg>
+                        </div>
+                        <h3 id="hmMasked" class="text-center mb-3">—</h3>
+                        <div id="hmLetters" class="d-flex flex-wrap gap-2 justify-content-center"></div>
+                        <div id="hmFeedback" class="alert mt-4 d-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MUISTIPELI -->
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-8">
+                <div id="memory-card" class="card d-none">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <span class="badge">Parit: <strong id="mmFound">0</strong></span>
+                            <span class="badge">Yritykset: <strong id="mmTries">0</strong></span>
+                        </div>
+                        <div id="mmGrid" class="row g-2 g-md-3"></div>
+                        <div id="mmFeedback" class="alert mt-4 d-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loppuruutu overlay -->
+    <div id="gameOverlay" class="game-overlay d-none">
+        <div class="game-overlay-content">
+            <div id="overlayIcon" class="overlay-icon">🎉</div>
+            <h2 id="overlayTitle" class="overlay-title">Hienoa!</h2>
+            <p id="overlayMessage" class="overlay-message"></p>
+            <div class="overlay-buttons">
+                <button id="overlayRestart" class="btn btn-outline-light btn-lg d-none">
+                    🔄 Pelaa uudestaan
+                </button>
+            </div>
+            <div id="overlayTimer" class="overlay-timer"></div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'games/game.js' %}"></script>
+
+{% endblock %}

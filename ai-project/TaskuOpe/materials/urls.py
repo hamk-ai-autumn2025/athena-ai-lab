@@ -37,6 +37,11 @@ urlpatterns = [
     # Kuvagenerointi
     path("image/generate/", views.generate_image_view, name="generate_image"),
 
+    #Peligenerointi
+    path('ajax/generate-game/', views.generate_game_ajax_view, name='generate_game_ajax'),
+    path('assignment/<uuid:assignment_id>/play/', views.play_game_view, name='play_game'),
+    path('assignment/<uuid:assignment_id>/complete/', views.complete_game_ajax_view, name='complete_game_ajax'),
+
     #Puheengenerointi
     path("assignment/<uuid:assignment_id>/tts/", views.assignment_tts_view, name="assignment_tts"),
 

@@ -85,6 +85,63 @@ from django.views.decorators.http import require_GET
 #Opetus suunnitelman haku
 from .ai_service import ask_llm, ask_llm_with_ops
 
+
+# ================= Pelin luontia varte ====================
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# ==========================================================
+
+#Pelinäkymä
+def generate_game_content(topic: str, game_type: str) -> dict:
+    """
+    Generates game content using OpenAI API based on the topic and game type.
+    Returns a dictionary (JSON) with the game data.
+    """
+    prompt = ""
+    if game_type == 'quiz':
+        prompt = f"""
+Rooli: Toimi suomalaisena opettajana ja tietokirjailijana.
+Tehtävä: Laadi 15 laadukasta monivalintakysymystä.
+Aihe: "{topic}"
+Vaikeustaso: alakoulu
+Säännöt:
+1. Faktojen on oltava oikein.
+2. Kysymysten on oltava selkeitä ja yksiselitteisiä.
+3. Vastausvaihtoehdoista vain yksi saa olla oikein.
+4. Varmista, että JSON-objektin `correct`-indeksi vastaa oikean vastauksen paikkaa `choices`-taulukossa.
+Vastauksen muoto:
+- Palauta VAIN JSON-objekti.
+- Kaikki tekstit suomeksi.
+- Noudata tarkasti tätä rakennetta: {{"levels":[... , ...]}}
+"""
+    elif game_type == 'hangman':
+        prompt = f"""
+Toimi suomenkielisenä opettajana. Anna YKSI suomenkielinen sana annetusta aiheesta hirsipuupeliin.
+Säännöt: Vain kirjaimia (A-Ö), 5-12 merkkiä pitkä, yleiskielinen.
+Palauta VAIN JSON-muodossa: {{"topic":"{topic}","word":"sana"}}.
+Aihe: {topic}
+"""
+    elif game_type == 'memory':
+        prompt = f"""
+Toimi suomenkielisenä opettajana. Laadi TÄSMÄLLEEN 10 muistipelikorttiparia aiheesta.
+AIHE: {topic}
+KRIITTISET SÄÄNNÖT:
+1. JOKAISEN VASTAUKSEN ON OLTAVA UNIIKKI.
+2. JOKAISEN KYSYMYKSEN ON OLTAVA UNIIKKI.
+3. Tekstit lyhyitä (max 15 merkkiä).
+Palauta VAIN JSON: {{"pairs":[... , ...]}}.
+"""
+    else:
+        raise ValueError("Tuntematon pelityyppi")
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini", # Voit vaihtaa mallia tarvittaessa
+        response_format={"type": "json_object"},
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    content = response.choices[0].message.content
+    return json.loads(content)
+
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
 def dashboard_view(request):
@@ -104,26 +161,33 @@ def dashboard_view(request):
 
     elif user.role == 'STUDENT':
         qs = (
-            Assignment.objects
-            .select_related('material', 'assigned_by')
-            .filter(student=user)
+        Assignment.objects
+        .select_related('material', 'assigned_by')
+        .filter(student=user)
+        )
+    
+        # Suodata pois suoritetut pelit etusivulta
+        qs_for_display = qs.exclude(
+        status='GRADED',
+        material__material_type='peli'
         )
 
         counts = {
-            "assigned": qs.filter(status=Assignment.Status.ASSIGNED).count(),
-            "in_progress": qs.filter(status=Assignment.Status.IN_PROGRESS).count(),
-            "graded": qs.filter(status=Assignment.Status.GRADED).count(),
+        "assigned": qs_for_display.filter(status=Assignment.Status.ASSIGNED).count(),
+        "in_progress": qs_for_display.filter(status=Assignment.Status.IN_PROGRESS).count(),
+        "graded": qs_for_display.filter(status=Assignment.Status.GRADED).count(),
         }
 
         due_soon = (
-            qs.exclude(due_at__isnull=True)
-              .filter(due_at__gte=timezone.now())
-              .order_by('due_at')[:3]
+        qs_for_display
+        .exclude(due_at__isnull=True)
+        .filter(due_at__gte=timezone.now())
+        .order_by('due_at')[:3]
         )
 
         return render(request, 'dashboard/student.html', {
-            "counts": counts,
-            "due_soon": due_soon,
+        "counts": counts,
+        "due_soon": due_soon,
         })
 
     return redirect('kirjaudu')
@@ -137,9 +201,15 @@ def student_assignments_view(request):
     selected_status = request.GET.get('status', '')
     selected_subject = request.GET.get('subject', '')
 
-    qs = Assignment.objects.select_related('material', 'assigned_by').filter(student=user)
+    # MUUTETTU: Suodata pois GRADED-statuksen tehtävät (suoritetut pelit)
+    qs = Assignment.objects.select_related('material', 'assigned_by').filter(
+        student=user
+    ).exclude(
+        status='GRADED',  # Piilota suoritetut pelit
+        material__material_type='peli'  # Vain pelit piilotetaan
+    )
 
-    #Suodatus
+    # Suodatus
     subjects = qs.exclude(material__subject__isnull=True).exclude(material__subject='').values_list('material__subject', flat=True).distinct().order_by('material__subject')
 
     if selected_status:
@@ -151,7 +221,7 @@ def student_assignments_view(request):
     ctx = {
         "assigned": qs.filter(status="ASSIGNED"),
         "in_progress": qs.filter(status="IN_PROGRESS"),
-        "submitted": qs.filter(status__in=["SUBMITTED", "GRADED"]),
+        "submitted": qs.filter(status__in=["SUBMITTED"]),  # GRADED ei enää mukana
         "subjects": subjects,
         "selected_subject": selected_subject,
         "selected_status": selected_status,
@@ -222,13 +292,11 @@ def material_list_view(request):
 
 @login_required(login_url='kirjaudu')
 def create_material_view(request):
-    """Manual material creation + AI helper."""
+    """Manual material creation + AI helper + Game generation."""
     if request.user.role != 'TEACHER':
         return redirect('dashboard')
 
-    # Haetaan dynaamiset valinnat OPS-datasta
     ops_facets = get_facets()
-
     ai_reply = None
     ai_prompt_val = ""
     ops_vals = {
@@ -243,54 +311,180 @@ def create_material_view(request):
 
         if action == 'ai':
             ai_prompt_val = (request.POST.get('ai_prompt') or '').strip()
-            
             if ai_prompt_val:
                 if ops_vals['use_ops'] and ops_vals['ops_subject'] and ops_vals['ops_grade']:
                     result = ask_llm_with_ops(
-                        question=ai_prompt_val,
-                        subjects=[ops_vals['ops_subject']],
-                        grades=[ops_vals['ops_grade']],
-                        user_id=request.user.id
+                        question=ai_prompt_val, subjects=[ops_vals['ops_subject']],
+                        grades=[ops_vals['ops_grade']], user_id=request.user.id
                     )
                     ai_reply = result.get('answer', '[Virhe haettaessa OPS-dataa]')
                 else:
                     ai_reply = ask_llm(ai_prompt_val, user_id=request.user.id)
-
+            
             return render(request, 'materials/create.html', {
-                'form': form,
-                'ai_prompt': ai_prompt_val,
-                'ai_reply': ai_reply,
-                'ops_vals': ops_vals,
-                'ops_facets': ops_facets # <-- LISÄYS: Välitetään data templatelle
+                'form': form, 'ai_prompt': ai_prompt_val, 'ai_reply': ai_reply,
+                'ops_vals': ops_vals, 'ops_facets': ops_facets
             })
 
         if action == 'save' or action is None:
             if form.is_valid():
                 material = form.save(commit=False)
                 material.author = request.user
-                material.status = Material.Status.DRAFT
-                material.save()
-                messages.success(request, f"Materiaali '{material.title}' luotu onnistuneesti.")
-                return redirect('dashboard')
-            
-            return render(request, 'materials/create.html', {
-                'form': form,
-                'ai_prompt': request.POST.get('ai_prompt', ''),
-                'ai_reply': None,
-                'ops_vals': ops_vals,
-                'ops_facets': ops_facets # <-- LISÄYS: Välitetään data templatelle myös tässä
-            })
 
-    # GET-pyynnön käsittely
-    form = MaterialForm()
+                if material.material_type == 'peli':
+                    json_data_str = request.POST.get('structured_content_json')
+                    if json_data_str:
+                        material.structured_content = json.loads(json_data_str)
+                    else:
+                        messages.error(request, "Valitsit materiaaliksi 'Peli', mutta et generoinut pelisisältöä. Käytä 'Generoi peli' -toimintoa ennen tallennusta.")
+                        return render(request, 'materials/create.html', {
+                            'form': form, 'ops_vals': ops_vals, 'ops_facets': ops_facets
+                        })
+                
+                material.save()
+                messages.success(request, f"Materiaali '{material.title}' tallennettu onnistuneesti.")
+                return redirect('dashboard')
+            else:
+                messages.error(request, "Lomakkeessa oli virheitä. Tarkista tiedot.")
+        
+    else: # GET-pyyntö
+        form = MaterialForm()
+
     return render(request, 'materials/create.html', {
-        'form': form, 
-        'ai_prompt': '', 
-        'ai_reply': None,
+        'form': form, 'ai_prompt': '', 'ai_reply': None,
         'ops_vals': {'use_ops': False, 'ops_subject': '', 'ops_grade': ''},
-        'ops_facets': ops_facets # <-- LISÄYS: Välitetään data templatelle
+        'ops_facets': ops_facets
     })
 
+@require_POST
+@login_required
+def generate_game_ajax_view(request):
+    if not hasattr(request.user, "role") or request.user.role != "TEACHER":
+        return JsonResponse({'error': 'Vain opettajat voivat luoda pelejä.'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        topic = data.get('topic')
+        game_type = data.get('game_type')
+        
+        if not topic or not game_type:
+            return JsonResponse({'error': 'Aihe ja pelityyppi ovat pakollisia.'}, status=400)
+
+        # Käytetään olemassa olevaa apufunktiotasi!
+        game_data = generate_game_content(topic, game_type)
+        
+        return JsonResponse({'success': True, 'game_data': game_data})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+@require_POST
+@login_required
+def complete_game_ajax_view(request, assignment_id):
+    assignment = get_object_or_404(Assignment, id=assignment_id, student=request.user)
+
+    # Määritä pelityyppi
+    try:
+        game_data = assignment.material.structured_content or {}
+    except (AttributeError, ValueError):
+        return JsonResponse({'status': 'error', 'message': 'Virheellinen pelisisältö'}, status=400)
+
+    if 'levels' in game_data:
+        game_type = 'quiz'
+    elif 'word' in game_data:
+        game_type = 'hangman'
+    elif 'pairs' in game_data:
+        game_type = 'memory'
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Tuntematon pelityyppi'}, status=400)
+
+    # Lue pisteet
+    try:
+        data = json.loads(request.body)
+        score = data.get('score', 0)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Virheellinen JSON'}, status=400)
+
+    # Jos peli on jo suoritettu
+    if assignment.status == Assignment.Status.GRADED:
+        if game_type == 'quiz':
+            existing_sub = assignment.submissions.last()
+            if existing_sub and existing_sub.score and existing_sub.score >= 100:
+                return JsonResponse({
+                    'status': 'already_completed',
+                    'completed': True,
+                    'score': existing_sub.score
+                })
+            
+            if not existing_sub or (existing_sub.score or 0) < score:
+                if existing_sub:
+                    existing_sub.score = score
+                    existing_sub.save(update_fields=['score'])
+                else:
+                    Submission.objects.create(
+                        assignment=assignment,
+                        student=request.user,
+                        status=Submission.Status.SUBMITTED,
+                        submitted_at=timezone.now(),
+                        graded_at=timezone.now(),
+                        score=score,
+                        feedback="Peli suoritettu."
+                    )
+            
+            if score >= 100:
+                assignment.status = Assignment.Status.GRADED
+                assignment.save(update_fields=['status'])
+                return JsonResponse({
+                    'status': 'success',
+                    'score': score,
+                    'completed': True
+                })
+            else:
+                return JsonResponse({
+                    'status': 'retry',
+                    'score': score,
+                    'completed': False
+                })
+        else:
+            existing_sub = assignment.submissions.last()
+            return JsonResponse({
+                'status': 'already_completed',
+                'completed': True,
+                'score': existing_sub.score if existing_sub else 0
+            })
+
+    # Ensimmäinen yritys
+    if game_type == 'quiz':
+        if score >= 100:
+            assignment.status = Assignment.Status.GRADED
+            assignment.save(update_fields=['status'])
+            completed = True
+        else:
+            completed = False
+    else:
+        assignment.status = Assignment.Status.GRADED
+        assignment.save(update_fields=['status'])
+        completed = True
+
+    # Luo submission
+    Submission.objects.create(
+        assignment=assignment,
+        student=request.user,
+        status=Submission.Status.SUBMITTED,
+        submitted_at=timezone.now(),
+        graded_at=timezone.now(),
+        score=score,
+        feedback="Peli suoritettu."
+    )
+
+    # TÄRKEÄ DEBUG: Tulosta konsoliin
+    print(f"[GAME COMPLETION] Student: {request.user.username}, Score: {score}, Completed: {completed}")
+
+    return JsonResponse({
+        'status': 'success',
+        'score': score,
+        'completed': completed
+    })
 
 # --- Assignments ---
 @login_required(login_url='kirjaudu')
@@ -321,10 +515,13 @@ def assign_material_view(request, material_id):
     return render(request, "assignments/assign.html", {"material": m, "form": form})
 
 
+# materials/views.py
+
 @login_required(login_url='kirjaudu')
 def assignment_detail_view(request, assignment_id):
     """
     Oppilas: katso tehtävä, tallenna luonnos, tai lähetä lopullinen vastaus.
+    HUOM: OHJAA PELIT UUTEEN PELINÄKYMÄÄN.
     """
     assignment = get_object_or_404(
         Assignment.objects.select_related('material', 'student', 'assigned_by'),
@@ -336,23 +533,89 @@ def assignment_detail_view(request, assignment_id):
         messages.error(request, "You are not authorized to view this assignment.")
         return redirect('dashboard')
 
-    # RENDERÖITY MATERIAALISISÄLTÖ (kuvat ym. näkyviin oppilaalle)
+    # --- TÄMÄ ON TÄRKEIN UUSI LISÄYS ---
+    # Jos materiaali on peli, ohjataan suoraan pelinäkymään
+    if assignment.material.material_type == 'peli':
+        return redirect('play_game', assignment_id=assignment.id)
+    # --- LISÄYS PÄÄTTYY ---
+
+    # Jos materiaali EI ole peli, jatketaan normaalisti vanhalla logiikalla:
     content_html = render_material_content_to_html(assignment.material.content)
 
-    # Jos jo palautettu/arvioitu: näytä lukutilassa
     if assignment.status in (Assignment.Status.SUBMITTED, Assignment.Status.GRADED):
+        # ... (TÄHÄN TULEE KOKO LOPPUOSA VANHASTA FUNKTIOSTASI, SITÄ EI TARVITSE MUUTTAA) ...
+        # ... (alkaa 'form = SubmissionForm()' ...)
         form = SubmissionForm()
         last_sub = assignment.submissions.last()
         ai_grade = getattr(last_sub, 'ai_grade', None) if last_sub else None
-
         return render(request, 'assignments/detail.html', {
             'assignment': assignment,
             'form': form,
             'readonly': True,
             'now': timezone.now(),
             'ai_grade': ai_grade,
-            'content_html': content_html,   # <-- tärkeä lisä
+            'content_html': content_html,
         })
+
+    if request.method == 'POST':
+        # ... (TÄHÄN TULEE KOKO LOPPUOSA VANHASTA FUNKTIOSTASI, SITÄ EI TARVITSE MUUTTAA) ...
+        # ... (alkaa 'form = SubmissionForm(request.POST)' ...)
+        form = SubmissionForm(request.POST)
+        if 'save_draft' in request.POST:
+            assignment.draft_response = request.POST.get('response', '').strip()
+            if assignment.draft_response and assignment.status == Assignment.Status.ASSIGNED:
+                assignment.status = Assignment.Status.IN_PROGRESS
+            assignment.save(update_fields=['draft_response', 'status'])
+            messages.info(request, "Luonnos tallennettu onnistuneesti!")
+            return redirect('assignment_detail', assignment_id=assignment.id)
+        elif 'submit_final' in request.POST:
+            if form.is_valid():
+                submission = form.save(commit=False)
+                submission.student = request.user
+                submission.assignment = assignment
+                if hasattr(submission, 'status'):
+                    submission.status = Submission.Status.SUBMITTED
+                if hasattr(submission, 'submitted_at'):
+                    submission.submitted_at = timezone.now()
+                submission.save()
+                assignment.status = Assignment.Status.SUBMITTED
+                assignment.draft_response = ""
+                assignment.save(update_fields=['status', 'draft_response'])
+                messages.success(request, "Vastauksesi on lähetetty onnistuneesti!")
+                return redirect('dashboard')
+    else:
+        form = SubmissionForm(initial={'response': assignment.draft_response})
+    
+    return render(request, 'assignments/detail.html', {
+        'assignment': assignment,
+        'form': form,
+        'readonly': False,
+        'now': timezone.now(),
+        'ai_grade': None,
+        'content_html': content_html,
+    })
+
+
+@login_required(login_url='kirjaudu')
+def play_game_view(request, assignment_id):
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+
+    # Varmistetaan, että vain oikea oppilas pääsee pelaamaan
+    if assignment.student != request.user:
+        messages.error(request, "Tämä tehtävä ei ole sinulle.")
+        return redirect('dashboard')
+
+    # Varmistetaan, että materiaali on peli
+    if assignment.material.material_type != 'peli':
+        messages.error(request, "Tämä materiaali ei ole peli.")
+        return redirect('assignment_detail', assignment_id=assignment.id)
+
+    context = {
+        'assignment': assignment,
+        # Välitetään pelin data (kysymykset yms.) suoraan templatelle JSON-muodossa
+        'game_data_json': json.dumps(assignment.material.structured_content)
+    }
+    return render(request, 'assignments/play_game.html', context)
 
     # Muokkaustila
     if request.method == 'POST':

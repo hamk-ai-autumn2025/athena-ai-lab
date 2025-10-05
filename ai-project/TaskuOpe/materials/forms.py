@@ -26,9 +26,16 @@ class MaterialForm(forms.ModelForm):
             "grade_level": forms.Select(attrs={"class": "form-select"}),
         }
 
+
     # KORJATTU: Molemmat aiemmat __init__-metodit on nyt yhdistetty tähän yhteen.
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Tarkistetaan, onko lomakkeella dataa (eli onko kyseessä POST-pyyntö)
+        # ja onko materiaaliksi valittu 'peli'.
+        if self.data and self.data.get('material_type') == 'peli':
+            # Jos on, tehdään 'content'-kentästä EI-pakollinen
+            self.fields['content'].required = False
         
         # Lisää "Valitse luokka" -vaihtoehdon pudotusvalikkoon
         grade_choices = self.fields['grade_level'].choices
