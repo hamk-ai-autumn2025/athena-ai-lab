@@ -1,0 +1,262 @@
+/* ========== Teema ========== */
+:root {
+  --bg-main: #0a0f2a;
+  --card-bg: rgba(22, 28, 64, 0.8); /* Hieman lisätty läpinäkyvyyttä */
+  --text-light: #e0e6f0;
+  --text-dark: #ffffff;
+  --border-color: rgba(60, 80, 150, 0.5);
+
+  --accent: #3ddcff;
+  --accent-hover: #60eaff;
+
+  --good: #4caf50;
+  --good-stroke: #2a7c47;
+  --bad: #f44336;
+  --bad-stroke: #9b3a43;
+
+  --path-color: #ff9800;
+  --tile-bg: #1e295a;
+  --tile-stroke: #8a9ac8;
+
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Perusreset + anti-alias */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  background-color: transparent;
+  color: var(--text-light);
+  font-family: 'Nunito', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* LISÄTTY KORJAUS CHROME-SELIMELLE */
+  position: relative;
+  z-index: 0;
+}
+
+/* ====== Taustataivas ====== */
+#space-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  display: block; /* Varmistaa, ettei kankaaseen tule ylimääräistä tilaa */
+}
+
+/* ====== Kortit / typografia ====== */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  
+  /* KORJAUS: Tämä luo sumennetun lasin efektin taustalle */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.main-title,
+.main-subtitle,
+h5,
+.form-label,
+#question,
+#intro h4 {
+  color: var(--text-dark);
+  text-shadow: 0 0 8px rgba(61, 220, 255, 0.3);
+}
+
+#genStatus { color: var(--text-dark) !important; opacity: 0.9; }
+#intro .text-muted { color: var(--text-light) !important; }
+
+/* KORJAUS: Varmistetaan, että AI-ohjetekstit ovat luettavia */
+[id^="ai-controls-"] .text-muted {
+  color: var(--text-light) !important;
+  opacity: 0.9;
+}
+
+/* ====== Lomake-elementit ====== */
+.form-control,
+.form-select {
+  background-color: #0e153a;
+  color: var(--text-light);
+  border-color: var(--border-color);
+}
+.form-control::placeholder { color: #6a789a; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ====== Napit ====== */
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  color: #0a0f2a;
+  font-weight: 800;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-outline-secondary {
+  border-color: var(--border-color);
+  color: var(--text-light);
+  background-color: #0e153a;
+}
+.btn-outline-secondary:hover { background-color: #1e295a; }
+.btn:focus-visible { box-shadow: 0 0 0 0.2rem rgba(61, 220, 255, 0.35); }
+
+/* ====== Badget ====== */
+.badge {
+  background-color: #1e295a !important;
+  border: 1px solid var(--border-color);
+  color: var(--text-light) !important;
+}
+
+/* ====== Pelilauta (visa) ====== */
+.game-board-container {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.board-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+#start-image-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+#start-image {
+  width: 60%;
+  max-width: 450px;
+  height: auto;
+  object-fit: contain;
+}
+.hidden { opacity: 0; }
+
+.path {
+  fill: none;
+  stroke: var(--path-color);
+  stroke-width: 45;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 15px var(--path-color));
+}
+
+.tile-circle {
+  fill: var(--tile-bg);
+  stroke: var(--tile-stroke);
+  stroke-width: 6;
+  transition: fill .25s ease, stroke .25s ease;
+}
+.tile-text {
+  font-size: 28px; font-weight: 800; fill: var(--text-light);
+  text-anchor: middle; dominant-baseline: central;
+}
+.tile.current .tile-circle {
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 15px var(--accent));
+}
+.tile.correct .tile-circle {
+  fill: var(--good) !important;
+  stroke: var(--good-stroke) !important;
+}
+.tile.wrong .tile-circle {
+  fill: var(--bad) !important;
+  stroke: var(--bad-stroke) !important;
+}
+
+.goal-text { font-size: 18px; font-weight: 800; fill: var(--text-light); }
+
+.hero {
+  position: absolute; width: 90px; height: 90px;
+  will-change: left, top; visibility: hidden;
+  transform: translate(-50%, -95%);
+  transition: left 0.6s ease-in-out, top 0.6s ease-in-out;
+  filter: drop-shadow(0 0 10px rgba(61, 220, 255, 0.7));
+  z-index: 2;
+}
+.hero img { width: 100%; display: block; }
+
+/* ====== Pelien napit ja tilat ====== */
+
+/* --- Yhdistetty perusnappien tyyli --- */
+.choice-btn,
+#hmLetters .btn,
+#mmGrid .btn {
+  background-color: #0e153a;
+  border-color: var(--border-color);
+  color: var(--text-light);
+}
+
+/* --- Yhdistetty 'Oikein'-tilan tyyli --- */
+.choice-btn.correct,
+#hmLetters .btn.correct,
+#mmGrid .btn.correct {
+  background-color: #1a4b2e;
+  border-color: var(--good-stroke);
+  color: #d1e7dd;
+}
+
+/* --- Yhdistetty 'Väärin'-tilan tyyli --- */
+.choice-btn.wrong,
+#hmLetters .btn.wrong,
+#mmGrid .btn.wrong {
+  background-color: #5d2129;
+  border-color: var(--bad-stroke);
+  color: #f8d7da;
+}
+
+/* Ajastin */
+#timer { font-weight: 800; }
+#timer.low { color: #ffc107; }
+#timer.critical { color: #ff6b6b; }
+
+/* Hirsipuu-spesifit tyylit */
+#hmMasked {
+  color: #fff;
+  letter-spacing: .18em;
+  text-shadow: 0 0 8px rgba(255,255,255,.08);
+}
+.hm-canvas #hmSvg {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+}
+#hmLetters .btn {
+  min-width: 38px;
+}
+#hmSvg line, #hmSvg circle {
+  stroke: var(--text-light);
+}
+
+/* ====== Responsiivisuus ====== */
+@media (max-width: 576px) {
+  .tile-text { font-size: 22px; }
+  .goal-text { font-size: 16px; }
+  #start-image { width: 78%; max-width: 420px; }
+  #hmMasked{ font-size: 1.35rem; letter-spacing: .12em; }
+}
+
+@media (min-width: 992px) {
+  .col-lg-2-4 {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+}

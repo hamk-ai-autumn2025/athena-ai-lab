@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TaskuOpe – Visailupelit (FI)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css?v=5">
+</head>
+<body>
+  <canvas id="space-canvas"></canvas>
+  <div class="container py-5">
+    <div class="card text-center mb-5 p-3">
+      <h1 class="main-title">🚀 Visailupelit 🚀</h1>
+      <p class="main-subtitle mb-0">Pelaa, opi ja voita!</p>
+    </div>
+    <div class="row g-5">
+      <div class="col-lg-4">
+        <div class="card p-4 mb-4">
+          <h5 class="mb-3">1. Valitse pelimuoto</h5>
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-secondary" id="mode-quiz">Avaruusseikkailu (visa)</button>
+            <button class="btn btn-outline-secondary" id="mode-hangman">Hirsipuu</button>
+            <button class="btn btn-outline-secondary" id="mode-memory">Muistipeli</button>
+          </div>
+        </div>
+        <div class="card p-4">
+          <h5 class="mb-3">2. Luo oma peli (valinnainen)</h5>
+          <div class="mb-3">
+            <label class="form-label">OpenAI API-avain</label>
+            <div class="input-group">
+              <input id="apiKey" type="password" class="form-control" placeholder="sk-..." />
+              <button id="btnClearKey" class="btn btn-outline-secondary" type="button">Poista</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Pelin aihe</label>
+            <input id="title" type="text" class="form-control" placeholder="Esim. Avaruus, Historia" />
+          </div>
+          <div id="ai-controls-quiz" class="d-none">
+            <div class="mb-3">
+              <label class="form-label">Vaikeus / Pituus</label>
+              <select id="difficulty" class="form-select">
+                <option value="easy" selected>Helppo (5 kysymystä)</option>
+                <option value="medium">Keskivaikea (10 kysymystä)</option>
+                <option value="hard">Haastava (15 kysymystä)</option>
+              </select>
+            </div>
+          </div>
+          <div id="ai-controls-hangman" class="d-none"><p class="small text-muted mb-3">Hirsipuuhun luodaan yksi sana aiheesta.</p></div>
+          <div id="ai-controls-memory" class="d-none"><p class="small text-muted mb-3">Muistipeliin luodaan 10 korttiparia aiheesta.</p></div>
+          <div class="d-grid gap-2">
+            <button id="btnGenerate" class="btn btn-primary">Luo peli tekoälyllä</button>
+          </div>
+          <div class="text-center mt-3">
+            <button id="btnToggleBackground" class="btn btn-sm btn-outline-secondary">Pysäytä tausta</button>
+          </div>
+          <div id="genStatus" class="mt-3 text-center text-muted"></div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div id="quiz-board-card" class="card mb-4 p-0 overflow-hidden">
+          <div class="game-board-container">
+            <svg id="boardSvg" class="board-svg" viewBox="0 0 1200 675"></svg>
+            <div id="start-image-container"><img id="start-image" src="start-image.png" alt="Pelin aloituskuva" /></div>
+            <div id="hero" class="hero"><img src="mascot.png" alt="Pelihahmo" /></div>
+          </div>
+        </div>
+        <div id="quiz-card" class="card d-none">
+          <div class="card-body p-4">
+            <div id="intro">
+              <h4 class="mb-3 text-center">Avaruusseikkailu</h4>
+              <p class="text-center text-muted">Käynnistä peli alla olevasta napista tai luo omasi vasemmalta.</p>
+              <div class="d-grid mt-4">
+                <button id="btnStartMockQuiz" class="btn btn-outline-secondary">Kokeile esimerkkivisaa</button>
+              </div>
+            </div>
+            <div id="game" class="d-none">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge fs-6">Pisteet: <strong id="score">0</strong></span>
+                <span id="levelBadge" class="badge fs-6"></span>
+                <span class="badge fs-6">Aika: <strong id="timer">—</strong></span>
+              </div>
+              <h4 id="question" class="mb-4 text-center"></h4>
+              <div id="choices" class="d-grid gap-3"></div>
+              <div id="feedback" class="alert mt-4 d-none" role="alert"></div>
+              <div class="text-center mt-3">
+                <button id="btnRestart" class="btn btn-outline-secondary d-none">Pelaa uudestaan</button>
+                <button id="btnNext" class="btn btn-primary d-none ms-2">Seuraava</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="hangman-card" class="card d-none">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="badge fs-6">Yritykset: <strong id="hmLives">0</strong></span>
+              <span class="badge fs-6">Aihe: <strong id="hmTopic">—</strong></span>
+            </div>
+            <div class="hm-canvas d-flex justify-content-center mb-3"><svg id="hmSvg" viewBox="0 0 200 220" aria-hidden="true"></svg></div>
+            <h3 id="hmMasked" class="text-center mb-3">—</h3>
+            <div id="hmLetters" class="d-flex flex-wrap gap-2 justify-content-center"></div>
+            <div id="hmFeedback" class="alert mt-4 d-none"></div>
+            <div class="text-center mt-3"><button id="hmRestart" class="btn btn-outline-secondary">Kokeile esimerkkiä</button></div>
+          </div>
+        </div>
+        <div id="memory-card" class="card d-none">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="badge fs-6">Parit: <strong id="mmFound">0</strong>/10</span>
+              <span class="badge fs-6">Yritykset: <strong id="mmTries">0</strong></span>
+            </div>
+            <div id="mmGrid" class="row g-3"></div>
+            <div id="mmFeedback" class="alert mt-4 d-none"></div>
+            <div class="text-center mt-3"><button id="mmRestart" class="btn btn-outline-secondary">Kokeile esimerkkiä</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script defer src="./game.js?v=5"></script>
+</body>
+</html>
