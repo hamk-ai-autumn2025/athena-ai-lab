@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Kirjaudu sisään{% endblock %}
+{% block hero %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+      <div class="card login-card border-0">
+        <div class="card-body p-4 p-md-5">
+          <div class="text-center mb-3">
+            <div class="login-icon mb-2">⭐</div>
+            <h1 class="h4 m-0">Kirjaudu sisään</h1>
+            <div class="text-secondary small">Jatkaaksesi lisäämään arvosteluja</div>
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">
+              {{ form.non_field_errors.0 }}
+            </div>
+          {% endif %}
+
+          <form method="post" novalidate class="vstack gap-3">{% csrf_token %}
+            <!-- Käyttäjätunnus -->
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control"
+                     id="id_username"
+                     name="username"
+                     required
+                     value="{{ form.username.value|default:'' }}"
+                     placeholder="Käyttäjätunnus">
+              <label for="id_username">Käyttäjätunnus</label>
+            </div>
+
+            <!-- Salasana + show/hide -->
+            <div class="form-floating position-relative">
+              <input type="password"
+                     class="form-control"
+                     id="id_password"
+                     name="password"
+                     required
+                     placeholder="Salasana">
+              <label for="id_password">Salasana</label>
+              <button type="button" class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                      id="togglePwd" aria-label="Näytä/piilota salasana">Näytä</button>
+            </div>
+
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+            <button class="btn btn-primary w-100 py-2">Kirjaudu</button>
+          </form>
+
+          <div class="text-center mt-3">
+            <a class="small text-decoration-none" href="/">← Takaisin etusivulle</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Show/Hide password
+  const btn = document.getElementById('togglePwd');
+  const pwd = document.getElementById('id_password');
+  if (btn && pwd) {
+    btn.addEventListener('click', () => {
+      const show = pwd.type === 'password';
+      pwd.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Piilota' : 'Näytä';
+      pwd.focus();
+    });
+  }
+</script>
+{% endblock %}
+

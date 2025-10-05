@@ -1,0 +1,88 @@
+/* Tiivistä kenttiä ja riviä */
+.hero-search .container { padding-top:.4rem; padding-bottom:.4rem; }
+.form-label { margin-bottom:.2rem; font-size:.9rem; }
+.row.g-2 { --bs-gutter-y:.4rem; --bs-gutter-x:.5rem; }
+
+/* Piilota iso hero-haku mobiilissa, käytä navin hakua */
+@media (max-width: 991.98px){
+  .hero-search { display: none; }
+}
+
+/* Pienempi kenttäkorkeus ja kulmat */
+.form-control-sm, .form-select-sm {
+  padding-top:.3rem; padding-bottom:.3rem;
+  border-radius:.35rem;
+}
+
+/* Pieni placeholder */
+::placeholder { opacity:.7; font-size:.95em; }
+
+/* Pienempi “Suodata”-nappi */
+.btn.btn-sm { padding:.3rem .55rem; }
+
+/* Navbar-CTA: mobiilissa isot, leveät; desktopissa kompaktit */
+@media (max-width: 991.98px){
+  .nav-cta { width: 100%; }
+  .nav-cta .cta-btn{
+    width: 100%;
+    padding: .6rem 1rem;       /* isompi kosketuspinta */
+    font-size: 1rem;           /* suurempi fontti */
+    border-radius: .5rem;
+  }
+}
+@media (min-width: 992px){
+  .nav-cta .cta-btn{
+    width: auto;               /* ei veny desktopissa */
+    padding: .25rem .6rem;     /* pieni nappi desktopissa */
+    font-size: .875rem;
+  }
+}
+
+/* ---- Selkeä ja varmasti näkyvä login-kortti ---- */
+.login-card{
+  background-color: rgba(255,255,255,.10) !important;  /* vaalea pinta tummaan taustaan */
+  border: 1px solid rgba(255,255,255,.22) !important;  /* selkeä rajaus */
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.45);
+}
+
+.login-icon{
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(255,255,255,.18);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.35rem; color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+}
+
+/* Kentät: selkeä pinta ja teksti */
+.form-floating > .form-control{
+  background-color: rgba(255,255,255,.12) !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  color: #fff;
+}
+.form-floating > label{
+  color: #c8cdd3;  /* flottauksen label näkyviin */
+}
+.form-floating > .form-control:focus{
+  border-color: #58d68d !important;
+  box-shadow: 0 0 0 .2rem rgba(88,214,141,.25);
+}
+
+/* Näytä/PIilota-nappi erottuvaksi */
+#togglePwd{
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.28);
+  color:#fff;
+}
+
+/* Primäärinappi: pieni korostus */
+.btn-primary{ box-shadow: 0 6px 18px rgba(13,110,253,.28); }
+
+/* Pieni sisämarginaali mobiilissa */
+@media (max-width: 576px){
+  .login-card { margin-top: .75rem; }
+}
+
+
+
+

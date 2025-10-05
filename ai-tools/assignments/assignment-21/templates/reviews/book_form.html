@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Lisää kirja{% endblock %}
+{% block content %}
+<div class="card border-0 bg-dark-subtle shadow-sm">
+  <div class="card-body">
+    <h1 class="h4 mb-3">Lisää kirja</h1>
+    <form method="post" class="vstack gap-3">{% csrf_token %}
+      <label class="form-label">Otsikko {{ form.title }}</label>
+      <label class="form-label">Kirjoittaja {{ form.author_name }}</label>
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label">Vuosi {{ form.published_year }}</label></div>
+        <div class="col-md-8"><label class="form-label">Genre {{ form.genre }}</label></div>
+      </div>
+      <label class="form-label">Kannen URL {{ form.cover_url }}</label>
+      <label class="form-label">Kuvaus {{ form.description }}</label>
+      <button class="btn btn-success">Tallenna</button>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Uusimmat kirja-arvostelut{% endblock %}
+
+{% block hero %}
+<section class="hero-search border-bottom bg-dark-subtle">
+  <div class="container py-2">  <!-- ennen py-4 -->
+    <form class="row g-2 align-items-end" role="search">
+      <div class="col-md-4">
+        <label class="form-label mb-1">Etsi kirjoja</label>
+        <input class="form-control form-control-sm"  
+               type="search" name="q" value="{{ q }}"
+               placeholder="Otsikko tai kirjoittaja">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Kirjoittaja</label>
+        <input class="form-control form-control-sm" name="author" value="{{ author }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Genre</label>
+        <input class="form-control form-control-sm" name="genre" value="{{ genre }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Väh. arvosana</label>
+        <select class="form-select form-select-sm" name="minr">
+          <option value="">–</option>
+          {% for i in "12345" %}
+            <option value="{{ i }}" {% if minr == i %}selected{% endif %}>{{ i }}+</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Järjestys</label>
+        <select class="form-select form-select-sm" name="sort">
+          <option value="rating" {% if sort == "rating" %}selected{% endif %}>Paras arvio</option>
+          <option value="newest" {% if sort == "newest" %}selected{% endif %}>Uusimmat</option>
+          <option value="reviews" {% if sort == "reviews" %}selected{% endif %}>Eniten arvioita</option>
+          <option value="title" {% if sort == "title" %}selected{% endif %}>A–Ö</option>
+        </select>
+      </div>
+
+      <div class="col-12 d-flex gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label mb-0 small text-secondary">Vuodesta</label>
+          <input class="form-control form-control-sm" name="y_from" value="{{ y_from }}" style="width:110px">
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label mb-0 small text-secondary">Vuoteen</label>
+          <input class="form-control form-control-sm" name="y_to" value="{{ y_to }}" style="width:110px">
+        </div>
+        <button class="btn btn-primary btn-sm ms-auto">Suodata</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="h3 mb-3">Uusimmat kirja-arviot</h2>
+
+
+
+<div class="vstack gap-4">
+  {% for b in books %}
+  <article class="review-row p-3 rounded-3 bg-dark-subtle border">
+    <div class="row g-3">
+      <div class="col-sm-3 col-md-2">
+        {% if b.cover_url %}
+          <img src="{{ b.cover_url }}" class="img-fluid rounded shadow-sm ratio-2x3 object-fit-cover" alt="Kansi: {{ b.title }}">
+        {% else %}
+          <div class="ratio ratio-2x3 bg-secondary-subtle rounded d-flex align-items-center justify-content-center text-secondary">Ei kantta</div>
+        {% endif %}
+      </div>
+      <div class="col-sm-9 col-md-10">
+<div class="d-flex justify-content-between align-items-start">
+  <div>
+    <h3 class="h5 mb-1">
+      <a class="link-light link-underline-opacity-0 link-underline-opacity-50-hover"
+         href="{% url 'reviews:book_detail' b.pk %}">{{ b.title }}</a>
+    </h3>
+    <div class="small text-secondary">
+      {{ b.author.name }}
+      {% if b.published_year %} · {{ b.published_year }}{% endif %}
+      {% if b.genre %} · {{ b.genre }}{% endif %}
+    </div>
+  </div>
+
+  {% if request.user.is_staff %}
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'reviews:book_edit' b.pk %}" class="btn btn-outline-light btn-sm">Muokkaa</a>
+    <a href="{% url 'reviews:book_delete' b.pk %}" class="btn btn-outline-danger btn-sm">Poista</a>
+  </div>
+  {% endif %}
+</div>
+
+        <div class="d-flex align-items-center gap-2 my-2">
+          <span class="stars" data-stars="{{ b.avg_rating|default:0|floatformat:0 }}"></span>
+          <span class="badge text-bg-secondary">{{ b.avg_rating|default:"–"|floatformat:1 }} / 5</span>
+          <small class="text-secondary">({{ b.review_count }} arviota)</small>
+        </div>
+
+        <p class="mb-2 text-truncate-3">{{ b.description|default:"(Ei kuvausta.)" }}</p>
+
+        <a href="{% url 'reviews:book_detail' b.pk %}" class="link-primary">Lue lisää…</a>
+      </div>
+    </div>
+  </article>
+  {% empty %}
+    <p class="text-secondary">Ei osumia.</p>
+  {% endfor %}
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination pagination-sm">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number }}">«</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Sivu {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number }}">»</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+

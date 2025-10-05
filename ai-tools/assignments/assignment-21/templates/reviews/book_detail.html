@@ -1,0 +1,59 @@
+<!-- templates/reviews/book_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-3">
+    {% if book.cover_url %}
+      <img src="{{ book.cover_url }}" alt="Kansi: {{ book.title }}" class="img-fluid rounded shadow-sm">
+    {% else %}
+      <div class="ratio ratio-2x3 bg-secondary-subtle rounded d-flex align-items-center justify-content-center text-secondary">Ei kantta</div>
+    {% endif %}
+  </div>
+  <div class="col-md-9">
+    <h1 class="mb-1">{{ book.title }}</h1>
+    <div class="text-secondary mb-2">
+      {{ book.author.name }}{% if book.published_year %} · {{ book.published_year }}{% endif %}
+      {% if book.genre %} · {{ book.genre }}{% endif %}
+    </div>
+    <div class="mb-3">
+      <span class="stars fs-4" data-stars="{{ book.avg_rating|default:0|floatformat:0 }}"></span>
+      <span class="badge text-bg-secondary ms-2">{{ book.avg_rating|default:"–"|floatformat:1 }}</span>
+      <span class="small text-secondary ms-2">({{ book.review_count }} arviota)</span>
+    </div>
+    <p class="lead">{{ book.description|default:"(Ei kuvausta.)" }}</p>
+    <div class="mt-3">
+      {% if request.user.is_authenticated %}
+        <a href="{% url 'reviews:review_create' book.pk %}" class="btn btn-primary">Lisää arvostelu</a>
+      {% else %}
+        <em>Kirjaudu adminiin lisätäksesi arvostelun.</em>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<hr class="my-4">
+
+<h3>Arvostelut</h3>
+<div class="vstack gap-3">
+  {% for r in book.reviews.all %}
+<div class="d-flex justify-content-between align-items-center mb-1">
+  <div class="stars" data-stars="{{ r.rating }}"></div>
+  <div class="d-flex align-items-center gap-2">
+    <small class="text-secondary">
+      {{ r.created_at|date:"d.m.Y H:i" }}{% if r.reviewer %} · {{ r.reviewer.username }}{% endif %}
+    </small>
+    {% if request.user.is_staff %}
+      <a href="{% url 'reviews:review_edit' r.pk %}" class="btn btn-outline-light btn-sm">Muokkaa</a>
+      <a href="{% url 'reviews:review_delete' r.pk %}" class="btn btn-outline-danger btn-sm">Poista</a>
+    {% endif %}
+  </div>
+</div>
+  {% empty %}
+    <p class="text-secondary">Ei arvosteluja vielä.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}
+
+

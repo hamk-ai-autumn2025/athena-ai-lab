@@ -1,0 +1,21 @@
+<!-- templates/reviews/review_form.html -->
+{% extends "base.html" %}
+{% block title %}Uusi arvostelu{% endblock %}
+{% block content %}
+<div class="card border-0 bg-dark-subtle shadow-sm">
+  <div class="card-body">
+    <h1 class="h3 mb-3">Uusi arvostelu</h1>
+    <form method="post" class="vstack gap-3">{% csrf_token %}
+      <div>
+        <label class="form-label">Arvosana</label>{{ form.rating }}
+      </div>
+      <div>
+        <label class="form-label">Teksti</label>{{ form.text }}
+      </div>
+      <div><button class="btn btn-primary">Tallenna</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+
