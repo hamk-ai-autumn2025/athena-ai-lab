@@ -144,6 +144,7 @@
 
 <!-- KIRJASTOT -->
 <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <!-- SIVUKOHTAINEN KÄYTTÖLOGIIKKA -->
 <script>
@@ -166,9 +167,15 @@ function parseAiReply(raw){
   const m2=raw.match(/^\s*#\s+(.+)$/m);
   if(m0) title=m0[1].trim(); else if(m1) title=m1[1].trim(); else if(m2) title=m2[1].trim();
 
-  let subject="";
-  const s1=raw.match(/^\s*(Aihe|Oppiaine)\s*:\s*(.+)$/mi);
-  if(s1) subject=s1[2].trim();
+    let subject = "";
+    // sallii Aihe/Oppiaine + :, -, – tai —, ja siivoaa markdown-lihavoinnin ym.
+    const s1 = raw.match(/^\s*(?:Aihe|Oppiaine)\s*(?:[:\-–—]|=)\s*(.+)$/im);
+    if (s1) {
+    subject = s1[1]
+        .replace(/[*_`]/g, "")   // poista **, __, ``
+        .replace(/\s+\(.*?\)\s*$/, "") // poista sulkeissa oleva lisäselite lopusta
+        .trim();
+    }
 
   let draft="";
   const d=raw.match(/^\s*Luonnosteksti\s*:\s*([\s\S]*)$/mi);
@@ -245,24 +252,32 @@ document.addEventListener('DOMContentLoaded',()=>{
     minHeight:"300px",
 
     // Renderöi markdown -> html ja hydratoi pelit
+
     previewRender: (plainText, preview) => {
-      const html = (window.marked && typeof window.marked.parse==='function')
+    const html = (window.marked && typeof window.marked.parse==='function')
         ? window.marked.parse(plainText)
         : plainText;
-      preview.innerHTML = html;
-      requestAnimationFrame(() => hydrateGames(preview));
-      return preview.innerHTML;
+    preview.innerHTML = html;
+
+    // ✅ älä kaada skriptiä jos hydrateGames puuttuu
+    if (typeof window.hydrateGames === "function") {
+        requestAnimationFrame(() => window.hydrateGames(preview));
     }
-  });
+
+    return preview.innerHTML;
+    }
+ });
 
   // KIINNITÄ INSTANSSI GLOBAALIKSI
   window.easyMDE = easyMDE;
 
   // Päivitä upotukset side-by-side -tilassa
-  const rehydrate = () => {
-    const pv = document.querySelector('.editor-preview, .editor-preview-side');
-    if (pv) hydrateGames(pv);
-  };
+const rehydrate = () => {
+  const pv = document.querySelector('.editor-preview, .editor-preview-side');
+  if (pv && typeof window.hydrateGames === "function") {
+    window.hydrateGames(pv);
+  }
+};
   easyMDE.codemirror.on('change', () => {
     if (document.querySelector('.editor-preview, .editor-preview-side')) rehydrate();
   });
@@ -398,5 +413,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
 
 });
+
 </script>
 {% endblock %}

@@ -49,10 +49,12 @@
   </form>
 </div>
 
+
 <!-- KIRJASTOT -->
 <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+
 document.addEventListener('DOMContentLoaded', () => {
   // === OSA 1: Alustetaan EasyMDE-editori ILMAN sen omaa esikatselua ===
   const easyMDE = new EasyMDE({
@@ -187,5 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Päivitetään esikatselu kerran heti alussa
   updatePreview();
 });
+
+
 </script>
 {% endblock %}
