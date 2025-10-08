@@ -156,25 +156,33 @@ html, body {
  Mobiili ensin: Ilmoitukset keskitettynä alareunaan -> Tarkistettu saavutettavuus ja luettavuus t.mirka
  Desktop: Ilmoitukset oikeassa alakulmassa, jotta ei peitä sisältöä
 */
+/* Mobiilin oletustyylit pysyvät samoina: alareunassa keskellä */
 .custom-toast-container .toast {
   width: 90vw;
   max-width: 500px; 
 }
 
+/* 
+  Työpöydän tyylit: Kun näyttö on vähintään 768px leveä.
+  Tässä siirrämme ilmoitukset YLÄREUNAAN KESKELLE.
+*/
 @media (min-width: 768px) {
   .custom-toast-container {
-    left: auto;
-    transform: none;
-    top: auto;
-    bottom: 1.25rem;
-    right: 1.25rem;
+    /* Nollataan mobiilin alareuna-asetus */
+    bottom: auto;
+    
+    /* Asetetaan uudet arvot yläreunaan keskelle.
+       'start-50' ja 'translate-middle-x' on jo HTML:ssä,
+       joten tarvitsee vain lisätä 'top'. */
+    top: 1.25rem; /* Hieman tilaa ylhäältä */
   }
+
+  /* Palautetaan toastin leveys normaaliksi työpöydällä */
   .custom-toast-container .toast {
     width: auto;
-    max-width: 350px;
+    max-width: 450px; /* Hieman leveämpi kuin aiemmin, sopii paremmin ylös */
   }
 }
-
 
 /* ================================================= */
 /* 4. APULUOKAT & TEEMAKOHTAISET KORJAUKSET           */
