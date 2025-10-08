@@ -117,7 +117,7 @@
       </header>
       <!-- VIERIVÄ SISÄLTÖALUE -->
       <main class="page-content">
-        {% include "partials/messages.html" %}
+        {% include "partials/messages.html" %} <!-- Messages -->
         {% block content %}{% endblock %}
       </main>
     </div>
@@ -140,17 +140,16 @@
       });
     });
   </script>
+  {# TÄMÄ ON MUUTOS: Vanha alert-skripti on korvattu uudella Toast-skriptillä Mobiiliystävällisempi standardi t.Mirka#}
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const alerts = document.querySelectorAll(".alert");
-      if (alerts.length > 0) {
-        setTimeout(() => {
-          alerts.forEach(alert => {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-          });
-        }, 5000);
-      }
+    document.addEventListener('DOMContentLoaded', () => {
+      const toastElList = document.querySelectorAll('.toast');
+      const toastList = [...toastElList].map(toastEl => {
+        const toast = new bootstrap.Toast(toastEl, {
+          delay: 5000 // Viesti näkyy 5 sekuntia
+        });
+        toast.show(); // Näytä toast
+      });
     });
   </script>
   <form id="logout-form" action="{% url 'kirjaudu_ulos' %}" method="post" style="display:none;">{% csrf_token %}</form>

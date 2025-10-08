@@ -1,13 +1,36 @@
+{% comment %} Toast-viestit muotoilut ja tyyli -> tehtiin tästä kauniimpi versio <3 {% endcomment %}
+
+{% comment %}
+  Tämä versio asemoi ilmoitukset oletuksena alareunaan (mobiili ensin)
+  ja antaa säiliölle oman luokan 'custom-toast-container' CSS-muokkauksia varten.
+{% endcomment %}
+
 {% if messages %}
-<div class="messages">
-  {% for message in messages %}
-    {% with tag=message.tags|default:'info' %}
-      <div class="alert {% if 'error' in tag %}alert-danger{% elif 'success' in tag %}alert-success{% elif 'warning' in tag %}alert-warning{% elif 'info' in tag %}alert-info{% else %}alert-secondary{% endif %} shadow-sm d-flex align-items-center alert-dismissible fade show" role="alert" aria-live="polite">
-        <i class="bi bi-{% if 'error' in tag %}x-circle-fill{% elif 'success' in tag %}check-circle-fill{% elif 'warning' in tag %}exclamation-triangle-fill{% elif 'info' in tag %}info-circle-fill{% else %}info-circle{% endif %} me-2"></i>
-        <div class="flex-grow-1">{{ message }}</div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Sulje"></button>
+  <div class="custom-toast-container toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1100;">
+
+    {% for message in messages %}
+      <div class="toast align-items-center 
+        {% if 'success' in message.tags %}bg-success-subtle
+        {% elif 'danger' in message.tags or 'error' in message.tags %}bg-danger-subtle
+        {% else %}bg-info-subtle{% endif %} border-0" 
+        role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi me-2
+              {% if 'success' in message.tags %}bi-check-circle-fill text-success
+              {% elif 'danger' in message.tags or 'error' in message.tags %}bi-x-circle-fill text-danger
+              {% else %}bi-info-circle-fill text-info{% endif %}"></i>
+            {{ message }}
+          </div>
+          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
       </div>
-    {% endwith %}
-  {% endfor %}
-</div>
+    {% endfor %}
+
+  </div>
 {% endif %}
+
+{% comment %}
+  JavaScript käynnistää Bootstrapin toastit automaattisesti sivun latauksen jälkeen.
+  Tämä koodi voidaan sijoittaa myös erilliseen JS-tiedostoon, jos halutaan.
+{% endcomment %}

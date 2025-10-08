@@ -508,7 +508,7 @@ def assign_material_view(request, material_id):
                 )
                 if created:
                     count += 1
-            messages.success(request, f"Material was successfully assigned to {count} student(s).")
+            messages.success(request, f"Materiaali on onnistuneesti jaettu {count} opiskelijalle.")
             return redirect('dashboard')
     else:
         form = AssignmentForm()
@@ -530,7 +530,7 @@ def assignment_detail_view(request, assignment_id):
 
     # Oikeustarkistus
     if assignment.student_id != request.user.id:
-        messages.error(request, "You are not authorized to view this assignment.")
+        messages.error(request, "Sinulla ei ole oikeuksia nähdä tätä tehtävää.")
         return redirect('dashboard')
 
     # --- TÄMÄ ON TÄRKEIN UUSI LISÄYS ---
@@ -694,7 +694,7 @@ def assignment_autosave_view(request, assignment_id):
 # --- Submissions & Grading ---
 @login_required(login_url='kirjaudu')
 def view_submissions(request, material_id):
-    """Teacher: view all student submissions for a material."""
+    """Opettaja: näytä kaikki opiskelijoiden palautukset tietylle materiaalille."""
     material = get_object_or_404(Material, id=material_id)
     if request.user.role != "TEACHER" or material.author_id != request.user.id:
         messages.error(request, "Sinulla ei ole oikeuksia tarkastella tätä sivua.")
@@ -716,8 +716,8 @@ def view_submissions(request, material_id):
 
 def _calculate_grade_from_score(score, max_score):
     """
-    Converts a score into a grade (4-10) based on the percentage.
-    NOTE: You can edit the percentage thresholds to fit your needs!
+    Muuntaa pistemäärän arvosanaksi (4-10) prosenttiosuuden perusteella.
+    HUOM: Voit muokata prosenttiosuusrajoja tarpeidesi mukaan!
     """
     # Ensure the values are numbers and avoid division by zero
     try:
@@ -749,7 +749,7 @@ def _calculate_grade_from_score(score, max_score):
 @login_required(login_url='kirjaudu')
 @transaction.atomic
 def grade_submission_view(request, submission_id):
-    """Teacher: grade a single student submission."""
+    """Opettaja: arvioi yksittäinen opiskelijan palautus."""
     submission = get_object_or_404(
         Submission.objects.select_related('assignment__student', 'assignment__material'),
         id=submission_id
@@ -759,23 +759,23 @@ def grade_submission_view(request, submission_id):
 
     # Authorization check
     if request.user.role != "TEACHER" or material.author_id != request.user.id:
-        messages.error(request, "You are not authorized to grade this submission.")
+        messages.error(request, "Sinulla ei ole oikeuksia arvioida tätä palautusta.")
         return redirect('dashboard')
 
     # --- AI rubric grading: generate from button press ---
     if request.method == 'POST' and 'run_ai_grade' in request.POST:
         try:
             ag = create_or_update_ai_grade(submission)
-            messages.success(request, f"AI grade suggestion created ({ag.total_points:.1f} points).")
+            messages.success(request, f"AI-arvosanaehdotus luotu ({ag.total_points:.1f} pistettä).")
         except Exception as e:
-            messages.error(request, f"AI grading failed: {e}")
+            messages.error(request, f"AI-arvosanaehdotuksen luonti epäonnistui: {e}")
         return redirect('grade_submission', submission_id=submission.id)
 
     # --- AI rubric grading: accept suggestion into fields ---
     if request.method == 'POST' and 'accept_ai_grade' in request.POST:
         ag = getattr(submission, 'ai_grade', None)
         if not ag:
-            messages.error(request, "AI grade suggestion does not exist.")
+            messages.error(request, "AI-arvosanaehdotus ei ole olemassa.")
             return redirect('grade_submission', submission_id=submission.id)
 
         # Copy criterion-specific scores and feedback to submission fields
@@ -803,7 +803,7 @@ def grade_submission_view(request, submission_id):
         # --- MODIFIED LINE: Added 'grade' to the list of fields to save ---
         submission.save(update_fields=["score", "max_score", "feedback", "grade"])
 
-        messages.success(request, "AI suggestion copied to grading fields. You can now edit and save.")
+        messages.success(request, "AI-arvosanaehdotus kopioitu arviointikenttiin. Voit nyt muokata ja tallentaa.")
         return redirect('grade_submission', submission_id=submission.id)
 
     # --- Plagiarism check from button press ---
@@ -813,15 +813,15 @@ def grade_submission_view(request, submission_id):
             if report.suspected_source:
                 messages.success(
                     request,
-                    f"Originality report updated. Similarity: {report.score:.2f}"
+                    f"Alkuperäisyysselvityksen raportti päivitetty. Samankaltaisuus: {report.score:.2f}"
                 )
             else:
                 messages.info(
                     request,
-                    "Report updated. No significant similarity was found."
+                    "Raportti päivitetty. Merkittävää samankaltaisuutta ei löytynyt."
                 )
         except Exception as e:
-            messages.error(request, f"Failed to generate report: {e}")
+            messages.error(request, f"Raportin luonti epäonnistui: {e}")
         return redirect('grade_submission', submission_id=submission.id)
 
     # --- Final form submission (saving the manual grade) ---
@@ -835,7 +835,7 @@ def grade_submission_view(request, submission_id):
             assignment.status = Assignment.Status.GRADED
             assignment.save(update_fields=['status'])
 
-            messages.success(request, "Grade saved successfully.")
+            messages.success(request, "Arvosana tallennettu onnistuneesti.")
             return redirect('view_submissions', material_id=material.id)
     else:
         form = GradingForm(instance=submission)
@@ -1372,11 +1372,11 @@ def assignment_tts_view(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
 
     if assignment.student != request.user:
-        return HttpResponseForbidden("You are not authorized to access this resource.")
+        return HttpResponseForbidden("Sinulla ei ole oikeuksia tähän.")
 
     raw_text = assignment.material.content
     if not raw_text:
-        return JsonResponse({"error": "No content to read."}, status=400)
+        return JsonResponse({"Virhe": "Ei sisältöä luettavaksi."}, status=400)
 
     # === KORJATTU SÄÄNNÖLLINEN LAUSEKE ===
     # Tämä on tarkempi ja poistaa vain oikeat Markdown-kuvat.
@@ -1385,14 +1385,14 @@ def assignment_tts_view(request, assignment_id):
     # Varmistetaan, että tekstiä jäi jäljelle siivouksen jälkeen
     if not clean_text.strip():
         # Jos jäljelle jäi vain tyhjää, palautetaan virhe.
-        return JsonResponse({"error": "No readable text found after cleaning."}, status=400)
+        return JsonResponse({"Virhe": "Ei luettavaa tekstiä löytynyt siivouksen jälkeen."}, status=400)
 
     audio_bytes = generate_speech(clean_text)
 
     if audio_bytes:
         return HttpResponse(audio_bytes, content_type='audio/mpeg')
     else:
-        return JsonResponse({"error": "Failed to generate audio."}, status=500)
+        return JsonResponse({"Virhe": "Äänitiedoston luonti epäonnistui."}, status=500)
     
     #JSON Chunks lataus tekoälylle
 @require_GET

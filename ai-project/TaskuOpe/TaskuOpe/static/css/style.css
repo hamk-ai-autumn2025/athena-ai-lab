@@ -118,14 +118,21 @@ html, body {
   border-bottom: 1px solid var(--border-color);
 }
 
-.messages {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1055;
-  display: grid;
-  gap: 0.75rem;
-  min-width: 300px;
+/*Poistettu viestikehys muotoilut ja lisätty uudet mobiiliystävälliset tyylit t.Mirka*/
+.django-messages-container {
+  padding-bottom: 1rem; 
+}
+
+.message-success {
+  color: #198754; 
+}
+
+.message-danger {
+  color: #dc3545; 
+}
+
+.message-warning {
+  color: #ffc107;
 }
 
 .login-page-body {
@@ -143,6 +150,29 @@ html, body {
 
 @media (min-width: 992px) {
   .row.align-items-stretch .card { height: 100%; }
+}
+
+/* --- Responsiiviset Toast-ilmoitukset (Lopullinen versio) ---
+ Mobiili ensin: Ilmoitukset keskitettynä alareunaan -> Tarkistettu saavutettavuus ja luettavuus t.mirka
+ Desktop: Ilmoitukset oikeassa alakulmassa, jotta ei peitä sisältöä
+*/
+.custom-toast-container .toast {
+  width: 90vw;
+  max-width: 500px; 
+}
+
+@media (min-width: 768px) {
+  .custom-toast-container {
+    left: auto;
+    transform: none;
+    top: auto;
+    bottom: 1.25rem;
+    right: 1.25rem;
+  }
+  .custom-toast-container .toast {
+    width: auto;
+    max-width: 350px;
+  }
 }
 
 

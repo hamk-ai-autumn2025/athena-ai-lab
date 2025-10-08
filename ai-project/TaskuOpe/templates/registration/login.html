@@ -30,32 +30,54 @@
             <div class="card-body p-4">
                 <h3 class="card-title text-center mb-4">Kirjaudu sisään</h3>
 
+                {# Näyttää yleiset viestit, kuten "Olet kirjautunut ulos." #}
                 {% include "partials/messages.html" %}
 
+                {# Näyttää yleiset lomakevirheet staattisessa laatikossa #}
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger" role="alert">
-                        {% for error in form.non_field_errors %}
-                            {{ error }}
-                        {% endfor %}
+                        {{ form.non_field_errors.as_text }}
                     </div>
                 {% endif %}
 
-                <form method="post" action="{% url 'kirjaudu' %}">
+                {# 1. OIKEA TAPA: 'novalidate' estää selaimen omat ilmoitukset #}
+                <form method="post" action="{% url 'kirjaudu' %}" novalidate>
                     {% csrf_token %}
 
                     <div class="mb-3">
                         <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
-                        {{ form.username }}
+                        
+                        {# 2. OIKEA TAPA: '.is-invalid' luokka lisätään vain virheen sattuessa #}
+                        <input type="text" 
+                               name="{{ form.username.name }}" 
+                               id="{{ form.username.id_for_label }}"
+                               class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                               value="{{ form.username.value|default:'' }}"
+                               required>
+                        
+                        {# 3. OIKEA TAPA: Virheteksti tulostetaan '.invalid-feedback'-elementin sisään #}
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.username.errors.as_text }}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="mb-3">
                         <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
-                        {{ form.password }}
+                        
+                        <input type="password" 
+                               name="{{ form.password.name }}" 
+                               id="{{ form.password.id_for_label }}"
+                               class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                               required>
+                        
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.password.errors.as_text }}
+                            </div>
+                        {% endif %}
                     </div>
-                    
-                    {% if next %}
-                        <input type="hidden" name="next" value="{{ next }}">
-                    {% endif %}
                     
                     <div class="d-grid mt-4">
                         <button type="submit" class="btn btn-primary">Kirjaudu</button>
@@ -64,20 +86,5 @@
             </div>
         </div>
     </div>
-    
-    <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const alerts = document.querySelectorAll(".alert");
-        if (alerts.length > 0) {
-            setTimeout(() => {
-                alerts.forEach(alert => {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                });
-            }, 5000);
-        }
-    });
-    </script>
-
 </body>
 </html>
