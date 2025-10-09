@@ -413,7 +413,7 @@ def material_list_view(request):
         return redirect('dashboard')
 
     selected_subject = request.GET.get('subject', '')
-    materials_qs = Material.objects.filter(author=request.user)
+    materials_qs = Material.objects.filter(author=request.user).order_by('-created_at') #Järjestys uusimmasta vanhimpaan t.Mirka
 
     #Kysely
     subjects = materials_qs.exclude(subject__isnull=True).exclude(subject='').values_list('subject', flat=True).distinct().order_by('subject')
