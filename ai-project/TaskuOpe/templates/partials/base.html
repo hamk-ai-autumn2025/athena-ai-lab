@@ -46,6 +46,7 @@
             <li class="nav-item"><a class="nav-link {% if nm == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-house-door-fill me-2"></i>Etusivu</a></li>
             {% if request.user.is_authenticated and request.user.role == 'STUDENT' %}
               <li class="nav-item"><a class="nav-link {% if nm == 'student_assignments' %}active{% endif %}" href="{% url 'student_assignments' %}"><i class="bi bi-list-check me-2"></i>Omat tehtävät</a></li>
+              <li class="nav-item"><a class="nav-link {% if nm == 'student_games' %}active{% endif %}" href="{% url 'student_games' %}"><i class="bi bi-controller me-2"></i>Pelit</a></li>
               <li class="nav-item"><a class="nav-link {% if nm == 'student_grades' %}active{% endif %}" href="{% url 'student_grades' %}"><i class="bi bi-award me-2"></i>Palautukset & arvioinnit</a></li>
             {% elif request.user.is_authenticated and request.user.role == 'TEACHER' %}
               <li class="nav-item"><a class="nav-link {% if nm == 'create_material' %}active{% endif %}" href="{% url 'create_material' %}"><i class="bi bi-plus-square-fill me-2"></i>Luo materiaali</a></li>
@@ -84,6 +85,7 @@
           <a href="{% url 'dashboard' %}" class="nav-link {% if nm == 'dashboard' %}active{% endif %}"><i class="bi bi-house-door-fill me-2"></i>Etusivu</a>
           {% if request.user.is_authenticated and request.user.role == 'STUDENT' %}
             <a href="{% url 'student_assignments' %}" class="nav-link {% if nm == 'student_assignments' %}active{% endif %}"><i class="bi bi-list-check me-2"></i>Omat tehtävät</a>
+            <a href="{% url 'student_games' %}" class="nav-link {% if nm == 'student_games' %}active{% endif %}"><i class="bi bi-controller me-2"></i>Pelit</a>
             <a href="{% url 'student_grades' %}" class="nav-link {% if nm == 'student_grades' %}active{% endif %}"><i class="bi bi-award me-2"></i>Palautukset & arvioinnit</a>
           {% elif request.user.is_authenticated and request.user.role == 'TEACHER' %}
             <a href="{% url 'create_material' %}" class="nav-link {% if nm == 'create_material' %}active{% endif %}"><i class="bi bi-plus-square-fill me-2"></i>Luo materiaali</a>

@@ -4,7 +4,7 @@
 {% block title %}Peli: {{ assignment.material.title }}{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/game.css' %}">
+  <link rel="stylesheet" href="{% static 'games/game.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -19,118 +19,187 @@
      data-completion-url="{% url 'complete_game_ajax' assignment_id=assignment.id %}">
 </div>
 
-<div class="game-content-wrapper">
-    <canvas id="space-canvas"></canvas>
+<!-- Canvas tausta -->
+<canvas id="space-canvas"></canvas>
 
-    <button id="btnToggleBackground" class="btn btn-sm btn-outline-secondary" 
-            style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-        ⏸️ Pysäytä tausta
-    </button>
-    
-    <div class="container-fluid px-3 px-lg-4 py-4" style="position: relative; z-index: 1;">
-        <!-- Otsikko -->
-        <div class="row justify-content-center mb-4">
-            <div class="col-12 col-xl-10">
-                <div class="card text-center p-3">
-                    <h1 class="main-title">🚀 {{ assignment.material.title }} 🚀</h1>
-                    <p class="main-subtitle mb-0">Aihe: {{ assignment.material.subject }}</p>
-                </div>
-            </div>
-        </div>
+<button id="btnToggleBackground" class="btn btn-sm btn-outline-secondary" 
+        style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+    ⏸️ Pysäytä tausta
+</button>
 
-        <!-- VISA-PELI: Pelilauta + Kysymykset -->
-        <div class="row g-3 g-lg-4 justify-content-center">
-            <!-- Pelilauta vasemmalla isolla näytöllä -->
-            <div class="col-12 col-lg-7 col-xl-6">
-                <div id="quiz-board-card" class="card p-0 overflow-hidden d-none">
-                    <div class="game-board-container">
-                        <svg id="boardSvg" class="board-svg" viewBox="0 0 1200 675"></svg>
-                        <div id="start-image-container">
-                            <img id="start-image" src="{% static 'images/start-image.png' %}" alt="Pelin aloituskuva">
-                        </div>
-                        <div id="hero" class="hero">
-                            <img src="{% static 'images/mascot.png' %}" alt="Pelihahmo">
-                        </div>
-                    </div>
+<div class="container-fluid px-3 px-lg-4 py-4" style="position: relative; z-index: 1;">
+    <!-- Otsikko -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-12 col-xl-10">
+            <div class="card text-center p-3">
+                <h1 class="main-title">🚀 {{ assignment.material.title }} 🚀</h1>
+                <p class="main-subtitle mb-2">Aihe: {{ assignment.material.subject }}</p>
+                
+                <!-- Ohjeet-nappi -->
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-light" type="button" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#gameInstructions" 
+                            aria-expanded="false" 
+                            aria-controls="gameInstructions">
+                        <i class="bi bi-info-circle me-1"></i> Näytä ohjeet
+                    </button>
                 </div>
-            </div>
-            
-            <!-- Kysymykset oikealla isolla näytöllä -->
-            <div class="col-12 col-lg-5 col-xl-4">
-                <div id="quiz-card" class="card d-none">
-                    <div class="card-body p-3 p-md-4">
-                        <div id="game">
-                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                                <span class="badge">Pisteet: <strong id="score">0</strong></span>
-                                <span id="levelBadge" class="badge"></span>
-                                <span class="badge">Aika: <strong id="timer">—</strong></span>
-                            </div>
-                            <h4 id="question" class="mb-3 text-center"></h4>
-                            <div id="choices" class="d-grid gap-2 gap-md-3"></div>
-                            <div id="feedback" class="alert mt-3 d-none" role="alert"></div>
-                            <div class="text-center mt-3">
-                                <button id="btnRestart" class="btn btn-outline-secondary d-none">Pelaa uudestaan</button>
-                                <button id="btnNext" class="btn btn-primary d-none ms-2">Seuraava</button>
-                            </div>
+                
+                <!-- Ohjeet (collapsible) -->
+                <div class="collapse mt-3" id="gameInstructions">
+                    <div class="card card-body text-start" 
+                         style="background-color: rgba(30, 41, 90, 0.8); border-color: var(--border-color);">
+                        <h5 class="mb-2">
+                            <i class="bi bi-lightbulb me-2"></i>Pelin ohjeet
+                        </h5>
+                        <div id="instructions-content">
+                            <!-- Ohjeet täytetään JavaScriptillä pelin tyypin mukaan -->
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- HIRSIPUU-PELI -->
-        <div class="row justify-content-center">
-            <div class="col-12 col-lg-8 col-xl-6">
-                <div id="hangman-card" class="card d-none">
-                    <div class="card-body p-3 p-md-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                            <span class="badge">Yritykset jäljellä: <strong id="hmLives">7</strong></span>
-                            <span class="badge">Aihe: <strong id="hmTopic">—</strong></span>
-                        </div>
-                        <div class="hm-canvas d-flex justify-content-center mb-3">
-                            <svg id="hmSvg" viewBox="0 0 200 220" aria-hidden="true"></svg>
-                        </div>
-                        <h3 id="hmMasked" class="text-center mb-3">—</h3>
-                        <div id="hmLetters" class="d-flex flex-wrap gap-2 justify-content-center"></div>
-                        <div id="hmFeedback" class="alert mt-4 d-none"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- MUISTIPELI -->
-        <div class="row justify-content-center">
-            <div class="col-12 col-lg-10 col-xl-8">
-                <div id="memory-card" class="card d-none">
-                    <div class="card-body p-3 p-md-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                            <span class="badge">Parit: <strong id="mmFound">0</strong></span>
-                            <span class="badge">Yritykset: <strong id="mmTries">0</strong></span>
-                        </div>
-                        <div id="mmGrid" class="row g-2 g-md-3"></div>
-                        <div id="mmFeedback" class="alert mt-4 d-none"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Loppuruutu overlay -->
-    <div id="gameOverlay" class="game-overlay d-none">
-        <div class="game-overlay-content">
-            <div id="overlayIcon" class="overlay-icon">🎉</div>
-            <h2 id="overlayTitle" class="overlay-title">Hienoa!</h2>
-            <p id="overlayMessage" class="overlay-message"></p>
-            <div class="overlay-buttons">
-                <button id="overlayRestart" class="btn btn-outline-light btn-lg d-none">
-                    🔄 Pelaa uudestaan
-                </button>
+    <!-- VISA-PELI: Pelilauta + Kysymykset -->
+    <div class="row g-3 g-lg-4 justify-content-center">
+        <!-- Pelilauta vasemmalla isolla näytöllä -->
+        <div class="col-12 col-lg-7 col-xl-6">
+            <div id="quiz-board-card" class="card p-0 overflow-hidden d-none">
+                <div class="game-board-container">
+                    <svg id="boardSvg" class="board-svg" viewBox="0 0 1200 675"></svg>
+                    <div id="start-image-container">
+                        <img id="start-image" src="{% static 'images/start-image.png' %}" alt="Pelin aloituskuva">
+                    </div>
+                    <div id="hero" class="hero">
+                        <img src="{% static 'images/mascot.png' %}" alt="Pelihahmo">
+                    </div>
+                </div>
             </div>
-            <div id="overlayTimer" class="overlay-timer"></div>
+        </div>
+        
+        <!-- Kysymykset oikealla isolla näytöllä -->
+        <div class="col-12 col-lg-5 col-xl-4">
+            <div id="quiz-card" class="card d-none">
+                <div class="card-body p-3 p-md-4">
+                    <div id="game">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <span class="badge">Pisteet: <strong id="score">0</strong></span>
+                            <span id="levelBadge" class="badge"></span>
+                            <span class="badge">Aika: <strong id="timer">—</strong></span>
+                        </div>
+                        <h4 id="question" class="mb-3 text-center"></h4>
+                        <div id="choices" class="d-grid gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIRSIPUU -->
+    <div class="row g-3 justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <div id="hangman-card" class="card d-none">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <span class="badge">Yrityksiä jäljellä: <strong id="hmTriesLeft">7</strong></span>
+                        <span class="badge">Pisteet: <strong id="hmScore">0</strong></span>
+                    </div>
+                    <div id="hmStickman" class="text-center mb-3" style="font-size: 3rem; min-height: 150px;" aria-live="polite">😊</div>
+                    <div id="hmMasked" class="text-center mb-4" style="font-size: 2rem; letter-spacing: 0.15em; font-weight: 700;" aria-live="polite">_ _ _ _</div>
+                    <div id="hmLetters" class="d-flex flex-wrap gap-2 justify-content-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MUISTIPELI -->
+    <div class="row g-3 justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <div id="memory-card" class="card d-none">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge">Yrityksiä: <strong id="mmTries">0</strong></span>
+                        <span class="badge">Pareja: <strong id="mmPairs">0</strong> / <strong id="mmTotal">0</strong></span>
+                    </div>
+                    <div id="mmGrid"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- Latausnäkymä -->
+<div id="loading-overlay" class="game-overlay">
+    <div class="game-overlay-content">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Ladataan...</span>
+        </div>
+        <p class="overlay-message">Ladataan peliä...</p>
+    </div>
+</div>
+
+<!-- ARIA live region ruudunlukijoille -->
+<div id="game-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
 <script src="{% static 'games/game.js' %}"></script>
+
+<script>
+// Täytä pelin ohjeet dynaamisesti
+document.addEventListener('DOMContentLoaded', function() {
+    const gameData = JSON.parse(document.getElementById('game-data').textContent);
+    const instructionsContent = document.getElementById('instructions-content');
+    
+    let instructions = '';
+    
+    if (gameData.questions) {
+        // ==================== VISA ====================
+        instructions = `
+            <p><strong>🎯 Tavoite:</strong> Vastaa kysymyksiin ja etene pelilaudalla maaliin!</p>
+            <ul class="mb-2">
+                <li>Lue kysymys huolellisesti</li>
+                <li>Valitse oikea vastaus vaihtoehdoista</li>
+                <li>Oikeat vastaukset vievät sinut eteenpäin pelilaudalla</li>
+                <li>Väärät vastaukset eivät vie eteenpäin</li>
+                <li>Tavoitteena on päästä maaliin mahdollisimman monella oikealla vastauksella</li>
+            </ul>
+            <p class="mb-0"><strong>💡 Vinkki:</strong> Lue kysymykset huolellisesti ennen vastaamista!</p>
+        `;
+    } else if (gameData.word || gameData.words) {
+        // ==================== HIRSIPUU ====================
+        instructions = `
+            <p><strong>🔍 Tavoite:</strong> Arvaa piilotettu sana ennen kuin mies hirtetään!</p>
+            <ul class="mb-2">
+                <li>Valitse kirjaimia yksi kerrallaan</li>
+                <li>Jos kirjain on sanassa, se ilmestyy oikealle paikalleen</li>
+                <li>Jos kirjainta ei ole sanassa, menetät yhden yrityksen</li>
+                <li>Sinulla on 7 yritystä arvata sana oikein</li>
+                <li>Peli päättyy, kun arvaat sanan tai yritykset loppuvat</li>
+            </ul>
+            <p class="mb-0"><strong>💡 Vinkki:</strong> Aloita yleisimmistä kirjaimista kuten A, I, E, N!</p>
+        `;
+    } else if (gameData.pairs) {
+        // ==================== MUISTIPELI ====================
+        instructions = `
+            <p><strong>🔍 Tavoite:</strong> Löydä kaikki korttien parit!</p>
+            <ul class="mb-2">
+                <li>Klikkaa kortteja paljastaaksesi niiden sisällön</li>
+                <li>Yritä muistaa, missä kukin kortti on</li>
+                <li>Löydä kaksi yhteensopivaa korttia muodostaaksesi parin</li>
+                <li>Kun löydät parin, kortit jäävät näkyviin</li>
+                <li>Peli päättyy, kun kaikki parit on löydetty</li>
+            </ul>
+            <p class="mb-0"><strong>💡 Vinkki:</strong> Keskity muistamaan korttien paikkoja!</p>
+        `;
+    } else {
+        // ==================== VIRHETILANNE ====================
+        instructions = '<p class="text-warning">⚠️ Ohjeiden latauksessa tapahtui virhe...</p>';
+    }
+    
+    // Aseta ohjeet näkyviin
+    instructionsContent.innerHTML = instructions;
+});
+</script>
 
 {% endblock %}

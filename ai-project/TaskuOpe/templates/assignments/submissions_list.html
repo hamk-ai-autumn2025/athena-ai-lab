@@ -7,7 +7,7 @@
 <div class="container-fluid">
 
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <h1 class="h2 mb-0">Kaikki palautukset ja tehtävänannot</h1>
+    <h1 class="h2 mb-0">Kaikki palautukset ja tehtävännot</h1>
     <div class="d-flex gap-2">
       <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
@@ -38,74 +38,236 @@
     </div>
   </form>
 
-  <section class="assignments-list">
-    <table class="table table-hover align-middle tasks">
-      <thead class="table-light">
-        <tr>
-          <th scope="col">Oppilas</th>
-          <th scope="col">Materiaali</th>
-          <th scope="col">Määräaika</th>
-          <th scope="col">Tila</th>
-          <th scope="col">Toiminnot</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for assignment in assignments %}
-        <tr>
-          <!-- KORJATTU RIVI ALLA: väliviiva (-) on vaihdettu alaviivaan (_) -->
-          <td data-label="Oppilas">{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
-          <td data-label="Materiaali">{{ assignment.material.title }}</td>
-          <td data-label="Määräaika">{{ assignment.due_at|date:"d.m.Y H:i"|default:"-" }}</td>
-          <td data-label="Tila">
-            <span class="badge 
-              {% if assignment.status == 'GRADED' %}bg-success
-              {% elif assignment.status == 'SUBMITTED' %}bg-primary
-              {% elif assignment.status == 'IN_PROGRESS' %}bg-warning text-dark
-              {% else %}bg-secondary{% endif %}">
-              {{ assignment.get_status_display }}
-            </span>
-          </td>
-          <td data-label="Toiminnot" class="d-grid gap-2 d-md-block">
-            {% with sub=assignment.submissions.last %}
-              {% if sub %}
-                <a class="btn btn-sm btn-primary" href="{% url 'grade_submission' submission_id=sub.id %}">
-                  Tarkastele palautusta
-                </a>
+  <!-- Normaalit tehtävät ENSIN -->
+  <section class="assignments-list mb-5">
+    <h5 class="mb-3">Tehtävät</h5>
+    
+    {% if assignments %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle tasks">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Oppilas</th>
+            <th scope="col">Materiaali</th>
+            <th scope="col">Määräaika</th>
+            <th scope="col">Tila</th>
+            <th scope="col">Toiminnot</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in assignments %}
+          <tr>
+            <td data-label="Oppilas">{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
+            <td data-label="Materiaali">{{ assignment.material.title }}</td>
+            <td data-label="Määräaika">{{ assignment.due_at|date:"d.m.Y H:i"|default:"—" }}</td>
+            <td data-label="Tila">
+              <span class="badge 
+                {% if assignment.status == 'GRADED' %}bg-success
+                {% elif assignment.status == 'SUBMITTED' %}bg-primary
+                {% elif assignment.status == 'IN_PROGRESS' %}bg-warning
+                {% else %}bg-secondary{% endif %}">
+                {{ assignment.get_status_display }}
+              </span>
+            </td>
+            <td data-label="Toiminnot">
+              {% if assignment.status in 'SUBMITTED,GRADED' %}
+                {% with sub=assignment.submissions.last %}
+                  {% if sub %}
+                    <a href="{% url 'grade_submission' submission_id=sub.id %}" 
+                       class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-pencil-square me-1"></i> Arvioi
+                    </a>
+                  {% endif %}
+                {% endwith %}
               {% else %}
-                <button class="btn btn-sm btn-secondary" disabled>Ei palautusta</button>
+                <span class="text-muted small">Ei palautusta</span>
               {% endif %}
-            {% endwith %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" class="text-center">
-            <div class="alert alert-secondary mb-0">Yhtään tehtävää ei ole vielä annettu.</div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
-    <!-- Sivutus ... -->
-    {% if assignments.paginator.num_pages > 1 %}
-    <nav aria-label="Sivutus" class="mt-3">
-        <ul class="pagination">
-          {% if assignments.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ assignments.previous_page_number }}&q={{ q }}&status={{ status }}">Edellinen</a></li>
-          {% else %}
-            <li class="page-item disabled"><span class="page-link">Edellinen</span></li>
-          {% endif %}
-          <li class="page-item disabled"><span class="page-link">Sivu {{ assignments.number }} / {{ assignments.paginator.num_pages }}</span></li>
-          {% if assignments.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ assignments.next_page_number }}&q={{ q }}&status={{ status }}">Seuraava</a></li>
-          {% else %}
-            <li class="page-item disabled"><span class="page-link">Seuraava</span></li>
-          {% endif %}
-        </ul>
-      </nav>
+    <!-- Sivutus -->
+    {% if assignments.has_other_pages %}
+    <nav aria-label="Sivunumerot">
+      <ul class="pagination justify-content-center">
+        {% if assignments.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+              Ensimmäinen
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" 
+               href="?page={{ assignments.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+              Edellinen
+            </a>
+          </li>
+        {% endif %}
+
+        <li class="page-item active">
+          <span class="page-link">Sivu {{ assignments.number }} / {{ assignments.paginator.num_pages }}</span>
+        </li>
+
+        {% if assignments.has_next %}
+          <li class="page-item">
+            <a class="page-link" 
+               href="?page={{ assignments.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+              Seuraava
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" 
+               href="?page={{ assignments.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+              Viimeinen
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
     {% endif %}
 
+    {% else %}
+    <div class="alert alert-secondary" role="alert">
+      <i class="bi bi-info-circle me-2"></i>
+      {% if q %}
+        Ei tehtäviä hakuehdoilla "{{ q }}".
+      {% else %}
+        Ei tehtäviä näytettäväksi.
+      {% endif %}
+    </div>
+    {% endif %}
   </section>
+
+  <!-- Pelit VIIMEISENÄ (collapse-laatikko) -->
+  {% if games %}
+  <section class="games-section">
+    <div class="card border-primary">
+      <div class="card-header bg-primary bg-opacity-10">
+        <button class="btn btn-link w-100 text-start text-decoration-none p-0" 
+                type="button" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#gamesCollapse" 
+                aria-expanded="false" 
+                aria-controls="gamesCollapse">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              </i>Pelien suoritukset
+              <span class="badge bg-primary ms-2">{{ games|length }}</span>
+            </h5>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+        </button>
+      </div>
+      
+      <div class="collapse" id="gamesCollapse">
+        <div class="card-body p-0">
+          <!-- Desktop: Taulukko -->
+          <div class="d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col">Oppilas</th>
+                    <th scope="col">Peli</th>
+                    <th scope="col">Suoritettu</th>
+                    <th scope="col">Pisteet</th>
+                    <th scope="col">Tila</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for game in games %}
+                  {% with sub=game.submissions.last %}
+                  <tr>
+                    <td>{{ game.student.get_full_name|default:game.student.username }}</td>
+                    <td>
+                      <strong>{{ game.material.title }}</strong>
+                      {% if game.material.subject %}
+                        <br><small class="text-muted">{{ game.material.subject }}</small>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if sub and sub.submitted_at %}
+                        {{ sub.submitted_at|date:"d.m.Y H:i" }}
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if sub and sub.score is not None %}
+                        <span class="badge {% if sub.score >= 80 %}bg-success{% elif sub.score >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                          {{ sub.score|floatformat:0 }}%
+                        </span>
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge 
+                        {% if game.status == 'GRADED' %}bg-success
+                        {% elif game.status == 'SUBMITTED' %}bg-primary
+                        {% elif game.status == 'IN_PROGRESS' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
+                        {{ game.get_status_display }}
+                      </span>
+                    </td>
+                  </tr>
+                  {% endwith %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile: Kortit (EI SCROLL BAR) -->
+          <div class="d-md-none">
+            <div class="list-group list-group-flush">
+              {% for game in games %}
+              {% with sub=game.submissions.last %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <h6 class="mb-1">{{ game.material.title }}</h6>
+                    <small class="text-muted">{{ game.student.get_full_name|default:game.student.username }}</small>
+                  </div>
+                  <span class="badge 
+                    {% if game.status == 'GRADED' %}bg-success
+                    {% elif game.status == 'SUBMITTED' %}bg-primary
+                    {% else %}bg-secondary{% endif %}">
+                    {{ game.get_status_display }}
+                  </span>
+                </div>
+                
+                <div class="small">
+                  {% if game.material.subject %}
+                    <div class="mb-1"><strong>Aihe:</strong> {{ game.material.subject }}</div>
+                  {% endif %}
+                  
+                  {% if sub and sub.submitted_at %}
+                    <div class="mb-1"><strong>Suoritettu:</strong> {{ sub.submitted_at|date:"d.m.Y H:i" }}</div>
+                  {% endif %}
+                  
+                  {% if sub and sub.score is not None %}
+                    <div>
+                      <strong>Pisteet:</strong> 
+                      <span class="badge {% if sub.score >= 80 %}bg-success{% elif sub.score >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                        {{ sub.score|floatformat:0 }}%
+                      </span>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endwith %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
 </div>
 {% endblock %}

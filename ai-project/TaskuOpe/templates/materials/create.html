@@ -80,13 +80,30 @@
                         <div id="ai-action-text-panel" class="d-grid">
                             <button type="submit" name="action" value="ai" class="btn btn-info" formnovalidate>Luo sisältöehdotus</button>
                         </div>
-                        <div id="ai-action-game-panel" class="d-none">
-                            <div id="ai-game-tool" class="border rounded p-3">
-                                <div class="mb-2"><label for="ai_game_type" class="form-label">Valitse pelityyppi</label><select id="ai_game_type" class="form-select form-select-sm"><option value="quiz">Visa</option><option value="hangman">Hirsipuu</option><option value="memory">Muistipeli</option></select></div>
-                                <div class="d-grid"><button type="button" id="ai_game_generate_btn" class="btn btn-sm btn-info">Generoi peli</button></div>
-                                <div id="ai_game_status" class="small text-muted mt-2" aria-live="polite"></div>
+
+                    <div id="ai-action-game-panel" class="d-none">
+                        <div id="ai-game-tool" class="border rounded p-3">
+                            <div class="mb-2">
+                                <label for="ai_game_type" class="form-label">Valitse pelityyppi</label>
+                                <select id="ai_game_type" class="form-select form-select-sm">
+                                    <option value="quiz">Visa</option>
+                                    <option value="hangman">Hirsipuu</option>
+                                    <option value="memory">Muistipeli</option>
+                                </select>
                             </div>
+        
+                            <div class="mb-2" id="difficulty-selector" style="display: none;">
+                                <label for="ai_game_difficulty" class="form-label">Vaikeustaso (vain visa)</label>
+                                <select id="ai_game_difficulty" class="form-select form-select-sm">
+                                    <option value="easy">Helppo (5 kysymystä)</option>
+                                    <option value="medium" selected>Keskitaso (10 kysymystä)</option>
+                                    <option value="hard">Vaikea (15 kysymystä)</option>
+                                </select>
+                            </div>
+                            <div class="d-grid"><button type="button" id="ai_game_generate_btn" class="btn btn-sm btn-info">Generoi peli</button></div>
+                            <div id="ai_game_status" class="small text-muted mt-2" aria-live="polite"></div>
                         </div>
+                    </div>
 
                         {% if ai_reply %}
                         <hr class="my-4">
@@ -377,10 +394,24 @@ const rehydrate = () => {
         const topicTextarea = document.getElementById('id_ai_prompt');
         const gameTypeSelect = document.getElementById('ai_game_type');
         const hiddenInput = document.getElementById('id_structured_content_json');
+        const difficultySelector = document.getElementById('difficulty-selector');
+
+        if (gameTypeSelect && difficultySelector) {
+            gameTypeSelect.addEventListener('change', () => {
+                if (gameTypeSelect.value === 'quiz') {
+                    difficultySelector.style.display = 'block';
+                } else {
+                    difficultySelector.style.display = 'none';
+                }
+            });
+}
 
         generateBtn.addEventListener('click', async () => {
             const topic = (topicTextarea.value || '').trim();
             const gameType = gameTypeSelect.value;
+            // 1. 🆕 Hae valittu vaikeustaso (jos valitsin on olemassa)
+            const difficulty = difficultySelector ? difficultySelector.value : null;
+
             if (!topic) {
                 statusEl.textContent = 'Kirjoita ensin aihe tai ohje ylimpään kenttään.';
                 return;
@@ -388,25 +419,66 @@ const rehydrate = () => {
             statusEl.textContent = 'Generoidaan peliä, odota hetki...';
             generateBtn.disabled = true;
             try {
+                // 2. KORVAA TÄMÄ KOHTA LÄHETTÄMÄÄN MYÖS VAIKEUSTASO
                 const response = await fetch("{% url 'generate_game_ajax' %}", {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                    body: JSON.stringify({ topic: topic, game_type: gameType })
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'X-CSRFToken': getCookie('csrftoken') 
+                    },
+                    body: JSON.stringify({ 
+                        topic: topic, 
+                        game_type: gameType,
+                        difficulty: difficulty //  Lähetä vaikeustaso
+                    })
                 });
+                
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || `Palvelin vastasi virheellä ${response.status}`);
                 }
+
                 const data = await response.json();
+            
+                // Tallenna pelisisältö
                 hiddenInput.value = JSON.stringify(data.game_data);
-                statusEl.textContent = `Valmis! Pelisisältö aiheesta '${topic}' on luotu.`;
+            
+                // Täytä otsikko ja aihe automaattisesti
+                if (data.metadata) {
+                    const titleInput = document.getElementById('id_title');
+                    const subjectInput = document.getElementById('id_subject');
+                
+                    if (data.metadata.title && titleInput) {
+                        titleInput.value = data.metadata.title;
+                        const errorSpan = document.getElementById('error-title');
+                        if (errorSpan) errorSpan.classList.add('d-none');
+                    }
+                
+                    if (data.metadata.subject && subjectInput) {
+                        subjectInput.value = data.metadata.subject;
+                        const errorSpan = document.getElementById('error-subject');
+                        if (errorSpan) errorSpan.classList.add('d-none');
+                    }
+                }
+            
+                // Aseta materiaalityypiksi "peli"
+                const materialTypeSelect = document.getElementById('id_material_type');
+                if (materialTypeSelect) {
+                    materialTypeSelect.value = 'peli';
+                }
+            
+                statusEl.textContent = `Valmis! Peli luotu. Otsikko ja aihe täytetty automaattisesti, lisää vielä luokka-aste.`;
                 statusEl.classList.remove('text-danger');
                 statusEl.classList.add('text-success');
+                
             } catch (error) {
-                statusEl.textContent = `Virhe: ${error.message}`;
+                // Virheenkäsittely
+                statusEl.textContent = `❌ Virhe: ${error.message}`;
                 statusEl.classList.remove('text-success');
                 statusEl.classList.add('text-danger');
+                
             } finally {
+                // Palauta nappi takaisin käyttöön aina
                 generateBtn.disabled = false;
             }
         });

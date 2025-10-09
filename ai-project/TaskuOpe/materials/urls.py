@@ -51,6 +51,7 @@ urlpatterns = [
     # Oppilaan näkymät
     path("oppilas/tehtavat/", views.student_assignments_view, name="student_assignments"),
     path("oppilas/palautukset/", views.student_grades_view, name="student_grades"),
+    path("oppilas/pelit/", views.student_games_view, name="student_games"),
 
     # Automaattitallennus
     path("assignment/<uuid:assignment_id>/autosave/", views.assignment_autosave_view, name="assignment_autosave"),

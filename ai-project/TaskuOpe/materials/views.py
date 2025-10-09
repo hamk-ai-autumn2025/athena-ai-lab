@@ -90,17 +90,33 @@ from .ai_service import ask_llm, ask_llm_with_ops
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # ==========================================================
 
-#Pelinäkymä
-def generate_game_content(topic: str, game_type: str) -> dict:
+# Pelisisältö
+def generate_game_content(topic: str, game_type: str, difficulty: str = 'medium') -> dict:
     """
-    Generates game content using OpenAI API based on the topic and game type.
-    Returns a dictionary (JSON) with the game data.
+    Generoi pelisisällön tekoälyllä.
+    
+    Args:
+        topic (str): Pelin aihe/kuvaus
+        game_type (str): Pelityyppi ('quiz', 'hangman', 'memory')
+        difficulty (str): Vaikeustaso ('easy', 'medium', 'hard') - vain visalle
+    
+    Returns:
+        dict: Pelisisältö JSON-muodossa
     """
     prompt = ""
+    
     if game_type == 'quiz':
+        # 🆕 Määritä kysymysten määrä vaikeustason mukaan
+        question_counts = {
+            'easy': 5,
+            'medium': 10,
+            'hard': 15
+        }
+        num_questions = question_counts.get(difficulty, 10)
+        
         prompt = f"""
 Rooli: Toimi suomalaisena opettajana ja tietokirjailijana.
-Tehtävä: Laadi 15 laadukasta monivalintakysymystä.
+Tehtävä: Laadi TARKALLEEN {num_questions} laadukasta monivalintakysymystä.
 Aihe: "{topic}"
 Vaikeustaso: alakoulu
 Säännöt:
@@ -111,16 +127,25 @@ Säännöt:
 Vastauksen muoto:
 - Palauta VAIN JSON-objekti.
 - Kaikki tekstit suomeksi.
-- Noudata tarkasti tätä rakennetta: {{"levels":[... , ...]}}
+- Noudata tarkasti tätä rakennetta: {{"difficulty":"{difficulty}","levels":[...]}}
 """
     elif game_type == 'hangman':
+        # Hirsipuu - 30 sanaa
         prompt = f"""
-Toimi suomenkielisenä opettajana. Anna YKSI suomenkielinen sana annetusta aiheesta hirsipuupeliin.
-Säännöt: Vain kirjaimia (A-Ö), 5-12 merkkiä pitkä, yleiskielinen.
-Palauta VAIN JSON-muodossa: {{"topic":"{topic}","word":"sana"}}.
+Toimi suomenkielisenä opettajana. Anna TARKALLEEN 30 suomenkielistä sanaa aiheesta "{topic}" hirsipuupeliin.
+Säännöt:
+1. Jokainen sana on aiheeseen sopiva
+2. Vain kirjaimia (A-Ö), 4-12 merkkiä pitkä
+3. Yleiskielisiä sanoja, ei ammattislangia
+4. Vaihteleva vaikeustaso (helpoista haastaviin)
+5. Ei toistoa
+
+Palauta VAIN JSON-muodossa: {{"topic":"{topic}","words":["sana1","sana2",...,"sana30"]}}
+
 Aihe: {topic}
 """
     elif game_type == 'memory':
+        # Muistipeli - 10 paria
         prompt = f"""
 Toimi suomenkielisenä opettajana. Laadi TÄSMÄLLEEN 10 muistipelikorttiparia aiheesta.
 AIHE: {topic}
@@ -128,19 +153,83 @@ KRIITTISET SÄÄNNÖT:
 1. JOKAISEN VASTAUKSEN ON OLTAVA UNIIKKI.
 2. JOKAISEN KYSYMYKSEN ON OLTAVA UNIIKKI.
 3. Tekstit lyhyitä (max 15 merkkiä).
-Palauta VAIN JSON: {{"pairs":[... , ...]}}.
+Palauta VAIN JSON: {{"pairs":[...]}}
 """
     else:
         raise ValueError("Tuntematon pelityyppi")
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini", # Voit vaihtaa mallia tarvittaessa
+        model="gpt-4o-mini",
         response_format={"type": "json_object"},
         messages=[{"role": "user", "content": prompt}]
     )
     
     content = response.choices[0].message.content
     return json.loads(content)
+
+# Pelin metadata
+def generate_game_metadata(topic: str, game_type: str) -> dict:
+    """
+    Generoi pelille automaattisesti otsikon ja aiheen.
+    
+    Käyttää OpenAI API:a luomaan:
+    - Houkuttelevan otsikon (max 50 merkkiä)
+    - Oppiaineen/aihealueen (1-3 sanaa)
+    
+    Args:
+        topic (str): Pelin aihe/kuvaus käyttäjältä
+        game_type (str): Pelityyppi ('quiz', 'hangman', 'memory')
+    
+    Returns:
+        dict: {'title': str, 'subject': str}
+    """
+    game_type_names = {
+        'quiz': 'visa',
+        'hangman': 'hirsipuu',
+        'memory': 'muistipeli'
+    }
+    
+    game_name = game_type_names.get(game_type, 'peli')
+    
+    prompt = f"""
+Olet suomalainen opettaja. Sinulle annetaan aihe pelille ja pelityyppi.
+Tehtäväsi on luoda:
+1. Lyhyt, houkutteleva otsikko pelille (max 50 merkkiä)
+2. Oppiaineen/aihealueen nimi (1-3 sanaa)
+
+Pelityyppi: {game_name}
+Aihe/kuvaus: {topic}
+
+TÄRKEÄÄ:
+- Otsikon tulee olla innostava ja selkeä
+- Aihealue tulee olla yleinen oppiaine tai aihealue (esim. "Matematiikka", "Historia", "Luonnontiede")
+- Palauta VAIN JSON-muodossa
+
+Palauta täsmälleen tässä muodossa:
+{{"title":"otsikko tähän","subject":"aihealue tähän"}}
+"""
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        
+        content = response.choices[0].message.content
+        result = json.loads(content)
+        
+        return {
+            'title': result.get('title', f'{game_name.capitalize()}: {topic[:40]}'),
+            'subject': result.get('subject', 'Yleinen')
+        }
+    except Exception as e:
+        # Fallback jos API-kutsu epäonnistuu
+        return {
+            'title': f'{game_name.capitalize()}: {topic[:40]}',
+            'subject': 'Yleinen'
+        }
 
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
@@ -229,7 +318,6 @@ def student_assignments_view(request):
     }
     return render(request, 'student/assignments.html', ctx)
 
-
 @login_required(login_url='kirjaudu')
 def student_grades_view(request):
     """
@@ -246,6 +334,7 @@ def student_grades_view(request):
     qs = (Assignment.objects
           .select_related('material', 'assigned_by')
           .filter(student=request.user, status__in=['SUBMITTED', 'GRADED'])
+          .exclude(material__material_type='peli')  # ← TÄRKEÄ: Suodata pelit pois
           .order_by('-created_at'))
 
     if q:
@@ -266,6 +355,55 @@ def student_grades_view(request):
         'page_obj': page_obj,
         'now': timezone.now(),
     })
+
+# Oppilaan pelinäkymä 
+@login_required(login_url='kirjaudu')
+def student_games_view(request):
+    """
+    Oppilaan pelisivu - näyttää kaikki pelit (myös suoritetut).
+    
+    Toiminnot:
+    - Hakee kaikki oppilaan pelit (material_type='peli')
+    - Aihesuodatus (subject)
+    - Jakaa pelit kolmeen kategoriaan: uudet, keskeneräiset, suoritetut
+    
+    Args:
+        request: HTTP-pyyntö
+    
+    Returns:
+        Renderöity 'student/games.html' template
+    """
+    if request.user.role != 'STUDENT':
+        return redirect('dashboard')
+
+    selected_subject = request.GET.get('subject', '')
+
+    # Hae kaikki pelit (mukaan lukien suoritetut)
+    qs = Assignment.objects.select_related('material', 'assigned_by').filter(
+        student=request.user,
+        material__material_type='peli'
+    ).order_by('-created_at')
+
+    # Aihesuodatus
+    subjects = qs.exclude(
+        material__subject__isnull=True
+    ).exclude(
+        material__subject=''
+    ).values_list('material__subject', flat=True).distinct().order_by('material__subject')
+
+    if selected_subject:
+        qs = qs.filter(material__subject=selected_subject)
+
+    # Jaa pelit kategorioihin
+    ctx = {
+        "assigned": qs.filter(status="ASSIGNED"),
+        "in_progress": qs.filter(status="IN_PROGRESS"),
+        "completed": qs.filter(status__in=["SUBMITTED", "GRADED"]),
+        "subjects": subjects,
+        "selected_subject": selected_subject,
+        "now": timezone.now(),
+    }
+    return render(request, 'student/games.html', ctx)
 
 @login_required(login_url='kirjaudu')
 def material_list_view(request):
@@ -366,14 +504,23 @@ def generate_game_ajax_view(request):
         data = json.loads(request.body)
         topic = data.get('topic')
         game_type = data.get('game_type')
+        difficulty = data.get('difficulty', 'medium')  # 🆕 Oletuksena medium
         
         if not topic or not game_type:
             return JsonResponse({'error': 'Aihe ja pelityyppi ovat pakollisia.'}, status=400)
 
-        # Käytetään olemassa olevaa apufunktiotasi!
-        game_data = generate_game_content(topic, game_type)
+        # Generoi pelisisältö vaikeustasolla
+        game_data = generate_game_content(topic, game_type, difficulty)
         
-        return JsonResponse({'success': True, 'game_data': game_data})
+        # Generoi otsikko ja aihe automaattisesti
+        metadata = generate_game_metadata(topic, game_type)
+        
+        # Palauta sekä pelisisältö että metadata
+        return JsonResponse({
+            'success': True, 
+            'game_data': game_data,
+            'metadata': metadata
+        })
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -391,7 +538,7 @@ def complete_game_ajax_view(request, assignment_id):
 
     if 'levels' in game_data:
         game_type = 'quiz'
-    elif 'word' in game_data:
+    elif 'word' in game_data or 'words' in game_data:  # Lisätty words-tuki
         game_type = 'hangman'
     elif 'pairs' in game_data:
         game_type = 'memory'
@@ -879,9 +1026,19 @@ def view_all_submissions_view(request):
             Q(student__last_name__icontains=q)
         )
 
-    page = Paginator(base, 20).get_page(request.GET.get("page"))
+    # UUSI: Erottele pelit ja normaalit tehtävät
+    normal_assignments = base.exclude(material__material_type='peli')
+    game_assignments = base.filter(material__material_type='peli')
+
+    # Sivutus normaaleille tehtäville
+    page = Paginator(normal_assignments, 20).get_page(request.GET.get("page"))
+    
+    # Pelit ilman sivutusta (näytetään kaikki collapse-laatikossa)
+    games_list = list(game_assignments[:50])  # Rajoita max 50 peliä
+
     return render(request, 'assignments/submissions_list.html', {
-        'assignments': page,  # paginator page object
+        'assignments': page,  # Normaalit tehtävät (paginated)
+        'games': games_list,  # Pelit (ei sivutusta)
         'q': q,
         'status': st or "",
     })
