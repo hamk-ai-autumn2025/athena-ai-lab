@@ -168,45 +168,53 @@ Palauta VAIN JSON: {{"pairs":[...]}}
     return json.loads(content)
 
 # Pelin metadata
-def generate_game_metadata(topic: str, game_type: str) -> dict:
+def generate_game_metadata(game_name: str, topic: str) -> dict:
     """
-    Generoi pelille automaattisesti otsikon ja aiheen.
-    
-    Käyttää OpenAI API:a luomaan:
-    - Houkuttelevan otsikon (max 50 merkkiä)
-    - Oppiaineen/aihealueen (1-3 sanaa)
-    
-    Args:
-        topic (str): Pelin aihe/kuvaus käyttäjältä
-        game_type (str): Pelityyppi ('quiz', 'hangman', 'memory')
-    
-    Returns:
-        dict: {'title': str, 'subject': str}
+    Generoi pelille otsikon ja aiheen OpenAI:n avulla.
+    Aihe valitaan Suomen opetussuunnitelman mukaisista oppiaineista.
     """
-    game_type_names = {
-        'quiz': 'visa',
-        'hangman': 'hirsipuu',
-        'memory': 'muistipeli'
-    }
     
-    game_name = game_type_names.get(game_type, 'peli')
+    # Suomen opetussuunnitelman mukaiset oppiaineet
+    VALID_SUBJECTS = [
+        "Äidinkieli ja kirjallisuus",
+        "Matematiikka",
+        "Ympäristöoppi",
+        "Ruotsi",
+        "Englanti",
+        "Fysiikka",
+        "Kemia",
+        "Maantieto",
+        "Kotitalous",
+        "Terveystieto",
+        "Liikunta",
+        "Musiikki",
+        "Kuvataide",
+        "Käsityö",
+        "Uskonto tai elämänkatsomustieto",
+        "Historia",
+        "Yhteiskuntaoppi"
+    ]
     
-    prompt = f"""
-Olet suomalainen opettaja. Sinulle annetaan aihe pelille ja pelityyppi.
+    subjects_list = "\n".join([f"- {s}" for s in VALID_SUBJECTS])
+    
+    prompt = f"""Sinulle annetaan aihe pelille ja pelityyppi.
 Tehtäväsi on luoda:
-1. Lyhyt, houkutteleva otsikko pelille (max 50 merkkiä)
-2. Oppiaineen/aihealueen nimi (1-3 sanaa)
+1. Lyhyt, houkutteleva otsikko pelille (max 20 merkkiä)
+2. Oppiaine Suomen perusopetuksen opetussuunnitelman mukaan
 
 Pelityyppi: {game_name}
 Aihe/kuvaus: {topic}
 
 TÄRKEÄÄ:
 - Otsikon tulee olla innostava ja selkeä
-- Aihealue tulee olla yleinen oppiaine tai aihealue (esim. "Matematiikka", "Historia", "Luonnontiede")
+- Aihealue TULEE valita VAIN seuraavista Suomen opetussuunnitelman oppiaineista:
+{subjects_list}
+- Valitse oppiaine sen mukaan, mikä parhaiten vastaa pelin aihetta
+- Jos peli ei sovi mihinkään tiettyyn oppiaineeseen, valitse "Ympäristöoppi" yleiseksi aihealueeksi
 - Palauta VAIN JSON-muodossa
 
 Palauta täsmälleen tässä muodossa:
-{{"title":"otsikko tähän","subject":"aihealue tähän"}}
+{{"title":"otsikko tähän","subject":"oppiaine tähän"}}
 """
     
     try:
@@ -220,15 +228,20 @@ Palauta täsmälleen tässä muodossa:
         content = response.choices[0].message.content
         result = json.loads(content)
         
+        # Varmista että palautettu oppiaine on listalla
+        returned_subject = result.get('subject', 'Ympäristöoppi')
+        if returned_subject not in VALID_SUBJECTS:
+            returned_subject = 'Ympäristöoppi'
+        
         return {
             'title': result.get('title', f'{game_name.capitalize()}: {topic[:40]}'),
-            'subject': result.get('subject', 'Yleinen')
+            'subject': returned_subject
         }
     except Exception as e:
         # Fallback jos API-kutsu epäonnistuu
         return {
             'title': f'{game_name.capitalize()}: {topic[:40]}',
-            'subject': 'Yleinen'
+            'subject': 'Ympäristöoppi'
         }
 
 # --- Main Dashboard ---
@@ -413,16 +426,22 @@ def material_list_view(request):
         return redirect('dashboard')
 
     selected_subject = request.GET.get('subject', '')
-    materials_qs = Material.objects.filter(author=request.user).order_by('-created_at') #Järjestys uusimmasta vanhimpaan t.Mirka
+    all_materials = Material.objects.filter(author=request.user).order_by('-created_at')
+    
+    # UUSI: Erottele pelit ja normaalit materiaalit
+    normal_materials = all_materials.exclude(material_type='peli')
+    game_materials = all_materials.filter(material_type='peli')
 
-    #Kysely
-    subjects = materials_qs.exclude(subject__isnull=True).exclude(subject='').values_list('subject', flat=True).distinct().order_by('subject')
+    # Aihesuodatus
+    subjects = all_materials.exclude(subject__isnull=True).exclude(subject='').values_list('subject', flat=True).distinct().order_by('subject')
 
     if selected_subject:
-        materials_qs = materials_qs.filter(subject=selected_subject)
+        normal_materials = normal_materials.filter(subject=selected_subject)
+        game_materials = game_materials.filter(subject=selected_subject)
 
     context = {
-        'materials': materials_qs,
+        'materials': normal_materials,  # Normaalit materiaalit
+        'games': list(game_materials[:50]),  # Pelit erikseen
         'subjects': subjects,
         'selected_subject': selected_subject,
     }

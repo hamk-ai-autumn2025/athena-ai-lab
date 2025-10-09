@@ -2,7 +2,6 @@
    PELIKOODI - KORJATTU VERSIO
    - AudioContext lazy initialization (luodaan vasta kun tarvitaan)
    - Loading overlay poistetaan kaikissa peleissä
-   - ⏰ AJASTIN VISAPELIIN LISÄTTY
    ========================================================================= */
 
 // ==================== APUFUNKTIOT ====================

@@ -33,7 +33,7 @@
     </div>
   </form>
 
-  <section class="materials-list">
+    <section class="materials-list">
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
 
       {% for m in materials %}
@@ -79,7 +79,7 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
             </div>
             <div class="modal-body">
-              Poistetaanko materiaali <strong>“{{ m.title }}”</strong>?<br>
+              Poistetaanko materiaali <strong>"{{ m.title }}"</strong>?<br>
               <small class="text-muted">Tämä poistaa myös siihen liittyvät tehtävänannot.</small>
             </div>
             <div class="modal-footer">
@@ -103,6 +103,94 @@
 
     </div>
   </section>
+
+  <!-- ⬇️⬇️⬇️ LISÄÄ TÄMÄ TÄHÄN - PELIEN COLLAPSE-LAATIKKO ⬇️⬇️⬇️ -->
+  {% if games %}
+  <section class="games-section mt-5">
+    <div class="card border-info">
+      <div class="card-header bg-info bg-opacity-10">
+        <button class="btn btn-link w-100 text-start text-decoration-none p-0" 
+                type="button" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#gamesCollapse" 
+                aria-expanded="false" 
+                aria-controls="gamesCollapse">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+               Pelit
+              <span class="badge bg-info ms-2">{{ games|length }}</span>
+            </h5>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+        </button>
+      </div>
+      
+      <div class="collapse" id="gamesCollapse">
+        <div class="card-body p-0">
+          <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 p-3">
+            {% for m in games %}
+            <div class="col">
+              <div class="card h-100 shadow-sm border-info">
+                <div class="card-body d-flex flex-column">
+                  <h5 class="card-title">
+                    {{ m.title }}
+                    <span class="badge bg-info fw-normal">Peli</span>
+                  </h5>
+                  <p class="card-subtitle mb-2 text-muted">Aihe: {{ m.subject|default:'Ei määritelty' }}</p>
+                  
+                  <div class="mt-auto pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <div class="btn-group">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'view_submissions' material_id=m.id %}">Tulokset</a>
+                      </div>
+                      <a class="btn btn-sm btn-info" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
+                    </div>
+
+                    <div class="d-grid mt-2">
+                      <button type="button"
+                              class="btn btn-sm btn-outline-danger"
+                              data-bs-toggle="modal"
+                              data-bs-target="#deleteModal-{{ m.id }}">
+                        Poista
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pelien poisto-modaali -->
+            <div class="modal fade" id="deleteModal-{{ m.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="deleteModalLabel-{{ m.id }}">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel-{{ m.id }}">Poista peli</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
+                  </div>
+                  <div class="modal-body">
+                    Poistetaanko peli <strong>"{{ m.title }}"</strong>?<br>
+                    <small class="text-muted">Tämä poistaa myös siihen liittyvät tehtävänannot.</small>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Peruuta</button>
+                    <form method="post" action="{% url 'delete_material' material_id=m.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-danger">Poista pysyvästi</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
 
 </div>
 {% endblock %}
