@@ -1,0 +1,124 @@
+/* 
+Multi-LLM Chat Application Styles
+Theme-adaptive CSS for light and dark modes
+*/
+
+/* ==================== INPUT STYLING ==================== */
+
+/* Light theme - bright input boxes */
+[data-testid="stAppViewContainer"]:not([data-theme="dark"]) .stTextInput input,
+[data-testid="stAppViewContainer"]:not([data-theme="dark"]) .stTextArea textarea {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #d1d5db !important;
+}
+
+/* Dark theme - dark input boxes */
+[data-testid="stAppViewContainer"][data-theme="dark"] .stTextInput input,
+[data-testid="stAppViewContainer"][data-theme="dark"] .stTextArea textarea {
+    background-color: #1a1d24 !important;
+    color: #ffffff !important;
+    border: 1px solid #374151 !important;
+}
+
+/* Chat input at bottom - dark theme */
+[data-testid="stAppViewContainer"][data-theme="dark"] .stChatInput input {
+    background-color: #1a1d24 !important;
+    color: #ffffff !important;
+    border: 1px solid #374151 !important;
+}
+
+/* Input border radius */
+.stTextInput input,
+.stTextArea textarea {
+    border-radius: 0.5rem !important;
+}
+
+/* Password input - monospace font for better visibility */
+.stTextInput input[type="password"] {
+    font-family: monospace;
+    letter-spacing: 0.1em;
+}
+
+
+/* ==================== CHAT MESSAGE STYLING ==================== */
+
+/* Base chat message styling */
+.chat-message {
+    padding: 1.5rem;
+    border-radius: 0.8rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e5e7eb;
+}
+
+/* Message headers */
+.message-header {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+
+/* ==================== LIGHT THEME MESSAGES ==================== */
+
+/* User message - light blue */
+.user-message {
+    background-color: #dbeafe;
+    margin-left: 15%;
+    border-left: 4px solid #3b82f6;
+    color: #1e40af;
+}
+
+/* Assistant message - light gray */
+.assistant-message {
+    background-color: #f3f4f6;
+    margin-right: 15%;
+    border-left: 4px solid #10b981;
+    color: #1f2937;
+}
+
+
+/* ==================== DARK THEME MESSAGES ==================== */
+
+/* Dark theme - chat message borders */
+[data-testid="stAppViewContainer"][data-theme="dark"] .chat-message {
+    border: 1px solid #374151;
+}
+
+/* Dark theme - user message */
+[data-testid="stAppViewContainer"][data-theme="dark"] .user-message {
+    background-color: #1e3a5f;
+    color: #93c5fd;
+}
+
+/* Dark theme - assistant message */
+[data-testid="stAppViewContainer"][data-theme="dark"] .assistant-message {
+    background-color: #1f2937;
+    color: #e5e7eb;
+}
+
+/* Dark theme - message headers */
+[data-testid="stAppViewContainer"][data-theme="dark"] .message-header {
+    color: #9ca3af;
+}
+
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Tablet and mobile adjustments */
+@media (max-width: 768px) {
+    .user-message {
+        margin-left: 5%;
+    }
+    
+    .assistant-message {
+        margin-right: 5%;
+    }
+    
+    .chat-message {
+        padding: 1rem;
+    }
+}
