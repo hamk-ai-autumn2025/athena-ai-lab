@@ -8,15 +8,24 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-        <div>
-            <h1 class="h2 mb-0">Luo uusi materiaali</h1>
-            <p class="text-muted mb-0">Täytä tiedot manuaalisesti tai käytä tekoälyä apuna.</p>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom taskuope-header">
+        <div class="mb-3 mb-md-0">
+            <h1 class="h2 taskuope-header-title mb-1">
+                Luo uusi materiaali
+            </h1>
+            <p class="taskuope-header-subtitle">
+                <span class="taskuope-badge">🤖 Tekoälyn avulla</span>
+                <span class="ms-2">tai manuaalisesti!</span>
+            </p>
         </div>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
-        </a>
+
+          <!-- Takaisin materiaalin valintaan -->
+  <button type="button" id="btn-back-to-type"
+          class="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1">
+    <i class="bi bi-puzzle"></i> Valitse materiaalin tyyppi
+  </button>
     </div>
+</div>
 
     <form method="post" novalidate>
         {% csrf_token %}
@@ -30,14 +39,16 @@
             <!-- Vasen sarake: AI-työkalut -->
             <div class="col-lg-5 col-xl-4 mb-4 mb-lg-0">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header"><h5 class="mb-0">1. Luo sisältö tekoälyllä (valinnainen)</h5></div>
+                    <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="step-header step-1 mb-3">Luo sisältö tekoälyllä (valinnainen)</h5>
+                    </div>
                     <div class="card-body d-flex flex-column">
                         <div class="mb-3">
                             <label for="id_ai_prompt" class="form-label">Kirjoita aihe tai ohje</label>
                             <textarea name="ai_prompt" class="form-control" id="id_ai_prompt" rows="3" placeholder="Esim. 'Johdanto prosenttilaskentaan 7.-luokalle...'">{{ ai_prompt }}</textarea>
                         </div>
 
-                        <div class="card p-3 mb-3">
+                        <div id="ops-assistant-card"  class="card p-3 mb-3">
                             <h6 class="mb-2">Opetussuunnitelma-avustin</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" role="switch" id="use_ops_checkbox" name="use_ops" {% if ops_vals.use_ops %}checked{% endif %}>
@@ -78,7 +89,9 @@
                         </div>
 
                         <div id="ai-action-text-panel" class="d-grid">
-                            <button type="submit" name="action" value="ai" class="btn btn-info" formnovalidate>Luo sisältöehdotus</button>
+                           <button type="submit" name="action" value="ai" class="btn btn-ai-action" formnovalidate>
+                        <i class="bi bi-stars me-1"></i> Luo sisältöehdotus
+                        </button>
                         </div>
 
                     <div id="ai-action-game-panel" class="d-none">
@@ -100,7 +113,9 @@
                                     <option value="hard">Vaikea (15 kysymystä)</option>
                                 </select>
                             </div>
-                            <div class="d-grid"><button type="button" id="ai_game_generate_btn" class="btn btn-sm btn-info">Generoi peli</button></div>
+                            <div class="d-grid"><button type="button" id="ai_game_generate_btn" class="btn btn-sm btn-ai-action">
+                            <i class="bi bi-controller me-1"></i> Generoi peli
+                            </button></div>
                             <div id="ai_game_status" class="small text-muted mt-2" aria-live="polite"></div>
                         </div>
                     </div>
@@ -118,22 +133,37 @@
                         </div>
                         {% endif %}
 
+                        <div id="ai-image-section">
                         <hr class="my-4">
                         <h6 class="mb-2">Kuvagenerointi</h6>
                         <div id="ai-image-tool" class="ai-image-panel border rounded p-3" data-generate-url="{% url 'generate_image' %}">
                             <div class="mb-2"><label for="ai_image_prompt" class="form-label">Kuvaus / ohje kuvalle</label><textarea id="ai_image_prompt" class="form-control" rows="2" placeholder="Esim. 'Yksinkertainen piirros pyramidista'"></textarea></div>
-                            <div class="d-flex gap-2"><select id="ai_image_size" class="form-select form-select-sm"><option value="square">Neliö</option><option value="landscape">Vaaka</option><option value="portrait">Pysty</option></select><button type="button" id="ai_image_generate" class="btn btn-sm btn-info w-100">Generoi kuva</button></div>
+                            <div class="d-flex gap-2"><select id="ai_image_size" class="form-select form-select-sm"><option value="square">Neliö</option><option value="landscape">Vaaka</option><option value="portrait">Pysty</option></select><button type="button" id="ai_image_generate" class="btn btn-sm btn-ai-action w-100">
+                            <i class="bi bi-image me-1"></i> Generoi kuva</button></div>
                             <div id="ai_image_status" class="small text-muted mt-2" aria-live="polite"></div>
-                            <div id="ai_image_result" class="d-none mt-2"><img id="ai_image_preview" src="" alt="Generoitu kuva" class="img-fluid rounded border"><div class="d-grid mt-2"><button type="button" id="ai_image_insert" class="btn btn-sm btn-outline-secondary">Lisää kuva sisältöön</button></div></div>
+                            <div id="ai_image_result" class="d-none mt-2"><img id="ai_image_preview" src="" alt="Generoitu kuva" class="img-fluid rounded border"><div class="d-grid mt-2"><button 
+                                    type="button" 
+                                    id="ai_image_insert" 
+                                    class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2"
+                                    >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
+                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                <path d="M2.002 1.5A1.5 1.5 0 1 1 5 0a1.5 1.5 0 0 1-3 1.5zm10.5 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                <path d="M2 7h12v6H2V7z"/>
+                            </svg>
+                                Lisää kuva sisältöön
+                                </button></div></div>
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
 
             <!-- Oikea sarake: Materiaalin tiedot -->
             <div class="col-lg-7 col-xl-8">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header"><h5 class="mb-0">2. Viimeistele ja tallenna materiaali</h5></div>
+                    <div class="card-header bg-white border-0 pb-0">
+                        <h5 class="step-header step-2 mb-3">Viimeistele ja tallenna materiaali</h5> </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3"><label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>{{ form.title }}<span id="error-title" class="text-danger small d-none">Tämä kenttä on pakollinen.</span></div>
@@ -149,7 +179,9 @@
                             <span id="error-content" class="text-danger small d-none">Tämä kenttä on pakollinen.</span>
                         </div>
                         <div class="d-grid mt-4">
-                            <button type="submit" name="action" value="save" class="btn btn-primary" id="save-material-button">Tallenna materiaali</button>
+                            <button type="submit" name="action" value="save" class="btn btn-save-material" id="save-material-button">
+                            <i class="bi bi-cloud-check me-2"></i>Tallenna materiaali
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -485,6 +517,436 @@ const rehydrate = () => {
     }
 
 });
+
+
+//---VAIHE 5 IDA ---//
+// Kollapsaa koko AI-kortti (vasen palsta) ilman templaattimuutoksia
+
+//---TÄHÄN LOPPUU TESTI JA ALKAA TOIMIVA!!!!!!!!!---//
+document.addEventListener('DOMContentLoaded', () => {
+  const typeSel = document.getElementById('id_material_type');
+
+  // ====== YLEISLAYOUT (vasen AI-kortti, otsikkorivit, sisältö, tallenna) ======
+  const sections = {
+    aiTools: document.querySelector('.col-lg-5.col-xl-4'),
+    titleSubjectRow: (()=> {
+      const t = document.getElementById('id_title');
+      const s = document.getElementById('id_subject');
+      if (!t || !s) return null;
+      let a=t; const rows=[];
+      while (a) { if (a.classList?.contains('row')) rows.push(a); a=a.parentElement; }
+      let b=s;
+      while (b) { if (b.classList?.contains('row') && rows.includes(b)) return b; b=b.parentElement; }
+      return null;
+    })(),
+    gradeCol: document.getElementById('id_grade_level')?.closest('.col-md-6'),
+    contentBlock: document.getElementById('{{ form.content.id_for_label }}')?.closest('.mb-3'),
+    saveBlock: document.getElementById('save-material-button')?.closest('.d-grid'),
+  };
+  function setVisible(node, show){
+    if (!node) return;
+    node.style.display = show ? '' : 'none';
+    node.querySelectorAll('input,select,textarea,button').forEach(el => {
+      if (el === typeSel) return;
+      el.disabled = !show;
+    });
+  }
+  const layout = {
+    oppimateriaali:{ ai:true, title:true, grade:true, content:true,  save:true },
+    testi:         { ai:true, title:true, grade:true, content:true,  save:true },
+    koe:           { ai:true, title:true, grade:true, content:true,  save:true },
+    video:         { ai:true, title:true, grade:true, content:false, save:true },
+    peli:          { ai:true, title:true, grade:true, content:false, save:true },
+  };
+  function applyLayout(){
+    const val = (typeSel?.value || '').toLowerCase();
+    if (!val || !layout[val]) {
+      setVisible(sections.aiTools, false);
+      setVisible(sections.titleSubjectRow, false);
+      setVisible(sections.gradeCol, false);
+      setVisible(sections.contentBlock, false);
+      setVisible(sections.saveBlock, false);
+      return;
+    }
+    const cfg = layout[val];
+    setVisible(sections.aiTools, !!cfg.ai);
+    setVisible(sections.titleSubjectRow, !!cfg.title);
+    setVisible(sections.gradeCol, !!cfg.grade);
+    setVisible(sections.contentBlock, !!cfg.content);
+    setVisible(sections.saveBlock, !!cfg.save);
+
+    // Synkkaa AI-kortin sisäinen näkyvyys
+    setAiModeByType();
+  }
+
+  // ====== AI-KORTIN SISÄINEN LOGIIKKA (teksti vs. peli, OPS/kuva) ======
+  const textPanel    = document.getElementById('ai-action-text-panel');
+  const gameGenPanel = document.getElementById('ai-action-game-panel');
+  const gameToolRoot = document.getElementById('ai-game-tool');
+  const imageSection = document.getElementById('ai-image-section'); 
+  const imageTool    = document.getElementById('ai-image-tool');
+  const radioButtons = document.querySelectorAll('input[name="ai_action"]');
+
+  function setOptionVisible(inputEl, show){
+    if (!inputEl) return;
+    const wrap = inputEl.closest('.form-check') || inputEl;
+    wrap.classList.toggle('d-none', !show);
+    wrap.toggleAttribute('inert', !show);
+    inputEl.disabled = !show;
+  }
+  function setPanelVisibility(node, show){
+    if (!node) return;
+    node.classList.toggle('d-none', !show);
+    node.toggleAttribute('inert', !show);
+    node.setAttribute('aria-hidden', String(!show));
+    node.querySelectorAll('input,select,textarea,button').forEach(el => el.disabled = !show);
+  }
+  function toggleAiAction(){
+    const selected = document.querySelector('input[name="ai_action"]:checked')?.value;
+    setPanelVisibility(textPanel, selected === 'text');
+    setPanelVisibility(gameGenPanel, selected === 'game');
+  }
+  radioButtons.forEach(r => r.addEventListener('change', toggleAiAction));
+
+function setAiModeByType(){
+  const val   = (typeSel?.value || '').toLowerCase();
+  const rText = document.getElementById('action_text');
+  const rGame = document.getElementById('action_game');
+  const opsCard = document.getElementById('ops-assistant-card');
+
+  if (val === 'peli') {
+    // vain peli-työkalu
+    setOptionVisible(rText, false);
+    setOptionVisible(rGame, true);
+    if (rGame) rGame.checked = true;
+
+    setPanelVisibility(textPanel, false);
+    setPanelVisibility(gameGenPanel, true);
+
+    // 🔒 OPS piiloon pelissä
+    if (opsCard) setPanelVisibility(opsCard, false);
+
+    // Kuvatyökalu piiloon pelissä
+    if (imageSection) {
+      setPanelVisibility(imageSection, false);
+    } else {
+      const imageHeader = imageTool?.previousElementSibling?.tagName === 'H6' ? imageTool.previousElementSibling : null;
+      const imageHr     = imageHeader?.previousElementSibling?.tagName === 'HR' ? imageHeader.previousElementSibling : null;
+      setPanelVisibility(imageTool, false);
+      if (imageHeader) setPanelVisibility(imageHeader, false);
+      if (imageHr)     setPanelVisibility(imageHr, false);
+    }
+
+  } else {
+    // muut tyypit: tekstityökalu + OPS + kuva näkyviin
+    setOptionVisible(rText, true);
+    setOptionVisible(rGame, false);
+    if (rText) rText.checked = true;
+
+    setPanelVisibility(textPanel, true);
+    setPanelVisibility(gameGenPanel, false);
+
+    if (opsCard) setPanelVisibility(opsCard, true);
+
+    if (imageSection) {
+      setPanelVisibility(imageSection, true);
+    } else {
+      const imageHeader = imageTool?.previousElementSibling?.tagName === 'H6' ? imageTool.previousElementSibling : null;
+      const imageHr     = imageHeader?.previousElementSibling?.tagName === 'HR' ? imageHeader.previousElementSibling : null;
+      setPanelVisibility(imageTool, true);
+      if (imageHeader) setPanelVisibility(imageHeader, true);
+      if (imageHr)     setPanelVisibility(imageHr, true);
+    }
+  }
+
+  toggleAiAction();
+}
+
+  // export ei ole välttämätön, koska kaikki samassa lohkossa, mutta jätetään varalle:
+  window.setAiModeByType = setAiModeByType;
+
+
+  // ====== ENNEN VALINTAA: otsikkoteksti + tallenna-nappi ======
+  (function initPreselectionUI(){
+    const card = typeSel?.closest('.card');
+    const headerH5 = card?.querySelector('.card-header h5');
+    const saveBtn = document.getElementById('save-material-button');
+    let saveWrap = saveBtn ? saveBtn.closest('.d-grid') : null;
+
+    function showSave(show){
+      if (saveWrap) saveWrap.style.display = show ? '' : 'none';
+      if (saveBtn) {
+        saveBtn.style.display = show ? '' : 'none';
+        saveBtn.disabled = !show;
+        saveBtn.setAttribute('aria-hidden', show ? 'false' : 'true');
+      }
+    }
+
+
+    //----UUSIII----//
+
+
+// ====== DYNAMINEN "VALITSE MATERIAALITYYPPI" -LAATIKKO ======
+function createMaterialTypeSelector() {
+  const card = typeSel?.closest('.card');
+  if (!card) return;
+  const header = card.querySelector('.card-header');
+  const body   = card.querySelector('.card-body');
+  if (!body) return;
+
+  // Estä duplikaatti
+  if (body.querySelector('.taskuope-material-type-selector')) return;
+
+  // Piilota header + kaikki sisällöt bodyssa
+  if (header) {
+    header.setAttribute('data-hidden-by-selector', '1');
+    header.style.display = 'none';
+  }
+  [...body.children].forEach(el => {
+    el.setAttribute('data-hidden-by-selector', '1');
+    el.style.display = 'none';
+  });
+
+  // Laatikko
+  const selector = document.createElement('div');
+  selector.className = 'taskuope-material-type-selector';
+  selector.innerHTML = `
+    <div class="taskuope-material-icon"><i class="bi bi-puzzle"></i></div>
+    <h5 class="taskuope-material-title">Minkä tyyppinen materiaali?</h5>
+    <p class="taskuope-material-text">
+      Valitse ensin materiaalin tyyppi – sen mukaan saat AI-työkalut ja muokkauskentät.
+    </p>
+    <div class="taskuope-material-buttons">
+      <button type="button" class="taskuope-material-btn" data-value="oppimateriaali"><i class="bi bi-book me-1"></i> Oppimateriaali</button>
+      <button type="button" class="taskuope-material-btn" data-value="peli"><i class="bi bi-controller me-1"></i> Peli</button>
+      <button type="button" class="taskuope-material-btn" data-value="testi"><i class="bi bi-check-circle me-1"></i> Testi</button>
+      <button type="button" class="taskuope-material-btn" data-value="video"><i class="bi bi-camera-video me-1"></i> Video</button>
+      <button type="button" class="taskuope-material-btn" data-value="koe"><i class="bi bi-file-earmark-text me-1"></i> Koe</button>
+    </div>
+  `;
+  body.appendChild(selector);
+
+  // Klikkaukset -> aseta selectin arvo
+  selector.querySelectorAll('.taskuope-material-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const value = btn.getAttribute('data-value');
+      if (typeSel) {
+        typeSel.value = value;
+        typeSel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  });
+}
+
+function removeMaterialTypeSelector() {
+  const card = typeSel?.closest('.card');
+  if (!card) return;
+  const header = card.querySelector('.card-header');
+  const body   = card.querySelector('.card-body');
+  if (!body) return;
+
+  // Poista laatikko
+  body.querySelector('.taskuope-material-type-selector')?.remove();
+
+  // Palauta header + body-lapset, jotka merkittiin piilotetuiksi
+  if (header && header.getAttribute('data-hidden-by-selector') === '1') {
+    header.style.display = '';
+    header.removeAttribute('data-hidden-by-selector');
+  }
+  body.querySelectorAll('[data-hidden-by-selector="1"]').forEach(el => {
+    el.style.display = '';
+    el.removeAttribute('data-hidden-by-selector');
+  });
+}
+
+function applyPreselection(){
+  const chosen = !!(typeSel?.value && String(typeSel.value).trim());
+  if (chosen) {
+    removeMaterialTypeSelector();
+    showSave(true);
+  } else {
+    createMaterialTypeSelector();
+    showSave(false);
+  }
+}
+
+
+    document.querySelector('form')?.addEventListener('submit', e => { if (!typeSel?.value) e.preventDefault(); });
+    typeSel?.addEventListener('change', applyPreselection);
+    applyPreselection();
+  })();
+
+  // ====== YHDEN KUUNTELIJAN MALLI ======
+  typeSel?.addEventListener('change', applyLayout);
+  applyLayout(); // alustus
+});
+
+
+// Add fade effect when toggling AI panels
+function setPanelVisibility(node, show) {
+  if (!node) return;
+  if (show) {
+    node.classList.remove('d-none');
+    // Trigger reflow for transition
+    void node.offsetWidth;
+    node.style.opacity = "0";
+    node.style.transition = "opacity 0.2s ease";
+    setTimeout(() => node.style.opacity = "1", 10);
+  } else {
+    node.style.opacity = "0";
+    setTimeout(() => node.classList.add('d-none'), 200);
+  }
+  node.querySelectorAll('input,select,textarea,button').forEach(el => el.disabled = !show);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const backToTypeBtn = document.getElementById('btn-back-to-type');
+  const typeSel = document.getElementById('id_material_type');
+
+  backToTypeBtn?.addEventListener('click', () => {
+    if (!typeSel) return;
+
+    // Nollaa materiaalin tyyppi
+    typeSel.value = '';
+    // Käynnistä oma logiikkasi (näyttää “Minkä tyyppinen materiaali?” -laatikon)
+    typeSel.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Vieritä AI-kortti näkyviin (vasen palsta)
+    const leftCard = document.querySelector('.col-lg-5.col-xl-4 .card');
+    leftCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Jos sinulla on mobiilikollapsi, varmistetaan että vasen kortti aukeaa
+    if (leftCard && leftCard._m?.setOpen) {
+      leftCard._m.setOpen(true);
+    }
+  });
+});
+
+
+/* --- MUUTA OPS + KUVA -OSAT KOLLAPSOITUVIKSI --- */
+function makeCollapsible(containerEl, headerEl, contentEls, defaultOpen=false) {
+  if (!containerEl || !headerEl || !contentEls?.length) return;
+  if (containerEl.dataset.collapsibleInit === '1') return; // idempotentti
+
+  // tee klikattava header
+  headerEl.classList.add('collapsible-header');
+  const caret = document.createElement('i');
+  caret.className = 'bi bi-chevron-down caret';
+  headerEl.prepend(caret);
+
+  // kääri sisältö wrapperiin
+  const body = document.createElement('div');
+  body.className = 'collapsible-body';
+  contentEls.forEach(el => body.appendChild(el));
+  headerEl.after(body);
+
+  // tila + a11y
+  const setOpen = (open) => {
+    headerEl.setAttribute('aria-expanded', String(open));
+    body.classList.toggle('d-none', !open);
+    body.toggleAttribute('inert', !open);
+    body.querySelectorAll('input,select,textarea,button').forEach(n => n.disabled = !open);
+  };
+
+  headerEl.tabIndex = 0;
+  headerEl.addEventListener('click', () => setOpen(headerEl.getAttribute('aria-expanded') !== 'true'));
+  headerEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); headerEl.click(); }
+  });
+
+  // aloitustila
+  setOpen(!!defaultOpen);
+
+  containerEl.dataset.collapsibleInit = '1';
+  containerEl._collapsible = { setOpen, body, headerEl };
+}
+
+function initOpsCollapsible(defaultOpen=false) {
+  const opsCard = document.getElementById('ops-assistant-card');
+  if (!opsCard) return;
+  const h6 = opsCard.querySelector('h6');
+  if (!h6) return;
+
+  // kaikki h6:n jälkeiset lapset sisällöksi (form-switch + rivit)
+  const chunks = [];
+  let n = h6.nextElementSibling;
+  while (n) { chunks.push(n); n = n.nextElementSibling; }
+  if (chunks.length) makeCollapsible(opsCard, h6, chunks, defaultOpen);
+}
+
+function initImageCollapsible(defaultOpen=false) {
+  const tool = document.getElementById('ai-image-tool');
+  if (!tool) return;
+  // Header on toolia edeltävä <h6>
+  const h6 = (tool.previousElementSibling?.tagName === 'H6') ? tool.previousElementSibling : null;
+  if (!h6) return;
+  makeCollapsible(tool.parentElement || tool, h6, [tool], defaultOpen);
+}
+
+/* --- kytke näkyvyys materiaalityypin mukaan --- */
+function showTextToolsCollapsed() {
+  // näyttää OPS + Kuva mutta KIINNI
+  initOpsCollapsible(false);
+  initImageCollapsible(false);
+  // jos jo alustettu aiemmin ja olivat auki -> sulje
+  const opsCard = document.getElementById('ops-assistant-card');
+  if (opsCard?._collapsible) opsCard._collapsible.setOpen(false);
+  const tool = document.getElementById('ai-image-tool');
+  const toolHost = tool?.parentElement;
+  if (toolHost?._collapsible) toolHost._collapsible.setOpen(false);
+
+  // varmista että ne ovat näkyvissä (ei d-none), jos setAiModeByType piilotti
+  opsCard?.classList.remove('d-none');
+  (toolHost || tool)?.classList.remove('d-none');
+  opsCard?.removeAttribute('inert');
+  (toolHost || tool)?.removeAttribute('inert');
+  opsCard?.querySelectorAll('input,select,textarea,button').forEach(n => n.disabled = false);
+  (toolHost || tool)?.querySelectorAll('input,select,textarea,button').forEach(n => n.disabled = false);
+}
+
+function hideTextToolsCompletely() {
+  // piiloon kun tyyppi = "peli"
+  const opsCard = document.getElementById('ops-assistant-card');
+  const tool = document.getElementById('ai-image-tool');
+  const toolHost = tool?.parentElement;
+  if (opsCard) { opsCard.classList.add('d-none'); opsCard.setAttribute('inert',''); }
+  if (toolHost) { toolHost.classList.add('d-none'); toolHost.setAttribute('inert',''); }
+}
+
+/* --- integrointi olemassa olevaan setAiModeByTypeen --- */
+/* Jos sinulla on jo window.setAiModeByType, kytke nämä loppuun: */
+(function hookSetAiModeByType(){
+  const original = window.setAiModeByType;
+  window.setAiModeByType = function(){
+    // aja alkuperäinen näkyvyyslogiikkasi
+    if (typeof original === 'function') original();
+
+    const typeSel = document.getElementById('id_material_type');
+    const val = (typeSel?.value || '').toLowerCase();
+
+    if (val === 'peli') {
+      hideTextToolsCompletely();
+    } else {
+      // muut tyypit: näytä mutta kollapsoi (oletuksena kiinni)
+      showTextToolsCollapsed();
+    }
+  };
+})();
+
+/* ensialustus DOM readyllä, jos tyyppi jo valittuna */
+document.addEventListener('DOMContentLoaded', () => {
+  const typeSel = document.getElementById('id_material_type');
+  if (!typeSel || !window.setAiModeByType) return;
+
+  // alusta kollapsoitavat rakenteet kerran (oletus: ei-­peli → kiinni)
+  initOpsCollapsible(false);
+  initImageCollapsible(false);
+
+  // aja tyyppilogiikka heti & muutoksissa
+  window.setAiModeByType();
+  typeSel.addEventListener('change', () => window.setAiModeByType());
+});
+
 
 </script>
 {% endblock %}

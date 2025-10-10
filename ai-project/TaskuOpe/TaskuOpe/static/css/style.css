@@ -478,3 +478,494 @@ html, body {
 #markdown-preview h3:not(:first-child), .card-body h3:not(:first-child) {
     margin-top: 2rem;
 }
+
+
+
+
+
+
+<!-- ENHANCED STYLES FOR MATERIAL CREATION PAGE -->
+<style>
+/* === Layout & Spacing === */
+.material-create-container {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  color: #2b2d42;
+}
+.step-header::before {
+  content: "";
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4361ee;
+  text-align: center;
+  line-height: 28px;
+  font-weight: bold;
+}
+.step-header.step-1::before { content: "1"; }
+.step-header.step-2::before { content: "2"; }
+
+/* === Cards === */
+.ai-card, .form-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s;
+}
+.ai-card:hover, .form-card:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+/* === AI Section === */
+.ai-section {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 12px;
+}
+.ai-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #334155;
+}
+
+/* AI Reply Panel */
+.ai-reply-panel {
+  background: #f0f9ff;
+  border-left: 4px solid #4361ee;
+  border-radius: 0 8px 8px 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+/* AI Buttons */
+.btn-ai-action {
+  background: #4cc9f0;
+  border-color: #4cc9f0;
+  color: #1e293b;
+  font-weight: 500;
+}
+.btn-ai-action:hover {
+  background: #38b6e8;
+  border-color: #38b6e8;
+  color: white;
+}
+
+/* Image Generator */
+.ai-image-panel {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 16px;
+}
+#ai_image_result img {
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* === Form Inputs === */
+.form-label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #334155;
+}
+.form-control, .form-select {
+  border: 1px solid #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+/* === Responsive === */
+@media (max-width: 992px) {
+  .step-header {
+    font-size: 1.1rem;
+  }
+}
+
+/* === MOBIILINÄKYMÄ: muuta kaksi saraketta yhdeksi pinoksi, mutta ryhmittele selkeästi === */
+@media (max-width: 991.98px) {
+  /* Piilota otsikot, koska ne tulevat nyt osioiden sisään */
+  .container-fluid > .row {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Vasen sarake (AI) → yläosa */
+  .col-lg-5.col-xl-4 {
+    order: 1;
+    width: 100%;
+  }
+
+  /* Oikea sarake (lomake) → alaosa */
+  .col-lg-7.col-xl-8 {
+    order: 2;
+    width: 100%;
+  }
+
+  /* Lisää selkeä otsikko AI-osiolle mobiilissa */
+  .col-lg-5.col-xl-4 .card-header h5::before {
+    content: "1. ";
+    font-weight: bold;
+  }
+
+  /* Lisää selkeä otsikko lomakeosiolle mobiilissa */
+  .col-lg-7.col-xl-8 .card-header h5::before {
+    content: "2. ";
+    font-weight: bold;
+  }
+
+  /* Tee kortit täysilevyisiksi ja anna niille enemmän hengitystilaa */
+  .col-lg-5.col-xl-4 .card,
+  .col-lg-7.col-xl-8 .card {
+    border-radius: 16px !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08) !important;
+  }
+
+  /* Vähennä sisäistä tiivistä mobiilissa */
+  .card-body {
+    padding: 1.25rem !important;
+  }
+
+  /* Tee tallennusnappi huomattavaksi */
+  #save-material-button {
+    font-size: 1.1rem;
+    padding: 12px;
+  }
+}
+
+/* === Valinnainen: lisää hieman ylämarginaalia mobiilin alkuun === */
+@media (max-width: 991.98px) {
+  .container-fluid {
+    padding-top: 1rem;
+  }
+}
+
+/* Näytä numerobadge normaalisti (sinulla tämä on jo jossain),
+   tärkeää on vain että piilotus toimii kun .no-step on päällä */
+.step-header.no-step::before {
+  content: none !important;
+  display: none !important;
+}
+
+
+.btn-save-material {
+  background: linear-gradient(135deg, #4361ee, #3a0ca3);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-save-material:hover {
+  background: linear-gradient(135deg, #3a56e0, #2d0a8c);
+  box-shadow: 0 6px 16px rgba(67, 97, 238, 0.45);
+  transform: translateY(-2px);
+}
+
+.btn-save-material:active {
+  transform: translateY(0);
+}
+
+.btn-save-material:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.3);
+}
+
+
+/* Bootstrap 5.3 teemat: tämä palauttaa headerin taustan teeman mukaiseksi */
+:root[data-bs-theme="dark"] .card-header.bg-white {
+  background-color: var(--bs-card-bg) !important;
+  color: var(--bs-body-color) !important;
+}
+
+:root[data-bs-theme="dark"] .card-header .step-header {
+  color: #fff !important;
+}
+
+
+
+/* ==== DARK THEME FIXES ==== */
+:root[data-bs-theme="dark"] {
+  /* kortit ja reunat */
+  --card-bg: #0f1216;
+  --card-border: #2a2f3a;
+  --panel-bg: #11151b;
+  --panel-border: #2a2f3a;
+  --text-strong: #ffffff;
+  --text-body: #e6e6e6;
+  --text-muted: #b9c0cc;
+}
+
+/* Korttien header/otsikot */
+:root[data-bs-theme="dark"] .card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+:root[data-bs-theme="dark"] .card-header {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+:root[data-bs-theme="dark"] .card-header .step-header,
+:root[data-bs-theme="dark"] .card-body h6,
+:root[data-bs-theme="dark"] .card-body label,
+:root[data-bs-theme="dark"] .form-label {
+  color: var(--text-strong) !important;
+}
+:root[data-bs-theme="dark"] .text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Kuvageneraattorin paneeli */
+:root[data-bs-theme="dark"] #ai-image-tool {
+  background-color: var(--panel-bg);
+  border-color: var(--panel-border);
+}
+:root[data-bs-theme="dark"] #ai-image-tool h6,
+:root[data-bs-theme="dark"] #ai-image-tool label {
+  color: var(--text-strong) !important;
+}
+
+/* ===== EasyMDE / CodeMirror dark ===== */
+:root[data-bs-theme="dark"] .EasyMDEContainer {
+  background: var(--panel-bg);
+  border-color: var(--panel-border);
+}
+
+/* Editorin tekstialue */
+:root[data-bs-theme="dark"] .EasyMDEContainer .CodeMirror {
+  background: var(--panel-bg) !important;
+  color: var(--text-body) !important;
+  border-color: var(--panel-border) !important;
+}
+:root[data-bs-theme="dark"] .EasyMDEContainer .CodeMirror-cursor {
+  border-left: 1px solid var(--text-body) !important;
+}
+:root[data-bs-theme="dark"] .EasyMDEContainer .CodeMirror-placeholder {
+  color: #9aa5b1 !important; /* placeholder vaaleaksi */
+}
+
+/* Syntax-värit (kevyt tummateema) */
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-header      { color: #9bd1ff !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-strong      { color: var(--text-strong) !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-em          { color: var(--text-body) !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-link        { color: #7ab7ff !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-quote       { color: #9aa5b1 !important; }
+
+/* Toolbar */
+:root[data-bs-theme="dark"] .editor-toolbar {
+  background: var(--panel-bg) !important;
+  border-color: var(--panel-border) !important;
+}
+:root[data-bs-theme="dark"] .editor-toolbar a {
+  color: var(--text-body) !important;
+}
+:root[data-bs-theme="dark"] .editor-toolbar a:hover {
+  background: #1b2028 !important;
+}
+:root[data-bs-theme="dark"] .editor-toolbar i.separator {
+  border-color: var(--panel-border) !important;
+}
+
+/* Esikatselu (preview + side-by-side) */
+:root[data-bs-theme="dark"] .editor-preview,
+:root[data-bs-theme="dark"] .editor-preview-side {
+  background: var(--panel-bg) !important;
+  color: var(--text-body) !important;
+}
+:root[data-bs-theme="dark"] .editor-preview h1,
+:root[data-bs-theme="dark"] .editor-preview h2,
+:root[data-bs-theme="dark"] .editor-preview h3,
+:root[data-bs-theme="dark"] .editor-preview-side h1,
+:root[data-bs-theme="dark"] .editor-preview-side h2,
+:root[data-bs-theme="dark"] .editor-preview-side h3 {
+  color: var(--text-strong) !important;
+}
+:root[data-bs-theme="dark"] .editor-preview a,
+:root[data-bs-theme="dark"] .editor-preview-side a {
+  color: #82b1ff !important;
+}
+
+/* HR-kontrastia */
+:root[data-bs-theme="dark"] hr {
+  border-color: var(--panel-border);
+}
+
+/* Form control placeholder vaaleaksi */
+:root[data-bs-theme="dark"] .form-control::placeholder,
+:root[data-bs-theme="dark"] textarea::placeholder {
+  color: #9aa5b1;
+}
+
+
+/* === TASKUOPE CREATE HEADER STYLE === */
+
+:root {
+    --taskuope-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.taskuope-header {
+    border-color: #e0e7ff !important;
+    padding-bottom: 1.25rem;
+}
+
+/* PÄÄOTSIKKO – isompi, tummempi, parempi kontrasti */
+.taskuope-header-title {
+    color: #0f172a; /* Tumma harmaa (ei täysin musta → pehmeämpi silmille) */
+    font-family: var(--taskuope-font-sans);
+    font-weight: 600;
+    font-size: 2.5rem; /* Isompi kuin oletus-h2 (1.5rem) */
+    line-height: 1.2;
+    margin: 1;
+}
+
+/* ALATEKSTI – nyt isompi ja tummempi kuin "text-muted" */
+.taskuope-header-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.35rem;
+    font-family: var(--taskuope-font-sans);
+    font-size: 1rem; /* Aiemmin "small" = ~0.875rem → nyt selkeämpi */
+    color: #475569; /* Tummempi kuin Bootstrapin oletus-text-muted (#6c757d) */
+}
+
+/* BADGE – säilyy korostettuna */
+.taskuope-badge {
+    background: linear-gradient(45deg, #0d6efd, #00c4ff);
+    color: white;
+    padding: 0.3rem 0.85rem;
+    border-radius: 50rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: var(--taskuope-font-sans);
+    box-shadow: 0 2px 4px rgba(0, 196, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.taskuope-badge:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 6px rgba(0, 196, 255, 0.3);
+    transition: all 0.2s ease;
+}
+
+/* Mobiilisovitus: otsikko ei ole liian iso pienellä näytöllä */
+@media (max-width: 576px) {
+    .taskuope-header-title {
+        font-size: 1.5rem;
+    }
+    .taskuope-header-subtitle {
+        font-size: 0.95rem;
+    }
+}
+
+
+/* === MATERIAALITYYPIN VALINTA - OHJAAVA LAATIKKO === */
+.taskuope-material-type-selector {
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.taskuope-material-type-selector:hover {
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.taskuope-material-icon {
+    font-size: 2.25rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.taskuope-material-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.taskuope-material-text {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.taskuope-material-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.taskuope-material-btn {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.taskuope-material-btn:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.15);
+}
+
+.taskuope-material-btn:active {
+    transform: translateY(0);
+}
+
+/* Yksinkertainen "dropdown"-otsikko */
+.collapsible-header {
+  display:flex; align-items:center; gap:.5rem;
+  cursor:pointer; user-select:none;
+  font-weight:600;
+}
+.collapsible-header .caret {
+  transition: transform .18s ease;
+  font-size: .95rem;
+}
+.collapsible-header[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+
+/* pehmeä sisään/ulos -efekti (valinnainen) */
+.collapsible-body {
+  transition: opacity .18s ease;
+}
+.collapsible-body.d-none {opacity:0;}
+
