@@ -15,7 +15,7 @@ multi-llm-chat/
 └── README.md              # This file
 ```
 
-## 🚀 Setup
+##  Setup
 
 1. **Clone or download the project**
 
@@ -34,7 +34,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 🎨 Features
+##  Features
 
 - Support for 12+ AI models across 3 providers
 - Modern, theme-adaptive UI (light/dark mode)
@@ -43,7 +43,7 @@ streamlit run app.py
 - Persistent chat history
 - Clean project structure
 
-## 🤖 Supported Models
+##  Supported Models
 
 **OpenAI:**
 - GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-4, GPT-3.5 Turbo
@@ -54,14 +54,14 @@ streamlit run app.py
 **Google:**
 - Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini Pro
 
-## 📝 Usage
+##  Usage
 
 1. Select a model from the sidebar
 2. Enter your API key (or set as environment variable)
 3. Adjust settings (temperature, system message)
 4. Start chatting!
 
-## 🔑 Environment Variables (Optional)
+##  Environment Variables (Optional)
 
 Set these to avoid entering API keys each time:
 
@@ -70,7 +70,3 @@ export OPENAI_API_KEY="your-key-here"
 export ANTHROPIC_API_KEY="your-key-here"
 export GOOGLE_API_KEY="your-key-here"
 ```
-
-## 📄 License
-
-MIT License - Feel free to use and modify!
