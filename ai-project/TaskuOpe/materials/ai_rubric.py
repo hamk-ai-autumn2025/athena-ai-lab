@@ -2,21 +2,28 @@
 
 import json
 import re
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from django.utils import timezone
 
-from .models import Rubric, RubricCriterion, AIGrade, Material, Submission
 from .ai_service import ask_llm
-
-from TaskuOpe.ops_chunks import retrieve_chunks, format_for_llm
+from .models import AIGrade, Material, Rubric, RubricCriterion, Submission
+from TaskuOpe.ops_chunks import format_for_llm, retrieve_chunks
 
 
 # ---------- Apurit ----------
 
 def _ensure_default_rubric(material: Material) -> Rubric:
     """
-    Luo materiaalille yksinkertaisen oletusrubriikin, jos sellaista ei ole.
+    Varmistaa, että materiaalille on olemassa rubriikki.
+    Jos rubriikkia ei ole, luo uuden oletusrubriikin kolmella peruskriteerillä:
+    Sisältö ja ymmärrys, Rakenne ja jäsentely, sekä Kieli ja oikeinkirjoitus.
+
+    Args:
+        material (Material): Materiaali, jolle rubriikki tarkistetaan/luodaan.
+
+    Returns:
+        Rubric: Materiaaliin liitetty rubriikki.
     """
     rubric = material.rubrics.first()
     if rubric:
@@ -42,14 +49,26 @@ def _ensure_default_rubric(material: Material) -> Rubric:
         )
     return rubric
 
-
 # ======================================================================
 # === LOPULLINEN, TARKENNETTU VERSIO PROMPTISTA ===
 # ======================================================================
-def _build_prompt(material: Material, submission: Submission, criteria: List[RubricCriterion]) -> str:
+def _build_prompt(
+    material: Material, submission: Submission, criteria: List[RubricCriterion]
+) -> str:
     """
-    Rakentaa promptin tekoälylle, joka on ohjeistettu olemaan systemaattinen,
-    analyyttinen ja rankaisemaan puuttuvista vastauksista.
+    Rakentaa tekoälylle tarkoitetun promptin, joka ohjeistaa sitä arvioimaan
+    oppilaan vastauksen systemaattisesti ja analyyttisesti ennalta määriteltyjen
+    kriteerien ja tehtävänannon perusteella. Prompti sisältää tehtävänannon otteen,
+    oppilaan vastauksen, rubriikin kriteerit ja tarvittaessa opetussuunnitelman kontekstin.
+    Tekoälyä ohjeistetaan palauttamaan JSON-muotoinen vastaus.
+
+    Args:
+        material (Material): Tehtävään liittyvä materiaali.
+        submission (Submission): Oppilaan vastaus.
+        criteria (List[RubricCriterion]): Lista rubriikin kriteereistä.
+
+    Returns:
+        str: Valmis prompt-teksti tekoälylle.
     """
     material_excerpt = (material.content or "").strip()[:2000] + "…"
     student_answer = (submission.response or "").strip()
@@ -73,7 +92,6 @@ OPETUSSUUNNITELMAN RELEVANTIT TAVOITTEET/SISÄLLÖT TÄLLE TEHTÄVÄLLE:
 
     criterialines = [f'- "{c.name}" (max {c.max_points} p): {c.guidance or ""}'.strip() for c in criteria]
 
-    # --- TÄSSÄ ON UUSI, ERITTÄIN TÄSMÄLLINEN OHJEISTUS ---
     prompt = f"""
 Tehtäväsi on toimia systemaattisena ja analyyttisenä opettajan apulaisena. Arvioi oppilaan vastaus vertaamalla sitä HUOLELLISESTI ja kohta kohdalta tehtävänantoon ja rubriikin kriteereihin.
 
@@ -107,20 +125,51 @@ Palauta vastaus TÄSMÄLLISESTI JSON-muodossa ilman muuta tekstiä:
 
 
 def _extract_json_block(text: str) -> Dict[str, Any]:
+    """
+    Poimii JSON-muotoisen lohkon annetusta tekstistä.
+    Etsii joko koodilohkon (` ```json ... ``` `) tai pelkän JSON-objektin (` { ... } `).
+    Yrittää ladata JSON:in ja käsittelee mahdolliset virheet.
+    Käsittelee myös tapauksia, joissa JSON sisältää kommentteja.
+
+    Args:
+        text (str): Teksti, josta JSON-lohko yritetään poimia.
+
+    Returns:
+        Dict[str, Any]: Parsittu JSON-objekti sanakirjana, tai tyhjä sanakirja, jos parsinta epäonnistuu.
+    """
     fence = re.search(r"```(?:json)?\s*({.*?})\s*```", text, flags=re.S)
     raw = fence.group(1) if fence else None
     if not raw:
         m = re.search(r"(\{.*\})", text, flags=re.S)
         raw = m.group(1) if m else None
-    if not raw: return {}
-    try: return json.loads(raw)
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
     except Exception:
         cleaned = re.sub(r"//.*", "", raw)
-        try: return json.loads(cleaned)
-        except Exception: return {}
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            return {}
 
 
 def create_or_update_ai_grade(submission: Submission) -> AIGrade:
+    """
+    Luo tai päivittää tekoälyn antaman arvosanan (AIGrade) annetulle vastaukselle (Submission).
+    Funktio:
+    1. Varmistaa, että submissionin materiaalille on olemassa oletusrubriikki.
+    2. Rakentaa promptin tekoälylle rubriikin ja submissionin perusteella.
+    3. Kutsuu tekoälypalvelua (`ask_llm`) ja poimii vastauksesta JSON-muotoisen arvioinnin.
+    4. Käsittelee tekoälyn antamat kriteerikohtaiset pisteet ja palautteen.
+    5. Tallentaa tai päivittää AIGrade-objektin tietokantaan.
+
+    Args:
+        submission (Submission): Oppilaan vastaus, joka arvioidaan.
+
+    Returns:
+        AIGrade: Luotu tai päivitetty tekoälyarvosana.
+    """    
     material = submission.assignment.material
     rubric = _ensure_default_rubric(material)
     criteria = list(rubric.criteria.order_by("order", "id"))

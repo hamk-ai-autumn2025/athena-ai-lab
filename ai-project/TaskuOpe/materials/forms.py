@@ -1,13 +1,20 @@
-from django import forms
 from decimal import Decimal, InvalidOperation
+from django import forms
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
 # Import the models we need to build forms from
-from .models import Material, Submission, Assignment
-from django.contrib.auth import get_user_model
+from .models import Assignment, Material, Submission
 
 
 class MaterialForm(forms.ModelForm):
+    """
+    Lomake opetusmateriaalien (Material-objektien) luomiseen ja muokkaamiseen.
+    Määrittää kentät, niiden etikettejä ja HTML-widgettejä.
+    Erityiskäsittely 'peli'-tyyppisille materiaaleille, jolloin 'content'-kenttä
+    ei ole pakollinen. Lisää myös oletusvalinnat pudotusvalikoihin.
+    """
+
     class Meta:
         model = Material
         fields = ["title", "content", "material_type", "subject", "grade_level"]
@@ -29,6 +36,12 @@ class MaterialForm(forms.ModelForm):
 
     # KORJATTU: Molemmat aiemmat __init__-metodit on nyt yhdistetty tähän yhteen.
     def __init__(self, *args, **kwargs):
+        """
+        Alustaa MaterialForm-lomakkeen.
+        Määrittää 'content'-kentän vaadittavuuden dynaamisesti
+        ja lisää oletusarvoiset "Valitse..."-vaihtoehdot pudotusvalikoihin.
+        """
+
         super().__init__(*args, **kwargs)
 
         # Tarkistetaan, onko lomakkeella dataa (eli onko kyseessä POST-pyyntö)
@@ -48,8 +61,10 @@ class MaterialForm(forms.ModelForm):
 
 class AssignmentForm(forms.Form):
     """
+    Lomake kentät sisältää opiskelijoiden valitsemiseen ja määräajan asettamiseen.
     Tätä käytetään (jos käytetään) yksittäisen tehtävän jakoon opiskelijoille.
     """
+
     students = forms.ModelMultipleChoiceField(
         queryset=None,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'list-unstyled'}),
@@ -63,6 +78,11 @@ class AssignmentForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        """
+        Alustaa AssignmentForm-lomakkeen ja asettaa `students`-kentän
+        querysetin sisältämään kaikki oppilaan roolin omaavat käyttäjät.
+        """
+
         super().__init__(*args, **kwargs)
         User = get_user_model()
         self.fields["students"].queryset = (
@@ -70,6 +90,11 @@ class AssignmentForm(forms.Form):
         )
 
 class SubmissionForm(forms.ModelForm):
+    """
+    Lomake opiskelijan vastauksen (Submission-objektin) lähettämiseen.
+    Sisältää yhden tekstikentän vastaukselle.
+    """
+
     class Meta:
         model = Submission
         fields = ['response']
@@ -80,6 +105,12 @@ class SubmissionForm(forms.ModelForm):
 
 
 class GradingForm(forms.ModelForm):
+    """
+    Lomake opiskelijan vastauksen arvioimiseen.
+    Sisältää kentät arvosanalle (4-10), pisteille, maksimipisteille ja palautteelle.
+    Suorittaa validoinnin varmistaakseen, ettei saatu pistemäärä ylitä maksimipistemäärää.
+    """
+        
     GRADE_CHOICES = [(n, str(n)) for n in range(4, 11)]
     grade = forms.TypedChoiceField(
         choices=[('', '— Ei arvosanaa —')] + GRADE_CHOICES,
@@ -110,6 +141,11 @@ class GradingForm(forms.ModelForm):
         fields = ["grade", "score", "max_score", "feedback"]
 
     def __init__(self, *args, **kwargs):
+        """
+        Alustaa GradingForm-lomakkeen ja asettaa 'grade'-kentän
+        alkuperäisen arvon Submission-instanssin perusteella.
+        """
+
         super().__init__(*args, **kwargs)
         instance = kwargs.get("instance")
         self.fields["grade"].initial = str(instance.grade) if instance and instance.grade is not None else ''
@@ -117,6 +153,11 @@ class GradingForm(forms.ModelForm):
     # LISÄTTY: Kenttien välinen validointi, joka estää loogiset virheet.
 
     def clean(self):
+        """
+        Suorittaa lomakkeen kenttien välisen validoinnin.
+        Tarkistaa, ettei 'score' ole suurempi kuin 'max_score'.
+        """   
+
         cleaned_data = super().clean()
         score = cleaned_data.get("score")
         max_score = cleaned_data.get("max_score")
@@ -132,6 +173,12 @@ class GradingForm(forms.ModelForm):
 
 
 class AddImageForm(forms.Form):
+    """
+    Lomake kuvan lisäämiseen materiaalin sisältöön.
+    Mahdollistaa joko kuvan lataamisen tai tekoälyn avulla generoinnin
+    sekä kuvan koon ja sijainnin määrittelyn.
+    Suorittaa validoinnin varmistaakseen, että joko lataus tai generointikehote on annettu.
+    """
 
     IMAGE_SIZES = (
         ('size-medium', 'Keskikokoinen (oletus)'),
@@ -178,6 +225,11 @@ class AddImageForm(forms.Form):
 
 
 class AssignForm(forms.Form):
+    """
+    Lomake materiaalin jakamiseen opiskelijoille tai luokille.
+    Mahdollistaa yksittäisten opiskelijoiden tai koko luokan valitsemisen
+    sekä määräajan asettamisen.
+    """
     students = forms.ModelMultipleChoiceField(
         queryset=None,
         required=False,
@@ -198,6 +250,11 @@ class AssignForm(forms.Form):
     )
 
     def __init__(self, *args, teacher=None, **kwargs):
+        """
+        Alustaa AssignForm-lomakkeen.
+        Asettaa 'students'-kentän querysetin sisältämään kaikki oppilaan roolin
+        omaavat käyttäjät. Mahdollisuus rajata opettajan omiin ryhmiin (kommentoitu pois).
+        """
         super().__init__(*args, **kwargs)
         User = get_user_model()
         qs = User.objects.filter(role="STUDENT")

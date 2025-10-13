@@ -1,89 +1,52 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import HttpResponseForbidden, HttpResponseNotAllowed
-from django.utils import timezone
-from django.db import transaction
-from django import forms
-from django.core.paginator import Paginator
-from django.db.models import Q
+# Standardikirjastot
 import csv
-from django.http import HttpResponse
-from .models import Assignment
-from django.core.files.storage import FileSystemStorage
-import io, os, json, base64, uuid, datetime
-from PIL import Image, ImageDraw, ImageFont
-from django.conf import settings
-
-# AI-avustin (demo/tuotanto)
-from .ai_service import ask_llm
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+import io
 import json
-from .ai_service import generate_speech
+import os
+import re
+import uuid
+from urllib.parse import parse_qs, urljoin, urlparse, urlunparse
 
-# 👉 Plagiointitarkistuspalvelu (UUSI)
-from .plagiarism import build_or_update_report
-from .forms import AssignForm
-
-# Import models and forms
-from .models import Material, Assignment, Submission
-from users.models import CustomUser
-from .forms import AssignmentForm, MaterialForm, SubmissionForm, GradingForm
-
-# Rubric & AI grading -> arviointikriteeristö & AI-arviointi
-from .models import AIGrade, Rubric
-from .ai_rubric import create_or_update_ai_grade
-
-from urllib.parse import urlparse, urljoin, parse_qs, urlunparse
-from django.core.files.base import ContentFile
-from .forms import AddImageForm
-from .models import MaterialImage
-
-#Kuvageneraation importteja
+# Kolmannen osapuolen kirjastot
 import markdown as md
-import re
-from django.utils.safestring import mark_safe
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from .ai_service import generate_image_bytes
-
+# Django-moduulit
+from django import forms
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
-from .forms import AddImageForm
-from .models import MaterialImage
-import re
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q
+from django.http import (
+    HttpResponse,
+    HttpResponseForbidden,
+    HttpResponseNotAllowed,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_GET, require_POST
 
-from TaskuOpe.ops_chunks import get_facets
+# Omat sovellusmoduulit
+from TaskuOpe.ops_chunks import get_facets, retrieve_chunks
+from users.models import CustomUser
 
+from .ai_rubric import create_or_update_ai_grade
+from .ai_service import ask_llm, ask_llm_with_ops, generate_image_bytes, generate_speech
+from .forms import AddImageForm, AssignForm, AssignmentForm, GradingForm, MaterialForm, SubmissionForm
+from .models import AIGrade, Assignment, Material, MaterialImage, Rubric, Submission
+from .plagiarism import build_or_update_report
+
+# Tarkista, onko OpenAI-kirjasto saatavilla
 try:
     from openai import OpenAI
     _has_openai = True
 except Exception:
     _has_openai = False
-
-# materials/views.py
-import markdown as md
-from django.utils.safestring import mark_safe
-from django.shortcuts import render, get_object_or_404
-
-# materials/views.py
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.http import HttpResponseForbidden
-from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
-from .models import MaterialImage
-
-# views.py
-from PIL import Image, ImageDraw, ImageFont, ImageOps
-import io
-
-#JSON chunkit
-from TaskuOpe.ops_chunks import retrieve_chunks, get_facets
-from django.views.decorators.http import require_GET
-
-#Opetus suunnitelman haku
-from .ai_service import ask_llm, ask_llm_with_ops
 
 
 # ================= Pelin luontia varte ====================
@@ -93,15 +56,20 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Pelisisältö
 def generate_game_content(topic: str, game_type: str, difficulty: str = 'medium') -> dict:
     """
-    Generoi pelisisällön tekoälyllä.
-    
+    Generoi pelisisällön tekoälyllä annetun aiheen, pelityypin ja
+    vaikeustason perusteella.
+
     Args:
-        topic (str): Pelin aihe/kuvaus
-        game_type (str): Pelityyppi ('quiz', 'hangman', 'memory')
-        difficulty (str): Vaikeustaso ('easy', 'medium', 'hard') - vain visalle
-    
+        topic (str): Pelin aihe tai kuvaus.
+        game_type (str): Pelityyppi ('quiz', 'hangman', 'memory').
+        difficulty (str): Vaikeustaso ('easy', 'medium', 'hard')
+                          (käytössä vain visapelissä).
+
     Returns:
-        dict: Pelisisältö JSON-muodossa
+        dict: Generoitu pelisisältö JSON-muodossa.
+
+    Raises:
+        ValueError: Jos annettua pelityyppiä ei tunnisteta.
     """
     prompt = ""
     
@@ -172,6 +140,14 @@ def generate_game_metadata(game_name: str, topic: str) -> dict:
     """
     Generoi pelille otsikon ja aiheen OpenAI:n avulla.
     Aihe valitaan Suomen opetussuunnitelman mukaisista oppiaineista.
+
+    Args:
+        game_name (str): Pelin nimi tai tyyppi (esim. 'Quiz').
+        topic (str): Pelin aihe tai kuvaus.
+
+    Returns:
+        dict: Sanakirja, joka sisältää generoidun otsikon ('title')
+              ja oppiaineen ('subject').
     """
     
     # Suomen opetussuunnitelman mukaiset oppiaineet
@@ -247,7 +223,17 @@ Palauta täsmälleen tässä muodossa:
 # --- Main Dashboard ---
 @login_required(login_url='kirjaudu')
 def dashboard_view(request):
-    """Renders the correct dashboard based on user role."""
+    """
+    Renderöi oikeanlaisen hallintapaneelin käyttäjän roolin mukaan.
+    Opettajille näytetään heidän materiaalit ja tehtävänannot.
+    Oppilaille näytetään heidän tehtäviensä tilanne.
+
+    Args:
+        request: HTTP-pyyntö.
+
+    Returns:
+        HttpResponse: Renderöity hallintapaneelin sivu.
+    """
     user = request.user
 
     if user.role == 'TEACHER':
@@ -296,6 +282,16 @@ def dashboard_view(request):
 
 @login_required(login_url='kirjaudu')
 def student_assignments_view(request):
+    """
+    Näyttää oppilaalle kaikki hänelle jaetut tehtävät (pl. suoritetut pelit).
+    Mahdollisuus suodattaa tehtäviä statuksen ja oppiaineen mukaan.
+
+    Args:
+        request: HTTP-pyyntö.
+
+    Returns:
+        HttpResponse: Renderöity oppilaan tehtävälistaussivu.
+    """
     user = request.user
     if user.role != 'STUDENT':
         return redirect('dashboard')
@@ -334,10 +330,16 @@ def student_assignments_view(request):
 @login_required(login_url='kirjaudu')
 def student_grades_view(request):
     """
-    Oppilaan palautukset & arvioinnit:
-    - Näytetään SUBMITTED ja GRADED
-    - Haku materiaalin nimellä/opettajan nimellä
-    - Sivutus
+    Oppilaan palautukset ja arvioinnit:
+    - Näyttää SUBMITTED ja GRADED -tilassa olevat tehtävät.
+    - Haku materiaalin nimellä tai opettajan nimellä.
+    - Sivutus.
+
+    Args:
+        request: HTTP-pyyntö.
+
+    Returns:
+        HttpResponse: Renderöity oppilaan arvosanasivu.
     """
     if request.user.role != 'STUDENT':
         return redirect('dashboard')
@@ -374,17 +376,17 @@ def student_grades_view(request):
 def student_games_view(request):
     """
     Oppilaan pelisivu - näyttää kaikki pelit (myös suoritetut).
-    
+
     Toiminnot:
-    - Hakee kaikki oppilaan pelit (material_type='peli')
-    - Aihesuodatus (subject)
-    - Jakaa pelit kolmeen kategoriaan: uudet, keskeneräiset, suoritetut
-    
+    - Hakee kaikki oppilaan pelit (material_type='peli').
+    - Aihesuodatus (subject).
+    - Jakaa pelit kolmeen kategoriaan: uudet, keskeneräiset, suoritetut.
+
     Args:
-        request: HTTP-pyyntö
-    
+        request: HTTP-pyyntö.
+
     Returns:
-        Renderöity 'student/games.html' template
+        HttpResponse: Renderöity 'student/games.html' -template.
     """
     if request.user.role != 'STUDENT':
         return redirect('dashboard')
@@ -420,7 +422,16 @@ def student_games_view(request):
 
 @login_required(login_url='kirjaudu')
 def material_list_view(request):
-    """Lists all materials created by the teacher, with subject filtering."""
+    """
+    Listaa kaikki opettajan luomat materiaalit, mahdollistaa
+    suodatuksen oppiaineen mukaan.
+
+    Args:
+        request: HTTP-pyyntö.
+
+    Returns:
+        HttpResponse: Renderöity materiaalien listaussivu.
+    """
     if request.user.role != 'TEACHER':
         messages.error(request, "Vain opettajat voivat nähdä tämän sivun.")
         return redirect('dashboard')
@@ -449,7 +460,17 @@ def material_list_view(request):
 
 @login_required(login_url='kirjaudu')
 def create_material_view(request):
-    """Manual material creation + AI helper + Game generation."""
+    """
+    Manuaalinen materiaalin luonti, tekoälyavustin ja pelin generointi.
+    Opettaja voi luoda uuden materiaalin käsin, käyttää tekoälyä sisällön
+    generointiin tai luoda tekoälyn avulla pelin.
+
+    Args:
+        request: HTTP-pyyntö.
+
+    Returns:
+        HttpResponse: Renderöity materiaalin luontisivu.
+    """
     if request.user.role != 'TEACHER':
         return redirect('dashboard')
 
@@ -516,6 +537,17 @@ def create_material_view(request):
 @require_POST
 @login_required
 def generate_game_ajax_view(request):
+    """
+    AJAX-näkymä pelisisällön ja metadatan generointiin tekoälyllä.
+    Vain opettajat voivat käyttää tätä.
+
+    Args:
+        request: HTTP-pyyntö, sisältää aiheen, pelityypin ja vaikeustason.
+
+    Returns:
+        JsonResponse: Sisältää generoidun pelidatan ja metadatan
+                      tai virheilmoituksen.
+    """
     if not hasattr(request.user, "role") or request.user.role != "TEACHER":
         return JsonResponse({'error': 'Vain opettajat voivat luoda pelejä.'}, status=403)
     
@@ -547,6 +579,19 @@ def generate_game_ajax_view(request):
 @require_POST
 @login_required
 def complete_game_ajax_view(request, assignment_id):
+    """
+    AJAX-näkymä pelin suorituksen tilan tallentamiseen ja pisteytykseen.
+    Käyttäjältä odotetaan pelin pistemäärää. Tehtävän status päivitetään
+    ja uusi palautus luodaan tai olemassa olevaa päivitetään.
+
+    Args:
+        request: HTTP-pyyntö, sisältää pelin pistemäärän.
+        assignment_id (uuid.UUID): Suoritetun tehtävän ID.
+
+    Returns:
+        JsonResponse: Sisältää suorituksen tilan, pistemäärän ja
+                      tiedon onnistumisesta.
+    """
     assignment = get_object_or_404(Assignment, id=assignment_id, student=request.user)
 
     # Määritä pelityyppi
@@ -655,7 +700,19 @@ def complete_game_ajax_view(request, assignment_id):
 # --- Assignments ---
 @login_required(login_url='kirjaudu')
 def assign_material_view(request, material_id):
-    """Assign material to students."""
+    """
+    Jakaa materiaalin opiskelijoille.
+    HUOM: Tämä funktio on kaksoiskappale alempana olevan kanssa.
+          Tätä voi siistiä ja yhdistää myöhemmin.
+
+    Args:
+        request: HTTP-pyyntö.
+        material_id (uuid.UUID): Jaettavan materiaalin ID.
+
+    Returns:
+        HttpResponse: Renderöity tehtävänantosivu tai ohjaus
+                      hallintapaneeliin.
+    """
     material = get_object_or_404(Material, id=material_id)
     if material.author != request.user:
         return redirect('dashboard')
@@ -686,8 +743,17 @@ def assign_material_view(request, material_id):
 @login_required(login_url='kirjaudu')
 def assignment_detail_view(request, assignment_id):
     """
-    Oppilas: katso tehtävä, tallenna luonnos, tai lähetä lopullinen vastaus.
-    HUOM: OHJAA PELIT UUTEEN PELINÄKYMÄÄN.
+    Oppilaan näkymä yksittäiselle tehtävälle. Mahdollistaa tehtävän
+    sisällön katselun, luonnoksen tallentamisen ja lopullisen
+    vastauksen lähettämisen. Ohjaa pelit erilliselle pelinäkymälle.
+
+    Args:
+        request: HTTP-pyyntö.
+        assignment_id (uuid.UUID): Tehtävän ID.
+
+    Returns:
+        HttpResponse: Renderöity tehtävän yksityiskohtien sivu
+                      tai ohjaus pelinäkymään.
     """
     assignment = get_object_or_404(
         Assignment.objects.select_related('material', 'student', 'assigned_by'),
@@ -764,6 +830,19 @@ def assignment_detail_view(request, assignment_id):
 
 @login_required(login_url='kirjaudu')
 def play_game_view(request, assignment_id):
+    """
+    Käsittelee pelitehtävän pelaamisen ja vastausten lähettämisen.
+
+    Vaatii käyttäjän olevan kirjautuneena sisään.
+    Varmistaa, että tehtävä kuuluu kirjautuneelle käyttäjälle ja että materiaali on tyypiltään 'peli'.
+
+    Args:
+        request: HttpRequest-objekti.
+        assignment_id: Pelattavan Assignment-objektin ID.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu pelin pelaamiseksi tai ohjaus toiselle sivulle.
+    """
     assignment = get_object_or_404(Assignment, id=assignment_id)
 
     # Varmistetaan, että vain oikea oppilas pääsee pelaamaan
@@ -783,7 +862,7 @@ def play_game_view(request, assignment_id):
     }
     return render(request, 'assignments/play_game.html', context)
 
-    # Muokkaustila
+'''    # Muokkaustila -> Kommentoitu ulos, koska koodia ei koskaan suoriteta
     if request.method == 'POST':
         form = SubmissionForm(request.POST)
 
@@ -826,14 +905,27 @@ def play_game_view(request, assignment_id):
         'now': timezone.now(),
         'ai_grade': None,
         'content_html': content_html,   # <-- tärkeä lisä
-    })
+    }) '''
 
 @login_required(login_url='kirjaudu')
 @require_POST
 def assignment_autosave_view(request, assignment_id):
     """
-    Tallentaa luonnoksen taustalla (AJAX). Palauttaa JSONin.
-    Käytä tätä fetch()-kutsulla assignments/detail.html -sivulla.
+    Tallentaa tehtävän luonnoksen taustalla (AJAX).
+
+    Palauttaa JSON-vastauksen, joka ilmaisee tallennuksen onnistumisen
+    ja tallennushetken.
+
+    Käytetään fetch()-kutsulla 'assignments/detail.html' -sivulla
+    tehtävän vastausluonnoksen automaattiseen tallennukseen.
+
+    Args:
+        request: HttpRequest-objekti.
+        assignment_id (int): Tehtävän yksilöivä ID.
+
+    Returns:
+        JsonResponse: JSON-objekti, joka sisältää 'ok' (bool) ja
+                      mahdollisesti 'error' (str) tai 'saved_at' (str).
     """
     assignment = get_object_or_404(Assignment, id=assignment_id)
 
@@ -860,7 +952,20 @@ def assignment_autosave_view(request, assignment_id):
 # --- Submissions & Grading ---
 @login_required(login_url='kirjaudu')
 def view_submissions(request, material_id):
-    """Opettaja: näytä kaikki opiskelijoiden palautukset tietylle materiaalille."""
+    """
+    Opettajakäyttäjä: Näyttää kaikki opiskelijoiden palautukset tietylle materiaalille.
+
+    Tarkistaa käyttäjän roolin ja materiaalikohtaiset oikeudet.
+    Hakee kaikki lähetetyt tai arvioidut tehtävät kyseiselle materiaalille.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Materiaalin yksilöivä ID.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu, joka näyttää tehtäväpalautukset,
+                      tai uudelleenohjaus 'dashboard'-sivulle, jos oikeudet puuttuvat.
+    """
     material = get_object_or_404(Material, id=material_id)
     if request.user.role != "TEACHER" or material.author_id != request.user.id:
         messages.error(request, "Sinulla ei ole oikeuksia tarkastella tätä sivua.")
@@ -882,8 +987,17 @@ def view_submissions(request, material_id):
 
 def _calculate_grade_from_score(score, max_score):
     """
-    Muuntaa pistemäärän arvosanaksi (4-10) prosenttiosuuden perusteella.
-    HUOM: Voit muokata prosenttiosuusrajoja tarpeidesi mukaan!
+    Muuntaa annetun pistemäärän arvosanaksi (4-10) prosenttiosuuden perusteella.
+
+    HUOM: Arvosanarajojen prosenttiosuuksia voi muokata tarpeen mukaan.
+
+    Args:
+        score (int | float): Opiskelijan saama pistemäärä.
+        max_score (int | float): Tehtävän maksimipistemäärä.
+
+    Returns:
+        int | None: Lasketun arvosanan (kokonaisluku 4-10) tai None,
+                    jos syöte on virheellinen tai maksimipisteet ovat nolla.
     """
     # Ensure the values are numbers and avoid division by zero
     try:
@@ -915,7 +1029,20 @@ def _calculate_grade_from_score(score, max_score):
 @login_required(login_url='kirjaudu')
 @transaction.atomic
 def grade_submission_view(request, submission_id):
-    """Opettaja: arvioi yksittäinen opiskelijan palautus."""
+    """
+    Käsittelee tehtävän palautuksen arvioinnin ja plagioinnin tarkistuksen.
+
+    Mahdollistaa opettajalle arvosanan antamisen ja tallentamisen,
+    sekä alkuperäisyysraportin luomisen tai päivittämisen pyynnöstä.
+
+    Args:
+        request: HttpRequest-objekti.
+        submission_id (int): Arvioitavan palautuksen (Submission) ID.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu arviointilomakkeineen ja raportteineen,
+                      tai uudelleenohjaus onnistuneen tallennuksen jälkeen.
+    """
     submission = get_object_or_404(
         Submission.objects.select_related('assignment__student', 'assignment__material'),
         id=submission_id
@@ -959,7 +1086,6 @@ def grade_submission_view(request, submission_id):
             lines.append(gen_feedback)
         submission.feedback = "\n".join(lines).strip()
 
-        # --- ADDED PART ---
         # Calculate and set the grade using the new helper function
         calculated_grade = _calculate_grade_from_score(submission.score, submission.max_score)
         if calculated_grade is not None:
@@ -1022,6 +1148,22 @@ def grade_submission_view(request, submission_id):
 
 @login_required(login_url='kirjaudu')
 def view_all_submissions_view(request):
+    """
+    Opettajakäyttäjä: Näyttää listan kaikista opettajan luomien materiaalien
+    perusteella luoduista tehtäväpalautuksista.
+
+    Mahdollistaa palautusten suodattamisen tilan (lähetetty/arvioitu) ja
+    hakusanan perusteella. Erottaa "normaalit" tehtävät ja "pelitehtävät"
+    eri listoihin.
+
+    Args:
+        request: HttpRequest-objekti.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu, joka näyttää tehtäväpalautukset,
+                      tai uudelleenohjaus 'dashboard'-sivulle, jos käyttäjällä
+                      ei ole opettajan roolia.
+    """
     if request.user.role != 'TEACHER':
         messages.error(request, "Vain opettajat voivat nähdä tämän sivun.")
         return redirect('dashboard')
@@ -1065,6 +1207,21 @@ def view_all_submissions_view(request):
 # --- Deletion ---
 @login_required(login_url='kirjaudu')
 def delete_material_view(request, material_id):
+    """
+    Poistaa opettajan luoman materiaalin.
+
+    Varmistaa, että materiaali kuuluu pyynnön tehneelle opettajalle.
+    Hyväksyy vain POST-pyynnöt.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Poistettavan materiaalin yksilöivä ID.
+
+    Returns:
+        HttpResponse: Uudelleenohjaus 'dashboard'-sivulle onnistuneen
+                      poiston jälkeen, tai virhesivu jos HTTP-metodi
+                      ei ole POST.
+    """
     material = get_object_or_404(Material, id=material_id, author=request.user)
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -1076,6 +1233,21 @@ def delete_material_view(request, material_id):
 
 @login_required(login_url='kirjaudu')
 def delete_assignment_view(request, assignment_id):
+    """
+    Poistaa opettajan luoman tehtävänannon.
+
+    Varmistaa, että tehtävänanto kuuluu pyynnön tehneelle opettajalle.
+    Hyväksyy vain POST-pyynnöt.
+
+    Args:
+        request: HttpRequest-objekti.
+        assignment_id (int): Poistettavan tehtävänannon yksilöivä ID.
+
+    Returns:
+        HttpResponse: Uudelleenohjaus 'dashboard'-sivulle onnistuneen
+                      poiston jälkeen, tai virhesivu jos HTTP-metodi
+                      ei ole POST.
+    """
     assignment = get_object_or_404(Assignment, id=assignment_id, assigned_by=request.user)
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -1085,6 +1257,22 @@ def delete_assignment_view(request, assignment_id):
 
 @login_required(login_url='kirjaudu')
 def export_submissions_csv_view(request):
+    """
+    Opettajakäyttäjä: Luo ja palauttaa CSV-tiedoston, joka sisältää
+    opettajan luomien tehtävien palautustiedot.
+
+    Mahdollistaa palautusten suodattamisen tilan ja hakusanan perusteella.
+    CSV-tiedosto sisältää tietoja opiskelijasta, materiaalista, tilasta,
+    pisteistä, arvosanasta ja palautteesta.
+
+    Args:
+        request: HttpRequest-objekti.
+
+    Returns:
+        HttpResponse: CSV-tiedosto HTTP-vastauksena tai uudelleenohjaus
+                      'dashboard'-sivulle, jos käyttäjällä ei ole
+                      opettajan roolia.
+    """
     if request.user.role != 'TEACHER':
         messages.error(request, "Vain opettajat voivat viedä palautuksia.")
         return redirect('dashboard')
@@ -1156,6 +1344,22 @@ def export_submissions_csv_view(request):
 
 @login_required
 def add_material_image_view(request, material_id):
+    """
+    Käsittelee kuvan lisäämisen materiaaliin joko lataamalla tiedoston
+    tai generoimalla kuvan tekoälyllä.
+
+    Kuva lisätään materiaalin sisältöön Markdown-muodossa ja
+    tallennetaan MaterialImage-objektina.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Materiaalin yksilöivä ID, johon kuva lisätään.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu kuvanlisäyslomakkeella tai
+                      uudelleenohjaus onnistuneen lisäyksen jälkeen.
+                      Uudelleenohjaa myös, jos käyttäjällä ei ole oikeuksia.
+    """
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
         messages.error(request, "Ei oikeutta.")
@@ -1214,6 +1418,22 @@ def add_material_image_view(request, material_id):
 
 @login_required
 def edit_material_view(request, material_id):
+    """
+    Käsittelee opettajan luoman materiaalin muokkaamisen.
+
+    Varmistaa, että käyttäjällä on opettajan rooli ja että hän on
+    materiaalin tekijä. Näyttää lomakkeen materiaalin tietojen muokkaamiseen
+    ja tallentaa muutokset tietokantaan.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Muokattavan materiaalin yksilöivä ID.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu muokkauslomakkeella tai
+                      uudelleenohjaus onnistuneen tallennuksen jälkeen
+                      tai jos käyttäjällä ei ole oikeuksia.
+    """
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
         messages.error(request, "Ei oikeutta.")
@@ -1232,6 +1452,20 @@ def edit_material_view(request, material_id):
 
 @login_required
 def unassign_view(request, assignment_id):
+    """
+    Poistaa tietyn tehtävänannon (Assignment) opiskelijalta.
+
+    Varmistaa, että käyttäjä on opettaja ja on luonut kyseisen tehtävänannon.
+    Tämä toiminto poistaa koko Assignment-objektin tietokannasta.
+
+    Args:
+        request: HttpRequest-objekti.
+        assignment_id (int): Poistettavan tehtävänannon yksilöivä ID.
+
+    Returns:
+        HttpResponse: Uudelleenohjaus 'view_submissions'-sivulle onnistuneen
+                      poiston jälkeen, tai jos käyttäjällä ei ole oikeuksia.
+    """
     a = get_object_or_404(Assignment, pk=assignment_id)
     if request.user.role != "TEACHER" or a.assigned_by_id != request.user.id:
         messages.error(request, "Ei oikeutta.")
@@ -1242,6 +1476,22 @@ def unassign_view(request, assignment_id):
 
 @login_required
 def assign_material_view(request, material_id):
+    """
+    Käsittelee materiaalin jakamisen opiskelijoille tai luokille.
+
+    Varmistaa, että käyttäjä on opettaja ja materiaalin tekijä.
+    Käyttäjä voi valita yksittäisiä opiskelijoita tai kokonaisen luokan.
+    Luo uusia Assignment-objekteja tai päivittää olemassa olevia.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Materiaalin yksilöivä ID, joka jaetaan.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu jakamislomakkeella tai
+                      uudelleenohjaus onnistuneen jakamisen jälkeen
+                      tai jos käyttäjällä ei ole oikeuksia.
+    """
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
         messages.error(request, "Ei oikeutta.")
@@ -1279,7 +1529,23 @@ def assign_material_view(request, material_id):
 
 @login_required
 def unassign_assignment(request, assignment_id):  # assignment_id on UUID, koska urls käyttää <uuid:...>
-    # sallitaan vain opettajille
+    """
+    Poistaa yksittäisen tehtävänannon opiskelijalta.
+
+    Varmistaa, että pyynnön tekijä on opettaja ja että hänellä on oikeus
+    poistaa kyseinen tehtävänanto (oletus: opettajan itse antama).
+    Hyväksyy vain POST-pyynnöt poistotoiminnolle.
+
+    Args:
+        request: HttpRequest-objekti.
+        assignment_id (uuid.UUID): Poistettavan tehtävänannon UUID.
+
+    Returns:
+        HttpResponse: Uudelleenohjaus 'dashboard'-sivulle onnistuneen
+                      poiston jälkeen, tai jos käyttäjällä ei ole oikeuksia
+                      tai HTTP-metodi ei ole POST. Palauttaa HttpResponseForbidden,
+                      jos käyttäjällä ei ole opettajan roolia.
+    """
     if not hasattr(request.user, "role") or request.user.role != "TEACHER":
         return HttpResponseForbidden("Vain opettaja voi poistaa tehtävänannon.")
 
@@ -1297,6 +1563,20 @@ def unassign_assignment(request, assignment_id):  # assignment_id on UUID, koska
 
 @require_POST
 def generate_image_view(request):
+    """
+    Generoi kuvan tekoälyllä annetun promptin perusteella ja tallentaa sen.
+
+    Hyväksyy vain POST-pyynnöt. Ottaa vastaan JSON- tai form-dataa.
+    Palauttaa generoidun kuvan URL-osoitteen.
+
+    Args:
+        request: HttpRequest-objekti, sisältäen "prompt"-parametrin.
+
+    Returns:
+        JsonResponse: JSON-objekti, joka sisältää "image_url"-kentän
+                      onnistuneen generoinnin jälkeen (HTTP 201), tai
+                      "error"-kentän virheen sattuessa (HTTP 400, 502).
+    """
     if request.content_type and "application/json" in request.content_type:
         try:
             payload = json.loads((request.body or b"").decode("utf-8") or "{}")
@@ -1330,6 +1610,20 @@ def generate_image_view(request):
     return JsonResponse({"image_url": image_url}, status=201)
 
 def material_detail_view(request, material_id):
+    """
+    Näyttää yksittäisen materiaalin yksityiskohdat.
+
+    Hakee materiaalin ID:n perusteella, renderöi sen sisällön HTML:ksi
+    ja välittää tiedot mallipohjalle.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Näytettävän materiaalin yksilöivä ID.
+
+    Returns:
+        HttpResponse: Renderöity HTML-sivu, joka näyttää materiaalin tiedot
+                      ja renderöidyn sisällön.
+    """
     material = get_object_or_404(Material, pk=material_id)
 
     rendered_content = render_material_content_to_html(material.content)
@@ -1338,9 +1632,27 @@ def material_detail_view(request, material_id):
         "material": material,
         "rendered_content": rendered_content,
     })
+
+
 @login_required
 @require_POST
 def delete_material_image_view(request, image_id):
+    """
+    Poistaa materiaaliin liitetyn kuvan.
+
+    Varmistaa, että käyttäjä on opettaja ja materiaalin tekijä.
+    Hyväksyy vain POST-pyynnöt poistotoiminnolle.
+    Kuvan tiedosto poistetaan levyltä Django-signaalin avulla.
+
+    Args:
+        request: HttpRequest-objekti.
+        image_id (int): Poistettavan MaterialImage-objektin yksilöivä ID.
+
+    Returns:
+        HttpResponse: Uudelleenohjaus 'material_detail'-sivulle onnistuneen
+                      poiston jälkeen, tai HttpResponseForbidden, jos käyttäjällä
+                      ei ole oikeuksia.
+    """
     img = get_object_or_404(MaterialImage.objects.select_related("material"), pk=image_id)
 
     # vain materiaalin tekijä/opettaja saa poistaa
@@ -1355,7 +1667,23 @@ def delete_material_image_view(request, image_id):
 @require_POST
 @login_required(login_url='kirjaudu')
 def material_image_insert_view(request, material_id, image_id):
-    """Lisää valitun galleria-kuvan markdown-tagina materiaalin contentiin."""
+    """
+    Lisää valitun galleriakuvan Markdown-tagina materiaalin sisältökenttään.
+
+    Kuvan koko ja sijainti sisällössä määräytyvät POST-datasta.
+    Varmistaa, että käyttäjä on opettaja ja materiaalin tekijä.
+    Hyväksyy vain POST-pyynnöt.
+
+    Args:
+        request: HttpRequest-objekti.
+        material_id (int): Materiaalin yksilöivä ID, johon kuva lisätään.
+        image_id (int): Lisättävän MaterialImage-objektin yksilöivä ID.
+
+    Returns:
+        HttpResponse: Uudelleenohjaus 'material_detail'-sivulle onnistuneen
+                      lisäyksen jälkeen, tai jos käyttäjällä ei ole oikeuksia.
+    """
+   
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
         messages.error(request, "Ei oikeutta muokata tämän materiaalin sisältöä.")
@@ -1383,6 +1711,10 @@ def material_image_insert_view(request, material_id, image_id):
 
 @require_POST
 def generate_image_view(request):
+    """
+    Generoi kuvan tekoälyllä annetun promptin perusteella, muokkaa sen
+    haluttuun kokoon ja tallentaa sen.
+    """
     # 1) Payload
     if request.content_type and "application/json" in request.content_type:
         try:
@@ -1512,6 +1844,14 @@ def render_material_content_to_html(text: str) -> str:
 
 @login_required
 def teacher_student_list_view(request):
+    """
+    Käsittelee opiskelijatietojen näyttämistä ja päivittämistä opettajille.
+
+    Varmistaa, että vain 'TEACHER'-roolissa olevat käyttäjät voivat
+    käyttää tätä näkymää. Mahdollistaa opettajille opiskelijoiden
+    luokkatiedon (grade_class) päivittämisen.
+    """
+
     if request.user.role != 'TEACHER':
         messages.error(request, "Vain opettajat voivat hallita opiskelijoita.")
         return redirect('dashboard')
@@ -1544,6 +1884,10 @@ def teacher_student_list_view(request):
 def assignment_tts_view(request, assignment_id):
     """
     Generoi äänitiedoston tehtävänannon sisällöstä (ilman kuvatekstejä) ja palauttaa sen.
+
+    Vaatii käyttäjän kirjautumisen ja POST-pyynnön.
+    Tarkistaa, että käyttäjä on tehtävän omistaja.
+    Poistaa Markdown-kuvat tehtävän sisällöstä ennen äänitiedoston luontia.
     """
     assignment = get_object_or_404(Assignment, id=assignment_id)
 
@@ -1570,13 +1914,18 @@ def assignment_tts_view(request, assignment_id):
     else:
         return JsonResponse({"Virhe": "Äänitiedoston luonti epäonnistui."}, status=500)
     
-    #JSON Chunks lataus tekoälylle
+#JSON Chunks lataus tekoälylle
 @require_GET
 def ops_facets(request):
     return JsonResponse(get_facets())
 
 @require_GET
 def ops_search(request):
+    """
+    Palauttaa JSON-muodossa saatavilla olevat fasettitiedot (esim. aiheet, luokka-asteet).
+
+    Vaatii GET-pyynnön.
+    """
     q = request.GET.get("q", "")
     try:
         k = int(request.GET.get("k", "8") or 8)

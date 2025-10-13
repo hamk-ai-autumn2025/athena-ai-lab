@@ -1,19 +1,29 @@
 # materials/models.py
 import uuid
-from django.db import models
-from django.conf import settings
-from django.utils.translation import gettext_lazy as _
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.contrib.auth.models import AbstractUser
-
-# ↓ lisää nämä importit jos eivät jo ole
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
-from imagekit.models import ImageSpecField
-from imagekit.processors import ResizeToFill
 import re
 
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+from django.utils.translation import gettext_lazy as _
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFill
+
+
 class Prompt(models.Model):
+    """
+    Malli tekoälylle annettujen kehotteiden (prompt) tallentamiseen.
+
+    Kentät:
+        id (UUIDField): Yksilöllinen tunniste kehotteelle.
+        text (TextField): Tekoälylle annettu varsinainen kehoiteteksti.
+        model (CharField): Käytetyn tekoälymallin nimi/tunnus.
+        teacher (ForeignKey): Viittaus opettajaan, joka kehotteen loi.
+        created_at (DateTimeField): Kehotteen luontiaika.
+    """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     text = models.TextField(verbose_name=_("Kehoite"))
     model = models.CharField(max_length=100, verbose_name=_("Mallin tunnus"))
@@ -26,15 +36,30 @@ class Prompt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Luotu"))
 
     class Meta:
+        """
+        Metatiedot Prompt-mallille.
+        """
         verbose_name = _("Kehoite")
         verbose_name_plural = _("Kehoitteet")
 
     def __str__(self):
+        """
+        Palauttaa kehotteen luettavan esitysmuodon.
+        """
         return f"Prompt by {self.teacher.username} at {self.created_at.strftime('%Y-%m-%d')}"
 
 
 class Material(models.Model):
+    """
+    Malli opetusmateriaaleille ja tehtäville.
+
+    Sisältää tiedot materiaalin otsikosta, sisällöstä, tyypistä, aiheesta,
+    kohderyhmästä, tekijästä, tilaista ja versiosta.
+    Mahdollistaa myös jäsennellyn sisällön tallentamisen JSON-muodossa.
+    """
+
     class MaterialType(models.TextChoices):
+        """Materiaalin tyyppiä kuvaavat valinnat."""
         TASK = 'tehtävä', _('Tehtävä')
         LEARNING_MATERIAL = 'oppimateriaali', _('Oppimateriaali')
         TEST = 'testi', _('Testi')
@@ -43,6 +68,7 @@ class Material(models.Model):
         GAME = 'peli', _('Peli')
 
     class Status(models.TextChoices):
+        """Materiaalin tilaa kuvaavat valinnat."""
         DRAFT = 'DRAFT', _('Luonnos')
         PENDING_APPROVAL = 'PENDING', _('Odottaa hyväksyntää')
         APPROVED = 'APPROVED', _('Hyväksytty')
@@ -116,10 +142,16 @@ class Material(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Päivitetty"))
 
     class Meta:
+        """
+        Metatiedot Material-mallille.
+        """
         verbose_name = _("Materiaali")
         verbose_name_plural = _("Materiaalit")
 
     def __str__(self):
+        """
+        Palauttaa materiaalin luettavan esitysmuodon.
+        """
         return f"{self.title} (v{self.version})"
     
     def save(self, *args, **kwargs):
@@ -145,11 +177,17 @@ def content_without_images(self):
             return ""
         # Poistetaan Markdown-kuvat ja ylimääräiset rivinvaihdot
             no_images = re.sub(r'!\[[^\]]*\]\([^\)]+\)', '', self.content)
-    # Poistetaan peräkkäiset tyhjät rivit ja palautetaan siistitty teksti
+        # Poistetaan peräkkäiset tyhjät rivit ja palautetaan siistitty teksti
             cleaned_text = re.sub(r'\n\s*\n', '\n', no_images).strip()
             return cleaned_text
 
 class MaterialRevision(models.Model):
+    """
+    Malli opetusmateriaalien versiohistorialle.
+
+    Tallentaa tiedot materiaalin jokaisesta versiosta, mukaan lukien
+    muokkaaja, huomautukset ja mahdolliset muutokset (diff).
+    """
     material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='revisions', verbose_name=_("Materiaali"))
     version = models.IntegerField(verbose_name=_("Versio"))
     editor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name=_("Muokkaaja"))
@@ -158,12 +196,21 @@ class MaterialRevision(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Luotu"))
 
     class Meta:
+        """
+        Metatiedot MaterialRevision-mallille.
+        """
         ordering = ['-created_at']
         verbose_name = _("Materiaaliversio")
         verbose_name_plural = _("Materiaaliversiot")
 
 
 class Assignment(models.Model):
+    """
+    Malli tehtävänannoille, joilla materiaali jaetaan oppilaalle.
+
+    Yhdistää materiaalin, oppilaan ja opettajan sekä sisältää tiedot
+    määräajasta ja tehtävän tilasta.
+    """
     class Status(models.TextChoices):
         ASSIGNED = "ASSIGNED", _("Annettu")
         IN_PROGRESS = "IN_PROGRESS", _("Kesken")
@@ -193,6 +240,10 @@ class Assignment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Luotu"))
 
     class Meta:
+        """
+        Metatiedot Assignment-mallille.
+        Määrittää uniikin rajoitteen ja indeksejä tehokkuuden parantamiseksi.
+        """
         constraints = [
             models.UniqueConstraint(fields=['material', 'student'], name='unique_assignment_per_student'),
         ]
@@ -206,11 +257,21 @@ class Assignment(models.Model):
         verbose_name_plural = _("Tehtävänannot")
 
     def __str__(self):
+        """
+        Palauttaa tehtävänannon luettavan esitysmuodon.
+        """
         return f"'{self.material.title}' for {self.student.username}"
 
 
 class Submission(models.Model):
+    """
+    Malli oppilaiden palautuksille tehtävänantoihin.
+
+    Sisältää oppilaan vastauksen, tilan ja opettajan antaman arvioinnin
+    (arvosana, pisteet, palaute).
+    """
     class Status(models.TextChoices):
+        """Palautuksen tilaa kuvaavat valinnat."""
         IN_PROGRESS = 'IN_PROGRESS', _('Kesken')
         SUBMITTED = 'SUBMITTED', _('Palautettu')
 
@@ -261,14 +322,26 @@ class Submission(models.Model):
     graded_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Arvioitu"))
 
     class Meta:
+        """
+        Metatiedot Submission-mallille.
+        """
         verbose_name = _("Palautus")
         verbose_name_plural = _("Palautukset")
 
     def __str__(self):
+        """
+        Palauttaa palautuksen luettavan esitysmuodon.
+        """
         return f"{self.student} → {self.assignment} ({self.get_status_display()})"
 
 
 class PlagiarismReport(models.Model):
+    """
+    Malli plagiointiraporteille, jotka liittyvät opiskelijoiden palautuksiin.
+
+    Tallentaa plagiointiriskin pistemäärän ja mahdolliset korostukset.
+    """
+
     submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name="plagiarism_report", verbose_name=_("Palautus"))
     suspected_source = models.ForeignKey(
         Submission,
@@ -291,11 +364,19 @@ class PlagiarismReport(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Luotu"))
 
     class Meta:
+        """
+        Metatiedot PlagiarismReport-mallille.
+        """
         verbose_name = _("Alkuperäisyysraportti")
         verbose_name_plural = _("Alkuperäisyysraportit")
 
 
 class Rubric(models.Model):
+    """
+    Malli arviointikriteeristöille, jotka liitetään materiaaleihin.
+
+    Sisältää otsikon, luojan ja luontiajan.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='rubrics', verbose_name=_("Materiaali"))
     title = models.CharField(max_length=200, default=_("Oletuskriteeristö"), verbose_name=_("Otsikko"))
@@ -303,14 +384,25 @@ class Rubric(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Luotu"))
 
     class Meta:
+        """
+        Metatiedot Rubric-mallille.
+        """
         verbose_name = _("Arviointikriteeristö")
         verbose_name_plural = _("Arviointikriteeristöt")
 
     def __str__(self):
+        """
+        Palauttaa rubriikin luettavan esitysmuodon.
+        """
         return self.title
 
 
 class RubricCriterion(models.Model):
+    """
+    Malli yksittäisille arviointikriteereille, jotka kuuluvat rubriikkeihin.
+
+    Sisältää kriteerin nimen, maksimipisteet, ohjeistuksen ja järjestyksen.
+    """
     rubric = models.ForeignKey(Rubric, on_delete=models.CASCADE, related_name='criteria', verbose_name=_("Kriteeristö"))
     name = models.CharField(max_length=200, verbose_name=_("Kriteeri"))
     max_points = models.PositiveIntegerField(default=5, verbose_name=_("Maksimipisteet"))
@@ -318,15 +410,27 @@ class RubricCriterion(models.Model):
     order = models.PositiveSmallIntegerField(default=0, verbose_name=_("Järjestys"))
 
     class Meta:
+        """
+        Metatiedot RubricCriterion-mallille.
+        """
         verbose_name = _("Arviointikriteeri")
         verbose_name_plural = _("Arviointikriteerit")
         ordering = ["order", "id"]
 
     def __str__(self):
+        """
+        Palauttaa kriteerin luettavan esitysmuodon.
+        """
         return f"{self.name} ({self.max_points}p)"
 
 
 class AIGrade(models.Model):
+    """
+    Malli tekoälyn antamille arvosanoille opiskelijoiden palautuksista.
+
+    Sisältää tiedot käytetystä rubriikista, mallin nimestä, kokonaispisteistä
+    sekä opettajan vahvistuksen tilasta ja muistiinpanoista.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name='ai_grade', verbose_name=_("Palautus"))
     rubric = models.ForeignKey(Rubric, on_delete=models.SET_NULL, null=True, verbose_name=_("Kriteeristö"))
@@ -343,10 +447,19 @@ class AIGrade(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Luotu"))
 
     class Meta:
+        """
+        Metatiedot AIGrade-mallille.
+        """
         verbose_name = _("AI-arvio")
         verbose_name_plural = _("AI-arviot")
 
 class MaterialImage(models.Model):
+    """
+    Malli materiaaleihin liitetyille kuville.
+
+    Tallentaa kuvan tiedoston, kuvatekstin, luojan ja luontiajan.
+    Luo automaattisesti pienennetyn esikatselukuvan (thumbnail).
+    """
     material = models.ForeignKey("Material", related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="materials/%Y/%m/")
     caption = models.CharField(max_length=255, blank=True)
@@ -360,13 +473,21 @@ class MaterialImage(models.Model):
                                       format='JPEG',
                                       options={'quality': 85}) # Pakkaa JPEG-kuvaksi hyvällä laadulla
     def __str__(self):
+        """
+        Palauttaa kuvatekstin tai tiedostonimen, jos kuvatekstiä ei ole.
+        """
         return self.caption or self.image.name
 
-# ⬇ HUOM: tämä on luokan ULKOPUOLELLA
 @receiver(post_delete, sender=MaterialImage)
 def delete_image_file(sender, instance, **kwargs):
     """
-    Kun MaterialImage-tietue poistetaan, poista myös kuvatiedosto levystä.
+    Signal-vastaanottaja, joka poistaa MaterialImage-objektiin liittyvän
+    kuvatiedoston levyltä, kun tietue poistetaan tietokannasta.
+
+    Args:
+        sender: Signaalin lähettäjä (tässä MaterialImage-malli).
+        instance (MaterialImage): Poistettu MaterialImage-instanssi.
+        **kwargs: Muut signaaliargumentit.
     """
     if instance.image:
         instance.image.delete(save=False)

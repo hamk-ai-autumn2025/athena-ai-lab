@@ -15,15 +15,17 @@ SYSTEM_FIN = (
     "1) ...\n2) ...\n3) ...\n\n"
     "Luonnosteksti:\n- <Tähän varsinainen tehtävä tai tehtävät, jotka osoitetaan suoraan oppilaalle. Voit käyttää otsikointia, kuten 'Tehtävä 1:'.>"
 )
-''' Vanha SYSTEM_FIN = (
-    "Kirjoita opetusmateriaalia suomeksi. Palauta TÄSMÄLLEEN tämä muoto:\n"
-    "Otsikkoehdotus: <lyhyt otsikko>\n"
-    "Tavoitteet:\n"
-    "1) ...\n2) ...\n3) ...\n\n"
-    "Luonnosteksti:\n- <varsinainen sisältö, luettelona tai kappaleina>"
-)'''
 
 def _demo(prompt: str) -> str:
+    """
+    Palauttaa demoversion tekoälyvastauksesta, kun API-avainta ei ole saatavilla.
+
+    Args:
+        prompt (str): Käyttäjän alkuperäinen syöte.
+
+    Returns:
+        str: Demovastaus, joka esittää tekoälyn formaattia.
+    """
     p = (prompt or '').strip()[:300]
     return (
         "[DEMO] AI ei vielä käytössä (ei API-avainta).\n\n"
@@ -36,6 +38,19 @@ def _demo(prompt: str) -> str:
     )
 
 def ask_llm(prompt: str, *, user_id: int = 0) -> str:
+    """
+    Kysyy Large Language Modelilta (LLM) vastausta annettuun promptiin.
+    Käyttää OpenAI:n API:a. Jos API-avainta ei ole asetettu, palauttaa demovastauksen.
+    Sisältää varautumismekanismin, jos LLM ei noudata annettua vastausformaattia.
+
+    Args:
+        prompt (str): Kysymys tai ohjeistus LLM:lle.
+        user_id (int): Valinnainen käyttäjän ID, jota voidaan käyttää
+                       API-kutsujen seurantaan tai personointiin.
+
+    Returns:
+        str: LLM:n generoitu vastaus tai demovastaus virheen sattuessa.
+    """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return _demo(prompt)
@@ -65,9 +80,23 @@ def ask_llm(prompt: str, *, user_id: int = 0) -> str:
 
 def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
     """
-    DALL·E 2 (vain neliö: 256/512/1024). Palauttaa PNG-binaarit.
-    Jos OPENAI_API_KEY puuttuu → demokuva Pillowilla.
-    Huom: DALL·E 2 voi palauttaa joko b64_json TAI url → käsittele molemmat.
+    Generoi kuvan DALL·E 3 -tekoälymallilla ja palauttaa sen PNG-muotoisena
+    binaaridatana. Jos OpenAI API-avainta ei ole asetettu, palauttaa demokuvan.
+    Käsittelee DALL·E 3:n mahdollisia vastausmuotoja (base64 tai URL).
+
+    Args:
+        prompt (str): Kuvaus siitä, millainen kuva halutaan generoida.
+        size (str): Kuvan koko (esim. "256x256", "512x512", "1024x1024").
+                    DALL·E 2 tukee vain näitä neliökokoja. Testikäytön jälkeen vaihto Dall·E 3:een.
+                    Jätetään koodiin neliötuki, vaikka Dall·E 3 tukee muitakin kokoja.
+
+    Returns:
+        bytes: Generoitu kuva PNG-binaarimuodossa.
+
+    Raises:
+        ValueError: Jos annettu koko ei ole tuettu.
+        RuntimeError: Jos kuvan generoinnissa tapahtuu virhe tai
+                      API-vastaus on epäkelpo.
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -120,7 +149,14 @@ def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
 def generate_speech(text_to_speak: str) -> bytes | None:
     """
     Muuntaa annetun tekstin puheeksi käyttäen OpenAI:n TTS-rajapintaa.
-    Palauttaa äänidatan (MP3) bitteinä tai None, jos virhe tapahtuu.
+    Palauttaa äänidatan (MP3) bitteinä tai None, jos virhe tapahtuu
+    tai API-avainta ei ole asetettu.
+
+    Args:
+        text_to_speak (str): Teksti, joka muunnetaan puheeksi.
+
+    Returns:
+        bytes | None: Äänidata MP3-muodossa tai None virheen sattuessa.
     """
     api_key = os.environ.get("OPENAI_API_KEY") or getattr(settings, "OPENAI_API_KEY", None)
     if not api_key:
@@ -155,7 +191,16 @@ except Exception:
 
 def _build_prompt_with_context(question: str, context_block: str) -> str:
     """
-    Rakentaa käyttäjän promptin + OPS-kontekstin selkeämmäksi kokonaisuudeksi.
+    Rakentaa täydellisen promptin tekoälylle, yhdistäen käyttäjän kysymyksen
+    ja opetussuunnitelman (OPS) kontekstin. Ohjeistaa tekoälyä käyttämään
+    ainoastaan annettua OPS-kontekstia vastauksen perustana.
+
+    Args:
+        question (str): Käyttäjän alkuperäinen kysymys tai pyyntö.
+        context_block (str): Opetussuunnitelman sisältö, joka tarjoaa kontekstin.
+
+    Returns:
+        str: Valmis prompt-teksti tekoälylle.
     """
     return (
         "Olet opettajan tekoälyavustaja. Tehtäväsi on luoda opetusmateriaalia alla olevan pyynnön ja opetussuunnitelman (OPS) otteiden pohjalta.\n\n"
@@ -179,8 +224,24 @@ def ask_llm_with_ops(
     max_chars: int = 8000
 ) -> dict:
     """
-    Hakee OPS-chunkit ja syöttää ne LLM:lle.
-    Palauttaa: {'answer': <str>, 'used_chunks': <list>}
+    Kysyy Large Language Modelilta (LLM) vastausta, johon on integroitu
+    opetussuunnitelman (OPS) konteksti. Hakee OPS-chunkit annettujen kriteerien
+    perusteella ja muotoilee ne promptiin.
+
+    Args:
+        question (str): Käyttäjän kysymys tekoälylle.
+        ops_query (str): Valinnainen hakukysely OPS-chunkeille.
+        subjects (Optional[List[str]]): Valinnainen lista oppiaineista.
+        grades (Optional[List[str]]): Valinnainen lista luokka-asteista.
+        ctypes (Optional[List[str]]): Valinnainen lista sisältötyypeistä.
+        k (int): Kuinka monta OPS-chunkia haetaan.
+        user_id (int): Valinnainen käyttäjän ID API-kutsuille.
+        max_chars (int): Maksimimerkkimäärä promptille,
+                         jonka jälkeen konteksti katkaistaan.
+
+    Returns:
+        dict: Sanakirja, joka sisältää LLM:n vastauksen ('answer')
+              ja käytetyt OPS-chunkit ('used_chunks').
     """
     if not _HAS_OPS:
         return {"answer": ask_llm(question, user_id=user_id), "used_chunks": []}
@@ -208,8 +269,20 @@ def ask_llm_with_given_chunks(
     max_chars: int = 8000
 ) -> dict:
     """
-    Käytä tätä, jos UI on jo valinnut tietyt chunkit.
-    Palauttaa: {'answer': <str>, 'used_chunks': <list>}
+    Kysyy Large Language Modelilta (LLM) vastausta käyttäen ennalta annettuja
+    opetussuunnitelman (OPS) chunkeja kontekstina. Tämä funktio on tarkoitettu
+    tapauksiin, joissa chunkit on jo valittu ulkopuolisesti (esim. käyttöliittymästä).
+
+    Args:
+        question (str): Käyttäjän kysymys tekoälylle.
+        chunks (List[dict]): Lista OPS-chunkeista, jotka annetaan kontekstina.
+        user_id (int): Valinnainen käyttäjän ID API-kutsuille.
+        max_chars (int): Maksimimerkkimäärä promptille,
+                         jonka jälkeen konteksti katkaistaan.
+
+    Returns:
+        dict: Sanakirja, joka sisältää LLM:n vastauksen ('answer')
+              ja käytetyt OPS-chunkit ('used_chunks').
     """
     if not chunks:
         return {"answer": ask_llm(question, user_id=user_id), "used_chunks": []}
@@ -221,3 +294,5 @@ def ask_llm_with_given_chunks(
         prompt = prompt[:max_chars] + "\n\n[Katkaistu konteksti]"
 
     return {"answer": ask_llm(prompt, user_id=user_id), "used_chunks": chunks}
+
+
