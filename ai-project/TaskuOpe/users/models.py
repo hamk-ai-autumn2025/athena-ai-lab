@@ -1,14 +1,30 @@
+"""
+Määrittelee sovelluksen mukautetun käyttäjämallin.
+
+Tässä tiedostossa laajennetaan Djangon oletusarvoista User-mallia
+lisäämällä sille rooli- ja luokka-aste-kentät.
+"""
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class CustomUser(AbstractUser):
     """
-    Extends the default User model.
-    The AbstractUser model already includes fields like username,
-    email, password, first_name, last_name, etc.
+    Mukautettu käyttäjämalli, joka laajentaa Djangon AbstractUseria.
+
+    AbstractUser sisältää jo peruskäyttäjätiedot, kuten käyttäjätunnuksen,
+    sähköpostin, salasanan, etunimen, sukunimen jne. Tähän malliin
+    lisätään 'role' (rooli) ja 'grade_class' (luokka-aste) -kentät.
     """
     # We define choices for the user roles
     class Role(models.TextChoices):
+        """
+        Määrittelee käyttäjän roolivaihtoehdot.
+
+        TextChoices on kätevä tapa määritellä tekstipohjaisia valintoja,
+        jotka tarjoavat sekä tietokantaan tallennettavan arvon (esim. 'TEACHER')
+        että ihmiselle luettavan selitteen (esim. 'Teacher').
+        """
         TEACHER = 'TEACHER', 'Teacher'
         STUDENT = 'STUDENT', 'Student'
 
@@ -21,4 +37,10 @@ class CustomUser(AbstractUser):
         blank=True, # Ei pakollinen lomakkeissa
         choices=[(i, f"{i}. luokka") for i in range(1, 10)] # Valinnat 1-9
     )
+
+   # __str__-metodin lisääminen parantaa mallin esitystä Djangon hallintapaneelissa
+    # ja muissa paikoissa, joissa objekti muutetaan merkkijonoksi.
+    def __str__(self):
+        """Palauttaa käyttäjän käyttäjätunnuksen merkkijonoesityksenä."""
+        return self.username
    

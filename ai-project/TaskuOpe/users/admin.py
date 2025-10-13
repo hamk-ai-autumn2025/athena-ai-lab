@@ -1,18 +1,27 @@
 # ai-project/users/admin.py
 
+"""
+Määrittelee CustomUser-mallin hallintapaneelin asetukset.
+
+Tässä tiedostossa rekisteröidään CustomUser-malli Djangon
+ylläpitopaneeliin ja määritellään sen ulkoasu ja toiminnallisuus,
+kuten käytettävät lomakkeet, näytettävät kentät ja suodatusvaihtoehdot.
+"""
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
-# TUO OMAT LOMAKKEESI
-from .forms import CustomUserCreationForm, CustomUserChangeForm
 
-# Käytetään @admin.register-dekoraattoria, kuten aiemminkin
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+from .models import CustomUser
+
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     """
-    LOPULLINEN ADMIN-MÄÄRITYS:
-    - Käyttää omia, turvallisia lomakkeita (`CustomUserCreationForm`, `CustomUserChangeForm`).
-    - Näyttää kaikki halutut kentät (`role`, `grade_class`, `email`, yms.) sekä lista- että muokkausnäkymissä.
+    Djangon ylläpitopaneelin määritys CustomUser-mallille.
+
+    Käyttää omia, turvallisia lomakkeita (CustomUserCreationForm, CustomUserChangeForm)
+    ja näyttää kaikki halutut kentät (kuten `role`, `grade_class`, `email`)
+    sekä lista- että muokkausnäkymissä.
     """
 
     # --- UUDET, TIETOTURVAA PARANTAVAT LISÄYKSET ---

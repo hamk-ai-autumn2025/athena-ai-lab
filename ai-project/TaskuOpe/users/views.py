@@ -1,3 +1,11 @@
+"""
+Määrittelee käyttäjien autentikointiin ja profiilin hallintaan liittyvät näkymät.
+
+Tämä tiedosto sisältää luokkapohjaisen näkymän sisäänkirjautumiselle
+(FinnishLoginView) sekä funktiopohjaiset näkymät uloskirjautumiselle
+(simple_logout) ja käyttäjäprofiilin näyttämiselle (profile_view).
+"""
+
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.views import LoginView
@@ -13,7 +21,11 @@ from .forms import CustomLoginForm
 
 class FinnishLoginView(LoginView):
     """
-    Lisää onnistumisviesti kirjautumisen jälkeen.
+    Mukautettu sisäänkirjautumisnäkymä.
+
+    Laajentaa Djangon oletusarvoista LoginView'ta lisäämällä
+    onnistumisviestin kirjautumisen jälkeen ja käyttämällä
+    mukautettua sisäänkirjautumislomaketta.
     """
     template_name = "registration/login.html"
     
@@ -21,6 +33,12 @@ class FinnishLoginView(LoginView):
     authentication_form = CustomLoginForm
 
     def form_valid(self, form):
+        """
+        Käsitellään onnistunut lomakkeen lähetys.
+
+        Lisää onnistumisviestin käyttäjälle ja kutsuu yliluokan
+        form_valid-metodia jatkamaan kirjautumisprosessia.
+        """
         response = super().form_valid(form)
         messages.success(self.request, "Kirjautuminen onnistui. Tervetuloa takaisin!")
         return response
@@ -30,6 +48,12 @@ class FinnishLoginView(LoginView):
 @require_http_methods(["GET", "POST"])
 def simple_logout(request):
     """
+    Kirjaa käyttäjän ulos ja ohjaa sisäänkirjautumissivulle.
+
+    Tämä näkymä sallii sekä GET- että POST-pyynnöt uloskirjautumiseen
+    ja lisää ilmoitusviestin uloskirjautumisesta.
+    """
+    """
     Kirjaa ulos GET- tai POST-pyynnöllä ja ohjaa aina /kirjaudu.
     """
     logout(request)
@@ -38,7 +62,12 @@ def simple_logout(request):
 
 @login_required(login_url='kirjaudu')
 def profile_view(request):
-    """Näyttää sisäänkirjautuneen käyttäjän profiilisivun."""
+    """
+    Näyttää sisäänkirjautuneen käyttäjän profiilisivun.
+
+    Tämä näkymä vaatii käyttäjän olevan kirjautuneena sisään.
+    Jos käyttäjä ei ole kirjautunut, hänet ohjataan 'kirjaudu'-sivulle.
+    """
     
     # Haetaan käyttäjä suoraan pyynnöstä. Ei tarvitse hakea tietokannasta.
     user = request.user

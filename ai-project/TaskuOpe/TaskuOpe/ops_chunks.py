@@ -1,14 +1,20 @@
 # TaskuOpe/ops_chunks.py
-# Kevyt OPS-chunk-haku ilman vektoreita ja ilman RapidFuzzia.
-# Lukee JSONin: TaskuOpe/ops_data/opetussuunnitelma_1-6_API_data.json
+"""Kevyt OPS-chunk-haku ilman vektoreita ja RapidFuzzia.
+
+Lukee opetussuunnitelmadatan JSON-tiedostosta ja tarjoaa
+toimintoja OPS-chunkien hakuun ja suodatukseen.
+
+Lukee JSONin: TaskuOpe/ops_data/opetussuunnitelma_1-6_API_data.json
+"""
 
 import json
 import os
-import time
-from typing import List, Dict, Optional, Tuple
-from django.conf import settings
 import re
+import time
 from collections import Counter
+from typing import Dict, List, Optional, Tuple
+
+from django.conf import settings
 
 JSON_FILENAME = "opetussuunnitelma_1-6_API_data.json"
 
@@ -20,12 +26,22 @@ _LOADED_MTIME = 0.0
 WORD_RE = re.compile(r"\w+", re.UNICODE)
 
 def _json_path() -> str:
+    """Palauttaa JSON-tiedoston koko polun."""
     import os
     from django.conf import settings
     # BASE_DIR osoittaa yleensä .../TaskuOpe
     return os.path.join(settings.BASE_DIR, "ops_data", JSON_FILENAME)
 
 def _build_facets(rows: List[Dict]) -> Dict[str, List[str]]:
+    """Rakentaa facetit (aiheet, luokka-asteet, sisältötyypit) datasta.
+
+    Args:
+        rows: Lista sanakirjoja, jotka edustavat OPS-chunkkeja.
+
+    Returns:
+        Sanakirja, jossa avaimina ovat facet-tyypit ja arvoina
+        listat uniikeista facet-arvoista.
+    """
     subs, grades, ctypes = set(), set(), set()
     for r in rows:
         subs.add((r.get("subject") or "").strip())
@@ -39,10 +55,26 @@ def _build_facets(rows: List[Dict]) -> Dict[str, List[str]]:
     }
 
 def _tokenize(text: str) -> List[str]:
-    # yksinkertainen tokenisointi ja pienennys
+    """Tokenisoi tekstin ja muuttaa tokenit pieniksi kirjaimiksi.
+
+    Args:
+        text: Käsiteltävä tekstimerkkijono.
+
+    Returns:
+        Lista pieniksi kirjaimiksi muunnettuja tokeneita.
+    """
+
     return [t.lower() for t in WORD_RE.findall(text)]
 
 def _load_data(force: bool = False) -> None:
+    """Lataa ja esikäsittelee OPS-datan JSON-tiedostosta.
+
+    Data ladataan vain kerran tai jos tiedostoa on muokattu tai force=True.
+
+    Args:
+        force: Pakottaa datan uudelleenlatauksen, vaikka sitä ei olisi muokattu.
+    """
+        
     global _DATA, _FACETS, _LOADED_PATH, _LOADED_MTIME
     path = _json_path()
     st = os.stat(path)
@@ -81,15 +113,27 @@ def _load_data(force: bool = False) -> None:
     _LOADED_MTIME = st.st_mtime
 
 def get_facets() -> Dict[str, List[str]]:
+    """Palauttaa saatavilla olevat facet-arvot (aiheet, luokka-asteet, sisältötyypit).
+
+    Returns:
+        Sanakirja, jossa avaimina facet-tyypit ja arvoina listat uniikeista arvoista.
+    """
     _load_data()
     return _FACETS
 
 def _score(query_tokens: List[str], row: Dict) -> float:
-    """
-    Yksinkertainen avainsanapisteytys:
+    """Yksinkertainen avainsanapisteytys OPS-chunkille.
+
     - summaa kyselytermien esiintymät (TF)
     - normalisoi kevyesti dokumentin pituudella
     - bonus jos kaikki termit löytyvät
+
+    Args:
+        query_tokens: Lista tokeneita hakukyselystä.
+        row: Sanakirja, joka edustaa yhtä OPS-chunkkia (sisältäen _tf ja _len).
+
+    Returns:
+        Chunkin pistemäärä, nolla jos ei osumia.
     """
     if not query_tokens:
         return 0.0
@@ -109,9 +153,21 @@ def retrieve_chunks(
     ctypes: Optional[List[str]] = None,
     min_score: float = 0.0
 ) -> List[Dict]:
-    """
-    Palauttaa top-k chunkit ilman RapidFuzzia. Jos query on tyhjä,
-    palauttaa k lyhyintä riviä valituilla suodattimilla.
+    """Palauttaa top-k chunkit ilman RapidFuzzia.
+
+    Jos query on tyhjä, palauttaa k lyhyintä riviä valituilla suodattimilla.
+
+    Args:
+        query: Hakutermi.
+        k: Palautettavien chunkien maksimimäärä.
+        subjects: Lista aiheista, joilla suodattaa.
+        grades: Lista luokka-asteista, joilla suodattaa.
+        ctypes: Lista sisältötyypeistä, joilla suodattaa.
+        min_score: Minimipistemäärä, jolla chunk palautetaan.
+
+    Returns:
+        Lista sanakirjoja, jotka edustavat löydettyjä OPS-chunkkeja
+        pisteytyksen tai pituuden mukaan järjestettynä.
     """
     _load_data()
     subj_set = {s.strip().lower() for s in (subjects or []) if s}
@@ -143,6 +199,18 @@ def retrieve_chunks(
     return [_public_fields(r, score=float(s)) for s, r in scored[:k]]
 
 def _public_fields(row: Dict, score: Optional[float]) -> Dict:
+    """Muokkaa OPS-chunkin sanakirjan julkisesti näkyvään muotoon.
+
+    Piilottaa sisäiset apukentät (esim. _tokens, _tf, _len) ja lisää
+    tarvittaessa pistemäärän.
+
+    Args:
+        row: Alkuperäinen OPS-chunk-sanakirja.
+        score: Valinnainen pistemäärä, joka lisätään tuloksiin.
+
+    Returns:
+        Uusi sanakirja, joka sisältää vain julkiset kentät ja pistemäärän.
+    """
     out = {
         "id": row["id"],
         "text": row["text"],
