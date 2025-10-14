@@ -33,76 +33,109 @@
     </div>
   </form>
 
-    <section class="materials-list">
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-
-      {% for m in materials %}
-      <div class="col">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body d-flex flex-column">
-            <h5 class="card-title">
-              {{ m.title }}
-              <span class="badge bg-secondary fw-normal">v{{ m.version }}</span>
-            </h5>
-            <p class="card-subtitle mb-2 text-muted">Aihe: {{ m.subject|default:'Ei määritelty' }}</p>
-            <p class="card-text"><small>Tila: {{ m.get_status_display }}</small></p>
-
-            <div class="mt-auto pt-3 border-top">
-              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="btn-group">
-                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
-                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'view_submissions' material_id=m.id %}">Palautukset</a>
-                </div>
-                <a class="btn btn-sm btn-info" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
-              </div>
-
-              <!-- Poisto: avaa modaali -->
-              <div class="d-grid mt-2">
-                <button type="button"
-                        class="btn btn-sm btn-outline-danger"
-                        data-bs-toggle="modal"
-                        data-bs-target="#deleteModal-{{ m.id }}">
-                  Poista
-                </button>
-              </div>
-            </div>
-          </div>
+<!-- ⬇️⬇️ Materiaalit – collapsella ⬇️⬇️ -->
+<section class="materials-list">
+  <div class="card border-secondary">
+    <div class="card-header bg-secondary bg-opacity-10">
+      <button class="btn btn-link w-100 text-start text-decoration-none p-0"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#materialsCollapse"
+              aria-expanded="false"
+              aria-controls="materialsCollapse">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            Materiaalit
+            <span class="badge bg-secondary ms-2">{{ materials|length }}</span>
+          </h5>
+          <i class="bi bi-chevron-down"></i>
         </div>
-      </div>
-
-      <!-- Poiston vahvistus -modaali (yksi per materiaali) -->
-      <div class="modal fade" id="deleteModal-{{ m.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="deleteModalLabel-{{ m.id }}">
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="deleteModalLabel-{{ m.id }}">Poista materiaali</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
-            </div>
-            <div class="modal-body">
-              Poistetaanko materiaali <strong>"{{ m.title }}"</strong>?<br>
-              <small class="text-muted">Tämä poistaa myös siihen liittyvät tehtävänannot.</small>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Peruuta</button>
-              <form method="post" action="{% url 'delete_material' material_id=m.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Poista pysyvästi</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <div class="col-12">
-        <div class="alert alert-info mb-0" role="alert">
-          Et ole vielä luonut materiaaleja. Voit aloittaa
-          <a href="{% url 'create_material' %}" class="alert-link">luomalla uuden materiaalin</a>.
-        </div>
-      </div>
-      {% endfor %}
-
+      </button>
     </div>
-  </section>
+
+    <div class="collapse" id="materialsCollapse">
+      <div class="card-body p-0">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 p-3">
+
+          {% for m in materials %}
+          <div class="col">
+            <div class="card h-100 shadow-sm">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">
+                  {{ m.title }}
+                  <span class="badge bg-secondary fw-normal">v{{ m.version }}</span>
+                </h5>
+                <p class="card-subtitle mb-2 text-muted">Aihe: {{ m.subject|default:'Ei määritelty' }}</p>
+                <p class="card-text"><small>Tila: {{ m.get_status_display }}</small></p>
+
+                <div class="mt-auto pt-3 border-top">
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="btn-group">
+                      <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary d-flex align-items-center"
+                          href="{% url 'material_detail' material_id=m.id %}">
+                          <i class="bi bi-eye me-1"></i> Avaa
+                        </a>
+                        <a class="btn btn-sm btn-outline-dark d-flex align-items-center"
+                          href="{% url 'view_submissions' material_id=m.id %}">
+                          <i class="bi bi-bar-chart-line me-1"></i> Palautukset
+                        </a>
+                      </div>
+                    </div>
+                    <a class="btn btn-sm btn-info" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
+                  </div>
+
+                  <div class="d-grid mt-2">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteMaterialModal-{{ m.id }}">
+                      Poista
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Poiston vahvistus -modaali -->
+          <div class="modal fade" id="deleteMaterialModal-{{ m.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="deleteMaterialModalLabel-{{ m.id }}">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteMaterialModalLabel-{{ m.id }}">Poista materiaali</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
+                </div>
+                <div class="modal-body">
+                  Poistetaanko materiaali <strong>"{{ m.title }}"</strong>?<br>
+                  <small class="text-muted">Tämä poistaa myös siihen liittyvät tehtävänannot.</small>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Peruuta</button>
+                  <form method="post" action="{% url 'delete_material' material_id=m.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Poista pysyvästi</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {% empty %}
+          <div class="col-12">
+            <div class="alert alert-info mb-0" role="alert">
+              Et ole vielä luonut materiaaleja. Voit aloittaa
+              <a href="{% url 'create_material' %}" class="alert-link">luomalla uuden materiaalin</a>.
+            </div>
+          </div>
+          {% endfor %}
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ⬆️⬆️ Materiaalit – collapse ⬆️⬆️ -->
 
   <!-- ⬇️⬇️⬇️ LISÄÄ TÄMÄ TÄHÄN - PELIEN COLLAPSE-LAATIKKO ⬇️⬇️⬇️ -->
   {% if games %}
@@ -140,9 +173,15 @@
                   
                   <div class="mt-auto pt-3 border-top">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                      <div class="btn-group">
-                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'material_detail' material_id=m.id %}">Tarkastele</a>
-                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'view_submissions' material_id=m.id %}">Tulokset</a>
+                      <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary d-flex align-items-center"
+                          href="{% url 'material_detail' material_id=m.id %}">
+                          <i class="bi bi-controller me-1"></i> Avaa peli
+                        </a>
+                        <a class="btn btn-sm btn-outline-dark d-flex align-items-center"
+                          href="{% url 'view_submissions' material_id=m.id %}">
+                          <i class="bi bi-trophy me-1"></i> Tulokset
+                        </a>
                       </div>
                       <a class="btn btn-sm btn-info" href="{% url 'assign_material' material_id=m.id %}">Anna tehtäväksi</a>
                     </div>
@@ -151,7 +190,7 @@
                       <button type="button"
                               class="btn btn-sm btn-outline-danger"
                               data-bs-toggle="modal"
-                              data-bs-target="#deleteModal-{{ m.id }}">
+                              data-bs-target="#deleteGameModal-{{ m.id }}">
                         Poista
                       </button>
                     </div>
@@ -161,11 +200,11 @@
             </div>
 
             <!-- Pelien poisto-modaali -->
-            <div class="modal fade" id="deleteModal-{{ m.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="deleteModalLabel-{{ m.id }}">
+            <div class="modal fade" id="deleteGameModal-{{ m.id }}" tabindex="-1" aria-hidden="true" aria-labelledby="deleteGameModalLabel-{{ m.id }}">
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                   <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel-{{ m.id }}">Poista peli</h5>
+                    <h5 class="modal-title" id="deleteGameModalLabel-{{ m.id }}">Poista peli</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
                   </div>
                   <div class="modal-body">
@@ -193,4 +232,21 @@
 
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('shown.bs.collapse', (e) => {
+    const icon = e.target.closest('.card')?.querySelector('.bi-chevron-down');
+    icon?.classList.add('rotate-180');
+  });
+  document.addEventListener('hidden.bs.collapse', (e) => {
+    const icon = e.target.closest('.card')?.querySelector('.bi-chevron-down');
+    icon?.classList.remove('rotate-180');
+  });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>.rotate-180{transform:rotate(180deg);transition:transform .2s ease}</style>
 {% endblock %}

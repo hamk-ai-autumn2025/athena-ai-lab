@@ -297,4 +297,35 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  function wireSubmitButton(name, loadingLabel) {
+    const btn = document.querySelector(`button[type="submit"][name="${name}"]`);
+    if (!btn) return;
+    const form = btn.form || btn.closest('form');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+      const submitter = e.submitter || document.activeElement;
+      if (submitter !== btn) return; // reagoi vain jos juuri tätä nappia painettiin
+
+      // anna natiivin submitin lähteä ja lukitse nappi vasta seuraavassa tikissä
+      setTimeout(() => {
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+          loadingLabel;
+      }, 0);
+    });
+  }
+
+  // Plagioinnin tarkistus
+  wireSubmitButton('run_plagiarism', 'Tarkistetaan…');
+
+  // Arviointiehdotuksen generointi
+  wireSubmitButton('run_ai_grade', 'Luodaan ehdotus…');
+});
+</script>
+
+
 {% endblock %}

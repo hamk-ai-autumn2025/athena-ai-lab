@@ -89,9 +89,6 @@
                         </div>
 
                         <div id="ai-action-text-panel" class="d-grid">
-                              <!-- Add status message before button -->
-                           <div id="ai_text_status" class="small text-muted mb-2" role="status" aria-live="polite"></div>
-
                            <button type="submit" id="btn-generate-text"name="action" value="ai" class="btn btn-ai-action" formnovalidate>
                         <i class="bi bi-stars me-1"></i> Luo sisältöehdotus
                         </button>
@@ -278,36 +275,8 @@ function autofillFromAi(){
   }
 }
 
-/*Automaattinen tilaviesti tekoälygenerointiin -Mirka*/
-function initAiTextStatus() {
-  const btn = document.getElementById('btn-generate-text');
-  const status = document.getElementById('ai_text_status');
-  if (!btn || !status) return;
-
-  const form = btn.form || document.querySelector('form');
-
-  form?.addEventListener('submit', (e) => {
-    // varmista että juuri tämä nappi lähettää
-    const submitter = e.submitter || document.activeElement;
-    if (!submitter || submitter.id !== 'btn-generate-text') return;
-
-    // status näkyviin heti
-    status.textContent = '🤖 Luodaan sisältöä tekoälyllä, odota hetki...';
-    status.classList.remove('text-danger', 'text-success');
-    status.classList.add('text-info');
-
-    // disabloi ja vaihda label vasta seuraavassa tikissä -> ei estä natiivia submitia
-    setTimeout(() => {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Luodaan...';
-    }, 0);
-  });
-}
-
 /* --- INIT --- */
 document.addEventListener('DOMContentLoaded',()=>{
-  // Alustetaan AI status viesti -Mirka
-  initAiTextStatus();
 
   // 1) EasyMDE
   easyMDE = new EasyMDE({
@@ -396,7 +365,7 @@ const rehydrate = () => {
             const prompt = (promptEl.value || '').trim();
             const size = sizeEl.value || 'square';
             if (!prompt) { statusEl.textContent = 'Anna ensin kuvaprompti.'; return; }
-            statusEl.textContent = 'Generoidaan kuvaa…';
+            //statusEl.textContent = 'Generoidaan kuvaa…'; -> Poistettu, lisätty toiminnallisuus nappiin -Mirka
             resBox.classList.add('d-none');
             previewEl.src = '';
             try {
@@ -414,6 +383,12 @@ const rehydrate = () => {
             } catch (err) {
                 statusEl.textContent = `Virhe: ${err.message}`;
             }
+            finally {
+        // Spinneri nappi kuvalle t.Mirka
+              btnGen.disabled = false;
+              btnGen.innerHTML =
+                  btnGen.dataset.originalHtml || '<i class="bi bi-image me-1"></i> Generoi kuva';
+    }
         });
 
         btnIns.addEventListener('click', () => {
@@ -460,6 +435,23 @@ const rehydrate = () => {
         const hiddenInput = document.getElementById('id_structured_content_json');
         const difficultySelector = document.getElementById('difficulty-selector');
 
+        // Kaappaava vartija: jos aihe puuttuu, estä kaikki muut klikki-handlerit (mm. spinneri-apuri) t. Mirka
+        generateBtn.addEventListener('click', (e) => {
+          const topic = (topicTextarea.value || '').trim();
+          if (!topic) {
+            e.preventDefault();
+            e.stopImmediatePropagation(); // estää wireAsyncButtonBySelector-spinnerin
+
+            statusEl.textContent = 'Kirjoita ensin aihe tai ohje ylimpään kenttään.';
+            statusEl.classList.add('text-danger');
+
+            // Varmuuden vuoksi palauta nappi heti (jos spinneri ehti muuttaa sen)
+            generateBtn.disabled = false;
+            generateBtn.innerHTML =
+              generateBtn.dataset.originalHtml || '<i class="bi bi-controller me-1"></i> Generoi peli';
+          }
+        }, true); // ← capture=true
+
         if (gameTypeSelect && difficultySelector) {
             gameTypeSelect.addEventListener('change', () => {
                 if (gameTypeSelect.value === 'quiz') {
@@ -472,16 +464,19 @@ const rehydrate = () => {
 
         generateBtn.addEventListener('click', async () => {
             const topic = (topicTextarea.value || '').trim();
+            if (!topic) return;  // Vartija, pitäisi olla jo estetty
+
             const gameType = gameTypeSelect.value;
             // 1. 🆕 Hae valittu vaikeustaso (jos valitsin on olemassa)
             const difficulty = difficultySelector ? difficultySelector.value : null;
 
-            if (!topic) {
-                statusEl.textContent = 'Kirjoita ensin aihe tai ohje ylimpään kenttään.';
-                return;
-            }
-            statusEl.textContent = 'Generoidaan peliä, odota hetki...';
-            generateBtn.disabled = true;
+            statusEl.classList.remove('text-danger','text-success');
+            //statusEl.textContent = 'Generoidaan peliä, odota hetki...';
+            // Älä disabloi tässä – spinneri-apuri (wireAsyncButtonBySelector) tekee sen
+
+            // jos spinneriä ei olisi kytketty, varmistetaan disable
+            //if (!generateBtn.disabled) generateBtn.disabled = true;
+
             try {
                 // 2. KORVAA TÄMÄ KOHTA LÄHETTÄMÄÄN MYÖS VAIKEUSTASO
                 const response = await fetch("{% url 'generate_game_ajax' %}", {
@@ -544,6 +539,8 @@ const rehydrate = () => {
             } finally {
                 // Palauta nappi takaisin käyttöön aina
                 generateBtn.disabled = false;
+                //Lisätty pyörivä nappi/Vaihdettu edellisestä tyylistä pois -Mirka
+                generateBtn.innerHTML = generateBtn.dataset.originalHtml || '<i class="bi bi-controller me-1"></i> Generoi peli';
             }
         });
     }
@@ -982,4 +979,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 </script>
+
+<script>
+  /*Pyörivät napit*/
+document.addEventListener('DOMContentLoaded', () => {
+  // Yleinen: lukitse submit-nappi ja näytä spinneri, mutta anna natiivin submitin lähteä.
+  function wireSubmitButtonBySelector(selector, loadingLabel) {
+    const btn = document.querySelector(selector);
+    if (!btn) return;
+    const form = btn.form || btn.closest('form');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+      const submitter = e.submitter || document.activeElement;
+      if (submitter !== btn) return;             // reagoi vain oikeaan nappiin
+      if (btn.disabled) return;
+
+      btn.dataset.originalHtml = btn.dataset.originalHtml || btn.innerHTML;
+      // Lukitse vasta seuraavassa tikissä → ei estä natiivia submitia.
+      setTimeout(() => {
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+          loadingLabel;
+      }, 0);
+    });
+  }
+
+  // Yleinen: lukitse asynkroninen (AJAX/fetch) nappi heti klikatessa ja näytä spinneri.
+  // Palautus tehdään kyseisen napin omassa "finally"-lohkossa.
+  function wireAsyncButtonBySelector(selector, loadingLabel) {
+    const btn = document.querySelector(selector);
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      btn.dataset.originalHtml = btn.dataset.originalHtml || btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+        loadingLabel;
+    });
+  }
+
+  // 1) AI-tekstiehdotus (lomakesubmit)
+  wireSubmitButtonBySelector('#btn-generate-text', 'Luodaan…');
+
+  // 2) Kuvagenerointi (fetch/AJAX)
+  wireAsyncButtonBySelector('#ai_image_generate', 'Generoidaan…');
+
+  // 3) Pelin generointi (fetch/AJAX)
+  wireAsyncButtonBySelector('#ai_game_generate_btn', 'Luodaan peli…');
+});
+</script>
+
 {% endblock %}
