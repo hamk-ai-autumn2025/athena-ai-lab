@@ -89,7 +89,10 @@
                         </div>
 
                         <div id="ai-action-text-panel" class="d-grid">
-                           <button type="submit" name="action" value="ai" class="btn btn-ai-action" formnovalidate>
+                              <!-- Add status message before button -->
+                           <div id="ai_text_status" class="small text-muted mb-2" role="status" aria-live="polite"></div>
+
+                           <button type="submit" id="btn-generate-text"name="action" value="ai" class="btn btn-ai-action" formnovalidate>
                         <i class="bi bi-stars me-1"></i> Luo sisältöehdotus
                         </button>
                         </div>
@@ -275,8 +278,37 @@ function autofillFromAi(){
   }
 }
 
+/*Automaattinen tilaviesti tekoälygenerointiin -Mirka*/
+function initAiTextStatus() {
+  const btn = document.getElementById('btn-generate-text');
+  const status = document.getElementById('ai_text_status');
+  if (!btn || !status) return;
+
+  const form = btn.form || document.querySelector('form');
+
+  form?.addEventListener('submit', (e) => {
+    // varmista että juuri tämä nappi lähettää
+    const submitter = e.submitter || document.activeElement;
+    if (!submitter || submitter.id !== 'btn-generate-text') return;
+
+    // status näkyviin heti
+    status.textContent = '🤖 Luodaan sisältöä tekoälyllä, odota hetki...';
+    status.classList.remove('text-danger', 'text-success');
+    status.classList.add('text-info');
+
+    // disabloi ja vaihda label vasta seuraavassa tikissä -> ei estä natiivia submitia
+    setTimeout(() => {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Luodaan...';
+    }, 0);
+  });
+}
+
 /* --- INIT --- */
 document.addEventListener('DOMContentLoaded',()=>{
+  // Alustetaan AI status viesti -Mirka
+  initAiTextStatus();
+
   // 1) EasyMDE
   easyMDE = new EasyMDE({
     element: document.getElementById('{{ form.content.id_for_label }}'),
@@ -524,6 +556,7 @@ const rehydrate = () => {
 
 //---TÄHÄN LOPPUU TESTI JA ALKAA TOIMIVA!!!!!!!!!---//
 document.addEventListener('DOMContentLoaded', () => {
+
   const typeSel = document.getElementById('id_material_type');
 
   // ====== YLEISLAYOUT (vasen AI-kortti, otsikkorivit, sisältö, tallenna) ======
