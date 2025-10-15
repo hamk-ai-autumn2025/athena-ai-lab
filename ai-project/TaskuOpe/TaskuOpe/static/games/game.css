@@ -262,13 +262,26 @@
 }
 
 /* Toissijaised napit */
+
+/* Toissijaised napit */
+
 .game-page .page-content .btn-outline-secondary,
 .game-page .page-content .btn-outline-light,
 .game-page .container-fluid .card .btn-outline-secondary,
 .game-page .container-fluid .card .btn-outline-light {
-  border-color: var(--border-color);
-  color: var(--text-light);
-  background-color: rgba(14, 21, 58, 0.6);
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Tummennus vain vaalealle teemalle - käytä !important jos tarpeen */
+html:not([data-theme="dark"]) .game-page .page-content .btn-outline-secondary,
+html:not([data-theme="dark"]) .game-page .page-content .btn-outline-light,
+html:not([data-theme="dark"]) .game-page .container-fluid .card .btn-outline-secondary,
+html:not([data-theme="dark"]) .game-page .container-fluid .card .btn-outline-light {
+  background-color: rgba(88, 102, 148, 0.45) !important;
 }
 
 .game-page .page-content .btn-outline-secondary:hover,
@@ -467,7 +480,7 @@
   color: white;
 }
 
-/* ==================== HIRSIPUU ==================== */
+/* ==================== MYSTEERISANA(HIRSIPUU) ==================== */
 #hmLetters .btn {
   min-width: 48px;
   min-height: 48px;
@@ -535,6 +548,19 @@
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.3s ease;
+}
+
+/* Vaaleampi overlay vaalealle teemalle */
+html[data-bs-theme="light"] .game-overlay {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+html[data-bs-theme="light"] .game-overlay .overlay-title {
+  color: #1a1a2e;
+}
+
+html[data-bs-theme="light"] .game-overlay .overlay-message {
+  color: #2a2a3e;
 }
 
 @keyframes fadeIn {

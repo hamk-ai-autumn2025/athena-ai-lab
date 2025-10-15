@@ -413,7 +413,6 @@ def student_games_view(request):
     # Jaa pelit kategorioihin
     ctx = {
         "assigned": qs.filter(status="ASSIGNED"),
-        "in_progress": qs.filter(status="IN_PROGRESS"),
         "completed": qs.filter(status__in=["SUBMITTED", "GRADED"]),
         "subjects": subjects,
         "selected_subject": selected_subject,
@@ -621,7 +620,7 @@ def complete_game_ajax_view(request, assignment_id):
     if assignment.status == Assignment.Status.GRADED:
         if game_type == 'quiz':
             existing_sub = assignment.submissions.last()
-            if existing_sub and existing_sub.score and existing_sub.score >= 100:
+            if existing_sub and existing_sub.score and existing_sub.score >= 80:
                 return JsonResponse({
                     'status': 'already_completed',
                     'completed': True,
@@ -643,7 +642,7 @@ def complete_game_ajax_view(request, assignment_id):
                         feedback="Peli suoritettu."
                     )
             
-            if score >= 100:
+            if score >= 80:
                 assignment.status = Assignment.Status.GRADED
                 assignment.save(update_fields=['status'])
                 return JsonResponse({
@@ -667,7 +666,7 @@ def complete_game_ajax_view(request, assignment_id):
 
     # Ensimmäinen yritys
     if game_type == 'quiz':
-        if score >= 100:
+        if score >= 80:
             assignment.status = Assignment.Status.GRADED
             assignment.save(update_fields=['status'])
             completed = True

@@ -28,6 +28,13 @@
 </button>
 
 <div class="container-fluid px-3 px-lg-4 py-4" style="position: relative; z-index: 1;">
+    <!-- Navigointi -->
+    <div class="d-flex justify-content-end align-items-center mb-3">
+        <a href="{% url 'student_games' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Pelit
+        </a>
+    </div>
+
     <!-- Otsikko -->
     <div class="row justify-content-center mb-4">
         <div class="col-12 col-xl-10">
@@ -96,7 +103,7 @@
         </div>
     </div>
 
-    <!-- HIRSIPUU -->
+    <!-- MYSTEERISANA(HIRSIPUU) -->
     <div class="row g-3 justify-content-center">
         <div class="col-12 col-lg-10 col-xl-8">
             <div id="hangman-card" class="card d-none">
@@ -152,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let instructions = '';
     
-    if (gameData.questions) {
+    if (gameData.levels) {
         // ==================== VISA ====================
         instructions = `
             <p><strong>🎯 Tavoite:</strong> Vastaa kysymyksiin ja etene pelilaudalla maaliin!</p>
@@ -166,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <p class="mb-0"><strong>💡 Vinkki:</strong> Lue kysymykset huolellisesti ennen vastaamista!</p>
         `;
     } else if (gameData.word || gameData.words) {
-        // ==================== HIRSIPUU ====================
+        // ==================== MYSTEERISANA(HIRSIPUU) ====================
         instructions = `
             <p><strong>🔍 Tavoite:</strong> Arvaa piilotettu sana ennen kuin mies hirtetään!</p>
             <ul class="mb-2">

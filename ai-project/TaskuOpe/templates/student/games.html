@@ -71,46 +71,6 @@
     </div>
   </section>
 
-  {# Keskeneräiset pelit #}
-  <section class="student-section stack-flow mb-4">
-    <h2 class="h5 mb-2"> Keskeneräiset pelit</h2>
-    <div class="student-cards">
-      {% for a in in_progress %}
-        <article class="card shadow-sm student-card h-100 border-warning">
-          <div class="card-body d-flex flex-column">
-            <h3 class="card-title h6 mb-2">
-              <a href="{% url 'play_game' assignment_id=a.id %}" class="text-decoration-none">
-                {{ a.material.title }}
-              </a>
-            </h3>
-            <p class="card-text text-muted small mb-2">
-              <strong>Aihe:</strong> {{ a.material.subject|default:"Ei määritetty" }}
-            </p>
-            <p class="card-text text-muted small mb-2">
-              <i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
-            </p>
-            {% if a.due_at %}
-              <p class="card-text small mb-2">
-                <i class="bi bi-calendar-event me-1"></i>
-                <span {% if a.due_at < now %}class="text-danger fw-bold"{% endif %}>
-                  {{ a.due_at|date:"d.m.Y H:i" }}
-                </span>
-              </p>
-            {% endif %}
-            <div class="mt-auto">
-              <a href="{% url 'play_game' assignment_id=a.id %}" class="btn btn-warning btn-sm w-100">
-                Jatka peliä ▶
-              </a>
-            </div>
-          </div>
-        </article>
-      {% empty %}
-        <div class="alert alert-secondary">
-          <i class="bi bi-check-circle me-2"></i>Ei keskeneräisiä pelejä.
-        </div>
-      {% endfor %}
-    </div>
-  </section>
 
   {# Suoritetut pelit #}
   <section class="student-section stack-flow mb-4">

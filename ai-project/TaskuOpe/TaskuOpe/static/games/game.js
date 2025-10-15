@@ -1,6 +1,6 @@
 /* =========================================================================
    PELIKOODI - SIIVOTTU VERSIO
-   - Visa-peli, Hirsipuu ja Muistipeli
+   - Visa-peli, Mysteerisana(Hirsipuu) ja Muistipeli
    - Tausta-animaatiot
    - Saavutettavuus
    ========================================================================= */
@@ -554,28 +554,53 @@ function advanceAfterAnswer(wasCorrect) {
 }
 
 // ==================== PELIN LOPETUS ====================
+// Apufunktio: valitse ikoni pistemäärän perusteella
+function getResultIcon(percentage) {
+  if (percentage === 100) return '🎉';
+  if (percentage >= 90) return '🌟';
+  if (percentage >= 70) return '😊';
+  if (percentage >= 40) return '😐';
+  if (percentage >= 30) return '🤔';
+  return '😢';
+}
+
+// Apufunktio: valitse otsikko pistemäärän perusteella
+function getResultTitle(percentage) {
+  if (percentage === 100) return 'Täydellinen suoritus!';
+  if (percentage >= 90) return 'Loistavaa!';
+  if (percentage >= 70) return 'Hyvä yritys!';
+  if (percentage >= 40) return 'Melkein!';
+  if (percentage >= 30) return 'Kokeile uudelleen!';
+  return 'Harjoittele lisää!';
+}
+
 // Lopeta peli ja näytä tulos
 function endGame() {
   gameEnded = true;
   clearTimer();
 
   const percentage = Math.round((score / questions.length) * 100);
+  const icon = getResultIcon(percentage);
+  const title = position >= gamePath.length - 1 ? 'Onneksi olkoon!' : getResultTitle(percentage);
+
+  // Peli katsotaan suoritetuksi jos pistemäärä on 80% tai enemmän
+  const isCompleted = percentage >= 80;
 
   if (position >= gamePath.length - 1) {
     playSound('goal');
     showGameOverlay({
-      icon: '🎉',
-      title: 'Onneksi olkoon!',
-      message: `Pääsit maaliin!<br><br>Sait <strong>${score}/${questions.length}</strong> oikein (${percentage}%).`,
+      icon: icon,
+      title: title,
+      message: `Pääsit maaliin!<br><br>Sait <strong>${score}/${questions.length}</strong> oikein (${percentage}%).${isCompleted ? '<br><br>✅ Tehtävä suoritettu!' : ''}`,
       showRestart: true,
       onRestart: () => resetGame()
     });
     submitGameCompletion(percentage);
   } else {
     showGameOverlay({
-      icon: '😢',
-      title: 'Peli ohi!',
-      message: `Sait <strong>${score}/${questions.length}</strong> oikein (${percentage}%).<br><br>Yritä uudelleen!`,
+      icon: icon,
+      title: title,
+      message: `Sait <strong>${score}/${questions.length}</strong> oikein (${percentage}%).<br><br>${isCompleted ? '✅ Tehtävä suoritettu!<br><br>' : ''}Yritä uudelleen!`,
       showRestart: true,
       onRestart: () => resetGame()
     });
@@ -621,12 +646,12 @@ function resetGame() {
   renderQuestion();
 }
 
-// ==================== HIRSIPUU ====================
-// Hirsipuun vakiot
+// ==================== MYSTEERISANA(HIRSIPUU) ====================
+// Mysteerisanan vakiot
 const HM_MAX_LIVES = 7;
 const FI_ALPHABET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ'];
 
-// Hirsipuun muuttujat
+// Mysteerisanan muuttujat
 let hmWordList = [];
 let hmWordIndex = 0;
 let hmWord = '';
@@ -635,7 +660,7 @@ let hmLivesLeft = HM_MAX_LIVES;
 let hmGuessed = new Set();
 let hmTopicStr = '';
 
-// Aloita hirsipuu-kierros
+// Aloita Mysteerisana-kierros
 function hmStartRound({ topic, word, words }) {
   gameEnded = false;
   hmTopicStr = topic;
@@ -664,7 +689,7 @@ function hmStartRound({ topic, word, words }) {
   hmRenderParts();
 
   removeLoadingOverlay();
-  announceToScreenReader(`Hirsipuu aloitettu. Arvaa sana.`);
+  announceToScreenReader(`Mysteerisana aloitettu. Arvaa sana.`);
 }
 
 // Päivitä peitetty sana
@@ -735,7 +760,7 @@ function hmCheckEnd() {
     gameEnded = true;
     showGameOverlay({
       icon: '😢',
-      title: 'Hups!',
+      title: 'Peli ohi!',
       message: `Oikea sana oli: <strong>${hmWord}</strong>`,
       showRestart: true,
       onRestart: () => {
@@ -1205,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', () => {
       positionHero(0, true);
       renderQuestion();
     } else if (initialGameData?.words || initialGameData?.word) {
-      // Hirsipuu
+      // Mysteerisana(Hirsipuu)
       $('hangman-card')?.classList.remove('d-none');
       hmStartRound({
         topic: initialGameData.topic,
