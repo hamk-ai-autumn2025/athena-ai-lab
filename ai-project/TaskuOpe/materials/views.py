@@ -19,7 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Value
 from django.http import (
     HttpResponse,
     HttpResponseForbidden,
@@ -30,6 +30,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_GET, require_POST
+from django.db.models.functions import Concat
 
 # Omat sovellusmoduulit
 from TaskuOpe.ops_chunks import get_facets, retrieve_chunks
@@ -1872,10 +1873,37 @@ def teacher_student_list_view(request):
     students = CustomUser.objects.filter(role='STUDENT').order_by('last_name', 'first_name')
     grade_choices = CustomUser._meta.get_field('grade_class').choices
 
+    # HAKU-TOIMINTO
+    students = CustomUser.objects.filter(role='STUDENT').order_by('last_name', 'first_name')
+
+    q = (request.GET.get('q') or '').strip()
+    if q:
+        # Tee annotaatiot "etunimi sukunimi" ja "sukunimi etunimi"
+        students = students.annotate(
+            full_name=Concat('first_name', Value(' '), 'last_name'),
+            rev_full_name=Concat('last_name', Value(' '), 'first_name'),
+        ).filter(
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q)  |
+            Q(username__icontains=q)   |   # nimimerkki
+            Q(full_name__icontains=q)  |   # "Etunimi Sukunimi"
+            Q(rev_full_name__icontains=q)  # "Sukunimi Etunimi"
+        )
+
+    # Luokkasuodatin (?grade=2 luokka tms.)
+    selected_grade = request.GET.get('grade', '').strip()
+    if selected_grade:
+        students = students.filter(grade_class=selected_grade)
+
+    grade_choices = CustomUser._meta.get_field('grade_class').choices
+
     context = {
         'students': students,
         'grade_choices': grade_choices,
+        'q': q,   # <-- välitetään templatelle
+        'selected_grade': selected_grade,
     }
+
     return render(request, 'materials/teacher_student_list.html', context)
 
 # Text-to-Speech for assignment content -> Poistetaan ym regexillä

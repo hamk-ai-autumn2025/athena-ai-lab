@@ -35,7 +35,7 @@ class CustomUser(AbstractUser):
         verbose_name="Luokka-aste",
         null=True,  # Salli tyhjä arvo (esim. opettajat)
         blank=True, # Ei pakollinen lomakkeissa
-        choices=[(i, f"{i}. luokka") for i in range(1, 10)] # Valinnat 1-9
+        choices=[(i, f"{i}. luokka") for i in range(1, 7)] # Valinnat 1-6
     )
 
    # __str__-metodin lisääminen parantaa mallin esitystä Djangon hallintapaneelissa

@@ -10,6 +10,38 @@
     </a>
   </div>
 
+<!-- Suodatin -->
+<form method="get" class="filter-panel p-3 p-md-4 rounded-3 mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-5">
+      <label for="student-query" class="form-label fw-semibold mb-1">Suodata opiskelijan nimellä</label>
+      <input type="text"
+             id="student-query"
+             name="q"
+             value="{{ q|default_if_none:'' }}"
+             class="form-control"
+             placeholder="nimi tai nimimerkki">
+    </div>
+
+    <div class="col-md-4">
+      <label for="grade-filter" class="form-label fw-semibold mb-1">Suodata luokan mukaan</label>
+      <select id="grade-filter" name="grade" class="form-select">
+        <option value="">Kaikki luokat</option>
+        {% for value,label in grade_choices %}
+          <option value="{{ value }}" {% if value == selected_grade %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3 d-flex gap-2 justify-content-md-end">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-funnel me-1"></i> Suodata
+      </button>
+      <a href="{% url 'teacher_student_list' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+    </div>
+  </div>
+</form>
+
   <div class="card shadow-sm">
     <div class="card-body">
       <form method="post">
@@ -28,7 +60,7 @@
           <tbody>
             {% for student in students %}
               <tr>
-                <!-- MUUTOS 2: Lisätty data-labelit jokaiseen soluun -->
+                <!-- MUUTOS 2: Lisätty data-labelit jokaiseen soluun Näyttää nimen, jos ei oo näytetään nimimerkki-->
                 <td data-label="Oppilas">{{ student.get_full_name|default:student.username }}</td>
                 <td data-label="Nykyinen luokka">{{ student.get_grade_class_display|default:"Ei asetettu" }}</td>
                 <td data-label="Vaihda luokkaa">
