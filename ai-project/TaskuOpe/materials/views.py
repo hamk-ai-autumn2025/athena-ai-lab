@@ -512,7 +512,18 @@ def create_material_view(request):
                 if material.material_type == 'peli':
                     json_data_str = request.POST.get('structured_content_json')
                     if json_data_str:
-                        material.structured_content = json.loads(json_data_str)
+                        try:
+                            # Parsitaan JSON
+                            game_json = json.loads(json_data_str)
+            
+                            # Tallennetaan structured_content-kenttään (JSONField)
+                            material.structured_content = game_json
+            
+                            # Muotoillaan content-kenttään (TextField) opettajalle näkyvä versio
+                            material.content = format_game_content_for_display(game_json)
+                        except Exception as e:
+                            # Jos JSON-parsinta epäonnistuu, tallenna raaka data
+                            material.content = f"Virhe pelin datan käsittelyssä:\n\n{json_data_str}"
                     else:
                         messages.error(request, "Valitsit materiaaliksi 'Peli', mutta et generoinut pelisisältöä. Käytä 'Generoi peli' -toimintoa ennen tallennusta.")
                         return render(request, 'materials/create.html', {
@@ -1136,6 +1147,10 @@ def grade_submission_view(request, submission_id):
     plagiarism_report = getattr(submission, "plagiarism_report", None)
     ai_grade = getattr(submission, "ai_grade", None)
 
+    # pelin HTML-esikatselu) renderöitäväksi HTML-koodiksi.
+    rendered_material_content = render_material_content_to_html(material.content)
+    # =================================================================
+
     return render(request, 'assignments/grade.html', {
         'material': material,
         'assignment': assignment,
@@ -1143,6 +1158,7 @@ def grade_submission_view(request, submission_id):
         'form': form,
         'plagiarism_report': plagiarism_report,
         'ai_grade': ai_grade,
+        'rendered_material_content': rendered_material_content,
     })
 
 
@@ -1841,6 +1857,177 @@ def render_material_content_to_html(text: str) -> str:
     # 3. Annetaan Markdown-kirjaston hoitaa loput
     html = md.markdown(processed_text, extensions=['extra'])
     return mark_safe(html)
+
+def format_game_content_for_display(game_data):
+    """
+    Muotoilee pelin JSON-datan opettajalle helposti luettavaan muotoon.
+    
+    Args:
+        game_data (dict): Pelin structured_content-data
+        
+    Returns:
+        str: HTML/Markdown-muotoiltu, luettava versio pelin sisällöstä
+    """
+    if not game_data or not isinstance(game_data, dict):
+        return "Ei pelisisältöä saatavilla."
+    
+    # MEMORY-PELI
+    if 'pairs' in game_data:
+        pairs = game_data.get('pairs', [])
+        content = "## Muistipeli - Parit\n\n"
+        content += f"**Parien määrä:** {len(pairs)}\n\n"
+        
+        if not pairs:
+            content += "<p><em>Ei pareja saatavilla</em></p>"
+            return content
+        
+        content += '<table class="table table-striped">\n'
+        content += '<thead><tr><th>#</th><th>Suomi</th><th>Englanti</th></tr></thead>\n'
+        content += '<tbody>\n'
+        for i, pair in enumerate(pairs, 1):
+            suomi = (pair.get('suomi') or pair.get('Suomi') or 
+                    pair.get('word1') or pair.get('fi') or '?')
+            englanti = (pair.get('englanti') or pair.get('Englanti') or 
+                       pair.get('word2') or pair.get('en') or '?')
+            content += f'<tr><td>{i}</td><td>{suomi}</td><td>{englanti}</td></tr>\n'
+        content += '</tbody>\n'
+        content += '</table>\n'
+        return content
+    
+    # HIRSIPUU / MYSTEERISANA
+    elif 'word' in game_data or 'words' in game_data:
+        content = "## Mysteerisana\n\n"
+        
+        if 'words' in game_data:
+            words_data = game_data['words']
+            
+            if 'topic' in game_data:
+                content += f"**Aihe:** {game_data['topic']}\n\n"
+            
+            # Jos words on lista merkkijonoja
+            if words_data and isinstance(words_data[0], str):
+                content += f"**Sanoja yhteensä:** {len(words_data)}\n\n"
+                content += '<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">\n'
+                for i, word in enumerate(words_data, 1):
+                    content += '<div class="col">\n'
+                    content += '<div class="card h-100">\n'
+                    content += '<div class="card-body p-2 text-center">\n'
+                    content += f'<small class="text-muted">#{i}</small>\n'
+                    content += f'<p class="mb-0 fw-bold text-dark">{word.upper()}</p>\n'
+                    content += '</div>\n'
+                    content += '</div>\n'
+                    content += '</div>\n'
+                content += '</div>\n'
+            
+            # Jos words on lista objekteja
+            elif words_data and isinstance(words_data[0], dict):
+                content += f"**Sanoja yhteensä:** {len(words_data)}\n\n"
+                content += '<div class="card">\n'
+                for i, word_obj in enumerate(words_data, 1):
+                    word = word_obj.get('word', '?')
+                    clue = word_obj.get('clue', 'Ei vihjettä')
+                    content += '<div class="card-body border-bottom">\n'
+                    content += f'<h5>Sana {i}</h5>\n'
+                    content += f'<p><strong>Sana:</strong> {word.upper()}</p>\n'
+                    content += f'<p><strong>Vihje:</strong> {clue}</p>\n'
+                    content += '</div>\n'
+                content += '</div>\n'
+        
+        elif 'word' in game_data:
+            word = game_data.get('word', '?')
+            clue = game_data.get('clue', 'Ei vihjettä')
+            content += f"**Sana:** {word.upper()}\n\n"
+            content += f"**Vihje:** {clue}\n\n"
+        
+        return content
+    
+    # VISA/QUIZ
+    elif 'levels' in game_data:
+        levels = game_data.get('levels', [])
+        content = "## Tietovisa\n\n"
+        content += f"**Tasojen määrä:** {len(levels)}\n\n"
+
+        question_counter = 0
+
+        for level_idx, level in enumerate(levels, 1):
+            level_name = level.get('name', f'Taso {level_idx}')
+            questions = level.get('questions', [])
+    
+            if not questions and 'question' in level:
+                questions = [level]
+    
+            content += f"### {level_name}\n\n"
+    
+            if not questions or len(questions) == 0:
+                content += "<p><em>Ei kysymyksiä tällä tasolla</em></p>\n\n"
+                continue
+    
+            content += f"**Kysymyksiä:** {len(questions)}\n\n"
+    
+            for q_idx, question in enumerate(questions, 1):
+                question_counter += 1
+                q_text = question.get('question', '?')
+        
+            # Hae vastausvaihtoehdot eri nimillä
+            options = (question.get('options') or 
+                      question.get('answers') or 
+                      question.get('choices') or [])
+        
+            # Hae oikea vastaus
+            correct = question.get('correct', question.get('correctAnswer'))
+        
+            # Jos correct on numero (indeksi), muunna se tekstiksi
+            correct_text = correct
+            if isinstance(correct, int) and options and 0 <= correct < len(options):
+                correct_text = options[correct]
+            elif isinstance(correct, str) and correct.isdigit():
+                # Jos correct on merkkijono "0", "1" jne
+                idx = int(correct)
+                if options and 0 <= idx < len(options):
+                    correct_text = options[idx]
+        
+            content += '<div class="card mb-3">\n'
+            content += '<div class="card-header bg-light">\n'
+            content += f'<strong>Kysymys {question_counter}:</strong> {q_text}\n'
+            content += '</div>\n'
+            content += '<div class="card-body">\n'
+        
+            # Näytä vastausvaihtoehdot jos niitä on
+            if options and len(options) > 0:
+                content += '<p class="mb-2"><strong>Vastausvaihtoehdot:</strong></p>\n'
+                content += '<ul class="list-group mb-3">\n'
+                
+                for opt_idx, option in enumerate(options):
+                    # Tarkista onko tämä oikea vastaus (vertaa sekä indeksiin että tekstiin)
+                    is_correct = (option == correct_text or 
+                                 opt_idx == correct or 
+                                 str(opt_idx) == str(correct))
+                    
+                    if is_correct:
+                        content += f'<li class="list-group-item list-group-item-success">✅ <strong>{chr(65 + opt_idx)})</strong> {option} <span class="badge bg-success ms-2">OIKEA VASTAUS</span></li>\n'
+                    else:
+                        content += f'<li class="list-group-item"><strong>{chr(65 + opt_idx)})</strong> {option}</li>\n'
+                
+                content += '</ul>\n'
+            else:
+                content += '<p class="text-muted"><em>Ei vastausvaihtoehtoja saatavilla</em></p>\n'
+            
+            content += '</div>\n'
+            content += '</div>\n'
+    
+        return content
+    
+    # Tuntematon pelityyppi
+    else:
+        try:
+            formatted = json.dumps(game_data, indent=2, ensure_ascii=False)
+            content = "## Pelin sisältö\n\n"
+            content += "<details open><summary>JSON-data</summary>\n"
+            content += f"<pre>{formatted}</pre>\n"
+            content += "</details>"
+            return content
+        except:
+            return f"## Pelin sisältö\n\n<pre>{str(game_data)}</pre>"
 
 @login_required
 def teacher_student_list_view(request):

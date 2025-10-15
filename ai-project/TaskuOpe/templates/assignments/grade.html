@@ -18,8 +18,12 @@
       <div class="card flex-grow-1 w-100">
         <div class="card-header fw-bold">{{ material.title }}</div>
         <div class="card-body">
-          {% if material.content %}
-            <div class="mb-3">{{ material.content|linebreaks }}</div>
+          {% if rendered_material_content %}
+            {# Käytetään uutta, esikäsiteltyä muuttujaa ja safe-suodatinta #}
+            <div class="mb-3">{{ rendered_material_content|safe }}</div>
+          {% else %}
+             {# Varmuuden vuoksi, jos sisältöä ei ole #}
+            <p class="text-muted"><em>Ei materiaalin sisältöä saatavilla.</em></p>
           {% endif %}
 
           <hr>

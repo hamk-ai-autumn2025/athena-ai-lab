@@ -240,10 +240,22 @@ function setupGamePath(difficulty) {
   stops = PATH_CONFIGS[totalLen] || PATH_CONFIGS[10];
 }
 
-// Generoi pelilauta SVG:nä
 function generateGameBoard() {
   if (!el.boardSvg) return;
   el.boardSvg.innerHTML = '';
+
+  // Piirrä dekoratiiviset tähdet taustalle
+  const starCount = 30;
+  for (let i = 0; i < starCount; i++) {
+    const star = document.createElementNS(NS, 'circle');
+    star.setAttribute('cx', Math.random() * 1200);
+    star.setAttribute('cy', Math.random() * 675);
+    star.setAttribute('r', Math.random() * 2 + 0.5);
+    star.setAttribute('fill', '#ffffff');
+    star.setAttribute('opacity', Math.random() * 0.7 + 0.3);
+    star.setAttribute('class', 'star-decoration');
+    el.boardSvg.appendChild(star);
+  }
 
   // Piirrä polku
   for (let i = 0; i < stops.length - 1; i++) {
@@ -259,21 +271,57 @@ function generateGameBoard() {
   // Piirrä ruudut
   stops.forEach((stop, i) => {
     const g = document.createElementNS(NS, 'g');
-    const circle = document.createElementNS(NS, 'circle');
-    circle.setAttribute('cx', stop.x);
-    circle.setAttribute('cy', stop.y);
-    circle.setAttribute('r', 28);
-    circle.setAttribute('class', 'tile-circle');
-    circle.setAttribute('data-index', i);
+    
+    if (i === stops.length - 1) {
+      // MAALI - Portaali (KUVA)
+      
+      // Tausta-hehku
+      const goalGlow = document.createElementNS(NS, 'circle');
+      goalGlow.setAttribute('cx', stop.x);
+      goalGlow.setAttribute('cy', stop.y);
+      goalGlow.setAttribute('r', 60);
+      goalGlow.setAttribute('fill', '#4FC3F7');
+      goalGlow.setAttribute('opacity', '0.3');
+      goalGlow.setAttribute('class', 'goal-glow');
+      g.appendChild(goalGlow);
+      
+      // Portaalikuva
+      const portalImage = document.createElementNS(NS, 'image');
+      portalImage.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/static/images/portal.png');
+      portalImage.setAttribute('x', stop.x - 40);
+      portalImage.setAttribute('y', stop.y - 40);
+      portalImage.setAttribute('width', '80');
+      portalImage.setAttribute('height', '80');
+      portalImage.setAttribute('class', 'goal-portal-image');
+      g.appendChild(portalImage);
+      
+      // Maali-teksti
+      const goalText = document.createElementNS(NS, 'text');
+      goalText.setAttribute('x', stop.x);
+      goalText.setAttribute('y', stop.y + 55);
+      goalText.setAttribute('class', 'goal-text');
+      goalText.textContent = 'MAALI';
+      g.appendChild(goalText);
+      
+    } else {
+      // Tavalliset ruudut
+      const circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', stop.x);
+      circle.setAttribute('cy', stop.y);
+      circle.setAttribute('r', 28);
+      circle.setAttribute('class', 'tile-circle');
+      circle.setAttribute('data-index', i);
 
-    const text = document.createElementNS(NS, 'text');
-    text.setAttribute('x', stop.x);
-    text.setAttribute('y', stop.y);
-    text.setAttribute('class', i === stops.length - 1 ? 'goal-text' : 'tile-text');
-    text.textContent = i === stops.length - 1 ? 'MAALI' : i;
+      const text = document.createElementNS(NS, 'text');
+      text.setAttribute('x', stop.x);
+      text.setAttribute('y', stop.y);
+      text.setAttribute('class', 'tile-text');
+      text.textContent = i + 1; // Shows 1, 2, 3... instead of 0, 1, 2...
 
-    g.appendChild(circle);
-    g.appendChild(text);
+      g.appendChild(circle);
+      g.appendChild(text);
+    }
+    
     el.boardSvg.appendChild(g);
   });
 }
@@ -284,16 +332,45 @@ function positionHero(index, instant = false) {
 
   const a11y = getAccessibilitySettings();
   const stop = stops[index];
-  const offsetX = -24;
-  const offsetY = -24;
+  
+  // Laske hero-koko responsiivisesti
+  let heroSize = 80;
+  if (window.innerWidth <= 575) {
+    heroSize = 60;
+  } else if (window.innerWidth <= 399) {
+    heroSize = 50;
+  }
+  
+  // Päivitä hero-koko
+  el.hero.style.width = `${heroSize}px`;
+  el.hero.style.height = `${heroSize}px`;
+  
+  // Laske SVG-koordinaatit: SVG viewBox on 1200x675
+  // Meidän täytyy skaalata hero-position SVG-koordinaattien mukaan
+  const boardSvg = el.boardSvg;
+  const svgRect = boardSvg.getBoundingClientRect();
+  const viewBoxWidth = 1200;
+  const viewBoxHeight = 675;
+  
+  // Skaalauskerroin SVG viewBoxista todelliseen kokoon
+  const scaleX = svgRect.width / viewBoxWidth;
+  const scaleY = svgRect.height / viewBoxHeight;
+  
+  // Laske hero-position SVG-koordinaateissa
+  const heroX = (stop.x * scaleX) - (heroSize / 2);
+  const heroY = (stop.y * scaleY) - (heroSize / 2);
+  
+  // Aseta hero näkyväksi ja oikeaan paikkaan
+  el.hero.classList.add('active'); // Ensure it's visible
 
   if (instant || a11y.reducedMotion) {
-    el.hero.style.left = `${stop.x + offsetX}px`;
-    el.hero.style.top = `${stop.y + offsetY}px`;
+    el.hero.style.transition = 'none';
+    el.hero.style.left = `${heroX}px`;
+    el.hero.style.top = `${heroY}px`;
   } else {
-    el.hero.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
-    el.hero.style.left = `${stop.x + offsetX}px`;
-    el.hero.style.top = `${stop.y + offsetY}px`;
+    el.hero.style.transition = 'left 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), top 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
+    el.hero.style.left = `${heroX}px`;
+    el.hero.style.top = `${heroY}px`;
   }
 
   updateBoardState(index);
@@ -444,10 +521,17 @@ function renderQuestion() {
     return;
   }
 
+  // Näytä ja aseta hero ensimmäisellä kysymyksellä (kun peli alkaa)
+  if (qIndex === 0 && gameStarted && el.hero) {
+    el.hero.classList.add('active');
+    // Position hero NOW, when game actually starts
+    positionHero(0, true);
+  }
+
   clearTimer();
   const lvl = questions[qIndex];
   const myToken = ++qToken;
-  locked = false;
+  locked = false
 
   if (el.question) el.question.textContent = lvl.question || '';
   if (el.levelBadge) el.levelBadge.textContent = `Kysymys ${qIndex + 1}/${questions.length}`;
@@ -624,9 +708,16 @@ function resetGame() {
   }
   if (el.feedback) el.feedback.classList.add('d-none');
   if (el.restart) el.restart.classList.add('d-none');
-  if (el.hero) el.hero.style.visibility = 'visible';
+  
+  // Piilota hero pelin resetissä
+  if (el.hero) {
+    el.hero.classList.remove('active');
+    // Reset position styles
+    el.hero.style.left = '';
+    el.hero.style.top = '';
+  }
 
-  // Nollaa näkymä
+  // Näytä aloituskuva uudelleen
   const startImage = $('start-image-container');
   const boardCard = $('quiz-board-card');
 
@@ -642,7 +733,8 @@ function resetGame() {
   const difficulty = initialGameData?.difficulty || 'medium';
   setupGamePath(difficulty);
   generateGameBoard();
-  positionHero(0, true);
+  // DON'T position hero in reset - remove this line if it exists:
+  // positionHero(0, true);
   renderQuestion();
 }
 
@@ -832,7 +924,7 @@ function renderMmGrid() {
   mmDeck.forEach((card, i) => {
     const btn = document.createElement('button');
     btn.className = 'btn btn-outline-light';
-    btn.textContent = card.flipped || card.matched ? card.text : '❓';
+    btn.textContent = card.flipped || card.matched ? card.text : '⭐';
     btn.disabled = card.matched;
     btn.onclick = () => mmFlip(i);
     
@@ -912,7 +1004,7 @@ function mmCheck() {
     setTimeout(() => {
       [mmFirst.card, mmSecond.card].forEach(c => {
         c.flipped = false;
-        c.btn.textContent = '❓';
+        c.btn.textContent = '⭐';
         c.btn.classList.remove('mm-wrong');
       });
       
@@ -971,8 +1063,16 @@ function setupBackground() {
   
   // Kuuntele teeman vaihdoksia
   const observer = new MutationObserver(() => {
-    if (!isAnimationPaused) {
-      resize();
+    if (isAnimationPaused) {
+    // Jos animaatio on pysäytetty, päivitä vain taustaväri
+      const isLight = getTheme() === 'light';
+      if (ctx) {
+        ctx.fillStyle = isLight ? '#87CEEB' : '#0a1540';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    } else {
+    // Jos animaatio on käynnissä, tee täysi resize
+    resize();
     }
   });
   observer.observe(document.documentElement, {
@@ -1180,7 +1280,19 @@ function animate() {
 // ==================== ALUSTUS ====================
 // Käynnistä peli kun sivu on ladattu
 document.addEventListener('DOMContentLoaded', () => {
+  
   setupBackground();
+
+ // Lisää ikkunan koon muutoksen käsittelijä
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      if (position !== undefined && stops[position]) {
+        positionHero(position, true); // Instant repositioning on resize
+      }
+    }, 100);
+  });
 
   // Tausta-animaation pysäytys/käynnistys -nappi
   const btnToggle = $('btnToggleBackground');
@@ -1227,7 +1339,8 @@ document.addEventListener('DOMContentLoaded', () => {
       questions = initialGameData.levels;
       setupGamePath(gameDifficulty);
       generateGameBoard();
-      positionHero(0, true);
+      // DON'T position hero yet - remove this line:
+      // positionHero(0, true);
       renderQuestion();
     } else if (initialGameData?.words || initialGameData?.word) {
       // Mysteerisana(Hirsipuu)
