@@ -1,5 +1,5 @@
 {% extends 'partials/base.html' %}
-{% block title %}Opiskelijan etusivu{% endblock %}
+{% block title %}Oppilaan etusivu{% endblock %}
 
 {% block content %}
 
@@ -14,58 +14,85 @@
       {% endif %}
     </div>
     <div class="btn-group mt-3 mt-sm-0">
-      <a href="{% url 'student_assignments' %}" class="btn btn-outline-primary">Omat tehtävät</a>
-      <a href="{% url 'student_grades' %}" class="btn btn-outline-secondary">Palautukset & arvioinnit</a>
+      <a href="{% url 'student_assignments' %}" class="btn btn-outline-primary">
+        <i class="bi bi-list-check me-2"></i>Omat tehtävät
+      </a>
+      <a href="{% url 'student_grades' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-award me-2"></i>Palautukset & arvioinnit
+      </a>
     </div>
   </div>
 
   <!-- TÄMÄ ROW-ELEMENTTI TOIMII NYT OIKEIN, KOSKA SE ON CONTAINERIN SISÄLLÄ -->
   <div class="row g-3 mb-4">
     <div class="col-12 col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-muted">Uudet</div>
-              <div class="display-6 fw-semibold">{{ counts.assigned|default:0 }}</div>
+      <a href="{% url 'student_assignments' %}" class="text-decoration-none">
+        <div class="card shadow-sm h-100 card-hover">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted">Uudet</div>
+                <div class="display-6 fw-semibold text-dark">{{ counts.assigned|default:0 }}</div>
+              </div>
+              <span class="badge bg-info text-dark">Annettu</span>
             </div>
-            <span class="badge bg-info text-dark">Annettu</span>
           </div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="col-12 col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-muted">Kesken</div>
-              <div class="display-6 fw-semibold">{{ counts.in_progress|default:0 }}</div>
+      <a href="{% url 'student_assignments' %}" class="text-decoration-none">
+        <div class="card shadow-sm h-100 card-hover">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted">Kesken</div>
+                <div class="display-6 fw-semibold text-dark">{{ counts.in_progress|default:0 }}</div>
+              </div>
+              <span class="badge bg-warning text-dark">Kesken</span>
             </div>
-            <span class="badge bg-warning text-dark">Kesken</span>
           </div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="col-12 col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-muted">Arvioidut</div>
-              <div class="display-6 fw-semibold">{{ counts.graded|default:0 }}</div>
+      <a href="{% url 'student_grades' %}" class="text-decoration-none">
+        <div class="card shadow-sm h-100 card-hover">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted">Arvioidut</div>
+                <div class="display-6 fw-semibold text-dark">{{ counts.graded|default:0 }}</div>
+              </div>
+              <span class="badge bg-success">Arvioitu</span>
             </div>
-            <span class="badge bg-success">Arvioitu</span>
           </div>
         </div>
-      </div>
+      </a>
     </div>
   </div>
-</div>
+
+  <!-- Suodatin -->
+  <form method="get" class="row g-2 align-items-end p-3 rounded mb-4 border">
+    <div class="col-md-4">
+      <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
+      <select name="subject" id="subject-filter" class="form-select">
+        <option value="">Kaikki aiheet</option>
+        {% for subject in subjects %}
+          <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
+            {{ subject }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-8 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Suodata</button>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+    </div>
+  </form>
 
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="h5 mb-0">Lähestyvät eräpäivät</h2>
-    <a class="btn btn-sm btn-outline-secondary" href="{% url 'student_assignments' %}">Näytä kaikki</a>
   </div>
   <div class="list-group mb-4">
     {% for a in due_soon %}
@@ -85,15 +112,6 @@
     {% empty %}
       <div class="list-group-item text-muted">Ei lähestyviä eräpäiviä.</div>
     {% endfor %}
-  </div>
-
-  <div class="d-flex flex-wrap gap-2">
-    <a href="{% url 'student_assignments' %}" class="btn btn-primary">
-      <i class="bi bi-list-check me-1"></i> Siirry omiin tehtäviin
-    </a>
-    <a href="{% url 'student_grades' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-award me-1"></i> Katso palautukset & arvioinnit
-    </a>
   </div>
 </div>
 {% endblock %}

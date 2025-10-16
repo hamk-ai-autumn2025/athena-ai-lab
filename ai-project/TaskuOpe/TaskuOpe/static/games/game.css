@@ -471,8 +471,8 @@ html:not([data-theme="dark"]) .game-page .container-fluid .card .btn-outline-lig
 /* Liikkuva animoitu hahmo pelilaudalla */
 .hero {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  width: 150px;
+  height: 150px;
   display: none;                /* Piilotettu oletuksena */
   align-items: center;
   justify-content: center;
@@ -506,6 +506,51 @@ html:not([data-theme="dark"]) .game-page .container-fluid .card .btn-outline-lig
   }
   50% { 
     transform: translateY(-10px) rotate(3deg); 
+  }
+}
+
+/* === Responsiiviset säädöt hahmolle === */
+/*
+ * TABLETTI (768px - 991px) - HUOMATTAVASTI SUUREMPI KORJAUS
+ * Tämä on ongelma-alue. Tehdään hahmosta paljon suurempi, jotta se vastaa ruutujen kokoa.
+ */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .hero {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+/*
+ * PIENI TABLETTI (576px - 767px) - Tasapainotettu koko.
+ * Pienempi kuin isolla tabletilla, mutta isompi kuin puhelimella.
+ */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .hero {
+    width: 110px;
+    height: 110px
+  }
+}
+
+/*
+ * PUHELIN (400px - 575px) - Pienennetty koko.
+ * Aiemmin liian suuri, nyt paremmin suhteutettu.
+ */
+@media (min-width: 400px) and (max-width: 575.98px) {
+  .hero {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/*
+ * ERITTÄIN PIENI PUHELIN (< 400px) - Pienin koko.
+ * Varmistaa, että hahmo ei ole valtava kaikkein kapeimmilla näytöillä.
+ */
+@media (max-width: 399.98px) {
+  .hero {
+    width: px;
+    height: 65px;
   }
 }
 
@@ -884,8 +929,8 @@ html[data-bs-theme="light"] .game-overlay .overlay-message {
   
   /* Pienempi hero-hahmo */
   .hero {
-    width: 70px;
-    height: 70px;
+    width: 90px;
+    height: 90px;
   }
   
   /* Pelilaudan elementit */
@@ -947,8 +992,8 @@ html[data-bs-theme="light"] .game-overlay .overlay-message {
   }
   
   .hero {
-    width: 65px;
-    height: 65px;
+    width: 70px;
+    height: 70px;
   }
   
   .path {
@@ -1232,5 +1277,54 @@ html[data-bs-theme="light"] .game-overlay .overlay-message {
   /* Ei scrollausta tulostuksessa */
   .game-page .page-content {
     overflow: visible !important;
+  }
+}
+
+/* Fix game board scaling on tablet view (670px - 990px) */
+@media (min-width: 670px) and (max-width: 990px) {
+  .game-board-container {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 aspect ratio to match viewBox 1200x675 */
+    overflow: hidden;
+  }
+  
+  .board-svg {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  
+  #start-image-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 5 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+  
+  #start-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block;
+  }
+  
+  
+  #quiz-board-card {
+    position: relative;
+    overflow: visible;
+  }
+  
+  #quiz-board-card .card {
+    overflow: hidden;
   }
 }

@@ -249,34 +249,54 @@ def dashboard_view(request):
         return render(request, 'dashboard/teacher.html', context)
 
     elif user.role == 'STUDENT':
+        # Hae valittu aihe GET-parametrista
+        selected_subject = request.GET.get('subject', '')
+        
         qs = (
-        Assignment.objects
-        .select_related('material', 'assigned_by')
-        .filter(student=user)
+            Assignment.objects
+            .select_related('material', 'assigned_by')
+            .filter(student=user)
         )
-    
+
+        # Suodata aiheen mukaan jos valittu
+        if selected_subject:
+            qs = qs.filter(material__subject=selected_subject)
+
         # Suodata pois suoritetut pelit etusivulta
         qs_for_display = qs.exclude(
-        status='GRADED',
-        material__material_type='peli'
+            status='GRADED',
+            material__material_type='peli'
         )
 
         counts = {
-        "assigned": qs_for_display.filter(status=Assignment.Status.ASSIGNED).count(),
-        "in_progress": qs_for_display.filter(status=Assignment.Status.IN_PROGRESS).count(),
-        "graded": qs_for_display.filter(status=Assignment.Status.GRADED).count(),
+            "assigned": qs_for_display.filter(status=Assignment.Status.ASSIGNED).count(),
+            "in_progress": qs_for_display.filter(status=Assignment.Status.IN_PROGRESS).count(),
+            "graded": qs_for_display.filter(status=Assignment.Status.GRADED).count(),
         }
 
         due_soon = (
-        qs_for_display
-        .exclude(due_at__isnull=True)
-        .filter(due_at__gte=timezone.now())
-        .order_by('due_at')[:3]
+            qs_for_display
+            .exclude(due_at__isnull=True)
+            .filter(due_at__gte=timezone.now())
+            .order_by('due_at')[:3]
+        )
+
+        # Hae kaikki aiheet oppilaan tehtävistä
+        subjects = (
+            Assignment.objects
+            .filter(student=user)
+            .exclude(material__subject__isnull=True)
+            .exclude(material__subject='')
+            .values_list('material__subject', flat=True)
+            .distinct()
+            .order_by('material__subject')
         )
 
         return render(request, 'dashboard/student.html', {
-        "counts": counts,
-        "due_soon": due_soon,
+            "counts": counts,
+            "due_soon": due_soon,
+            "subjects": subjects,
+            "selected_subject": selected_subject,
         })
 
     return redirect('kirjaudu')
@@ -1876,69 +1896,70 @@ def format_game_content_for_display(game_data):
         pairs = game_data.get('pairs', [])
         content = "## Muistipeli - Parit\n\n"
         content += f"**Parien määrä:** {len(pairs)}\n\n"
-        
+    
         if not pairs:
             content += "<p><em>Ei pareja saatavilla</em></p>"
             return content
-        
+    
+        # Detect column headers dynamically from the first pair
+        first_pair = pairs[0] if pairs else {}
+    
+        # Try to determine what kind of pairs these are
+        col1_key = None
+        col2_key = None
+        col1_name = "Kysymys"
+        col2_name = "Vastaus"
+    
+        # Check for common key patterns
+        if 'suomi' in first_pair or 'Suomi' in first_pair:
+            col1_key = 'suomi'
+            col2_key = 'englanti'
+            col1_name = "Suomi"
+            col2_name = "Englanti"
+        elif 'question' in first_pair:
+            col1_key = 'question'
+            col2_key = 'answer'
+            col1_name = "Kysymys"
+            col2_name = "Vastaus"
+        elif 'word1' in first_pair:
+            col1_key = 'word1'
+            col2_key = 'word2'
+            col1_name = "Kortti 1"
+            col2_name = "Kortti 2"
+        else:
+            # Use the first two keys found
+            keys = list(first_pair.keys())
+            if len(keys) >= 2:
+                col1_key = keys[0]
+                col2_key = keys[1]
+                col1_name = keys[0].capitalize()
+                col2_name = keys[1].capitalize()
+    
         content += '<table class="table table-striped">\n'
-        content += '<thead><tr><th>#</th><th>Suomi</th><th>Englanti</th></tr></thead>\n'
+        content += f'<thead><tr><th>#</th><th>{col1_name}</th><th>{col2_name}</th></tr></thead>\n'
         content += '<tbody>\n'
+    
         for i, pair in enumerate(pairs, 1):
-            suomi = (pair.get('suomi') or pair.get('Suomi') or 
-                    pair.get('word1') or pair.get('fi') or '?')
-            englanti = (pair.get('englanti') or pair.get('Englanti') or 
-                       pair.get('word2') or pair.get('en') or '?')
-            content += f'<tr><td>{i}</td><td>{suomi}</td><td>{englanti}</td></tr>\n'
+            # Get values dynamically
+            val1 = '?'
+            val2 = '?'
+        
+            if col1_key:
+                val1 = (pair.get(col1_key) or pair.get(col1_key.capitalize()) or 
+                    pair.get('word1') or pair.get('fi') or pair.get('suomi') or '?')
+                val2 = (pair.get(col2_key) or pair.get(col2_key.capitalize()) or 
+                   pair.get('word2') or pair.get('en') or pair.get('englanti') or '?')
+            else:
+                # Fallback: take any two values from the dict
+                values = list(pair.values())
+                if len(values) >= 2:
+                    val1 = values[0]
+                    val2 = values[1]
+        
+            content += f'<tr><td>{i}</td><td>{val1}</td><td>{val2}</td></tr>\n'
+    
         content += '</tbody>\n'
         content += '</table>\n'
-        return content
-    
-    # HIRSIPUU / MYSTEERISANA
-    elif 'word' in game_data or 'words' in game_data:
-        content = "## Mysteerisana\n\n"
-        
-        if 'words' in game_data:
-            words_data = game_data['words']
-            
-            if 'topic' in game_data:
-                content += f"**Aihe:** {game_data['topic']}\n\n"
-            
-            # Jos words on lista merkkijonoja
-            if words_data and isinstance(words_data[0], str):
-                content += f"**Sanoja yhteensä:** {len(words_data)}\n\n"
-                content += '<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">\n'
-                for i, word in enumerate(words_data, 1):
-                    content += '<div class="col">\n'
-                    content += '<div class="card h-100">\n'
-                    content += '<div class="card-body p-2 text-center">\n'
-                    content += f'<small class="text-muted">#{i}</small>\n'
-                    content += f'<p class="mb-0 fw-bold text-dark">{word.upper()}</p>\n'
-                    content += '</div>\n'
-                    content += '</div>\n'
-                    content += '</div>\n'
-                content += '</div>\n'
-            
-            # Jos words on lista objekteja
-            elif words_data and isinstance(words_data[0], dict):
-                content += f"**Sanoja yhteensä:** {len(words_data)}\n\n"
-                content += '<div class="card">\n'
-                for i, word_obj in enumerate(words_data, 1):
-                    word = word_obj.get('word', '?')
-                    clue = word_obj.get('clue', 'Ei vihjettä')
-                    content += '<div class="card-body border-bottom">\n'
-                    content += f'<h5>Sana {i}</h5>\n'
-                    content += f'<p><strong>Sana:</strong> {word.upper()}</p>\n'
-                    content += f'<p><strong>Vihje:</strong> {clue}</p>\n'
-                    content += '</div>\n'
-                content += '</div>\n'
-        
-        elif 'word' in game_data:
-            word = game_data.get('word', '?')
-            clue = game_data.get('clue', 'Ei vihjettä')
-            content += f"**Sana:** {word.upper()}\n\n"
-            content += f"**Vihje:** {clue}\n\n"
-        
         return content
     
     # VISA/QUIZ
@@ -2032,7 +2053,7 @@ def format_game_content_for_display(game_data):
 @login_required
 def teacher_student_list_view(request):
     """
-    Käsittelee opiskelijatietojen näyttämistä ja päivittämistä opettajille.
+    Käsittelee oppilastietojen näyttämistä ja päivittämistä opettajille.
 
     Varmistaa, että vain 'TEACHER'-roolissa olevat käyttäjät voivat
     käyttää tätä näkymää. Mahdollistaa opettajille opiskelijoiden

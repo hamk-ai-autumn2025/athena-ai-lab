@@ -61,14 +61,14 @@ class MaterialForm(forms.ModelForm):
 
 class AssignmentForm(forms.Form):
     """
-    Lomake kentät sisältää opiskelijoiden valitsemiseen ja määräajan asettamiseen.
+    Lomake kentät sisältää oppilaiden valitsemiseen ja määräajan asettamiseen.
     Tätä käytetään (jos käytetään) yksittäisen tehtävän jakoon opiskelijoille.
     """
 
     students = forms.ModelMultipleChoiceField(
         queryset=None,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'list-unstyled'}),
-        label="Valitse opiskelijat",
+        label="Valitse opppilaat",
         required=True,
     )
     due_at = forms.DateTimeField(
@@ -226,15 +226,15 @@ class AddImageForm(forms.Form):
 
 class AssignForm(forms.Form):
     """
-    Lomake materiaalin jakamiseen opiskelijoille tai luokille.
-    Mahdollistaa yksittäisten opiskelijoiden tai koko luokan valitsemisen
+    Lomake materiaalin jakamiseen oppiloille tai luokille.
+    Mahdollistaa yksittäisten oppilaiden tai koko luokan valitsemisen
     sekä määräajan asettamisen.
     """
     students = forms.ModelMultipleChoiceField(
         queryset=None,
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        label="Valitse opiskelijat"
+        label="Valitse oppilaat"
     )
     due_at = forms.DateTimeField(
         required=False,

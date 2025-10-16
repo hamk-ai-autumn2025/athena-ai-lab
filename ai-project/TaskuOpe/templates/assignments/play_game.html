@@ -161,20 +161,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (gameData.levels) {
         // ==================== VISA ====================
         instructions = `
-            <p><strong>🎯 Tavoite:</strong> Vastaa kysymyksiin ja etene pelilaudalla maaliin!</p>
+            <p><strong>🎯 Tavoite:</strong> Vastaa kysymyksiin ja etene pelilaudalla maaliin!<br>
+            <em><strong>⚠️ Huom:</strong> Peliä ei voi tallentaa — sivulta poistuminen aloittaa pelin alusta.</em>
             <ul class="mb-2">
+                <li>Pelin aloittaminen käynnistää ajastimen, jokaiseen kysymykseen on aikaa 20 sekunttia</li>
                 <li>Lue kysymys huolellisesti</li>
                 <li>Valitse oikea vastaus vaihtoehdoista</li>
                 <li>Oikeat vastaukset vievät sinut eteenpäin pelilaudalla</li>
                 <li>Väärät vastaukset eivät vie eteenpäin</li>
                 <li>Tavoitteena on päästä maaliin mahdollisimman monella oikealla vastauksella</li>
             </ul>
-            <p class="mb-0"><strong>💡 Vinkki:</strong> Lue kysymykset huolellisesti ennen vastaamista!</p>
         `;
     } else if (gameData.word || gameData.words) {
         // ==================== MYSTEERISANA(HIRSIPUU) ====================
         instructions = `
-            <p><strong>🔍 Tavoite:</strong> Arvaa piilotettu sana ennen kuin mies hirtetään!</p>
+            <p><strong>🔍 Tavoite:</strong> Arvaa piilotettu sana ennen yritysten loppumista!<br>
+            <em><strong>⚠️ Huom:</strong> Peliä ei voi tallentaa — sivulta poistuminen aloittaa pelin alusta.</em>
+            </p>
             <ul class="mb-2">
                 <li>Valitse kirjaimia yksi kerrallaan</li>
                 <li>Jos kirjain on sanassa, se ilmestyy oikealle paikalleen</li>
@@ -187,7 +190,10 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (gameData.pairs) {
         // ==================== MUISTIPELI ====================
         instructions = `
-            <p><strong>🔍 Tavoite:</strong> Löydä kaikki korttien parit!</p>
+            <p>
+                <strong>🔍 Tavoite:</strong> Löydä kaikki korttien parit!<br>
+                <em><strong>⚠️ Huom:</strong> Peliä ei voi tallentaa — sivulta poistuminen aloittaa pelin alusta.</em>
+            </p>
             <ul class="mb-2">
                 <li>Klikkaa kortteja paljastaaksesi niiden sisällön</li>
                 <li>Yritä muistaa, missä kukin kortti on</li>

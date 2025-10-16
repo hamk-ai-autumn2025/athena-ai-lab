@@ -52,7 +52,7 @@
               <li class="nav-item"><a class="nav-link {% if nm == 'create_material' %}active{% endif %}" href="{% url 'create_material' %}"><i class="bi bi-plus-square-fill me-2"></i>Luo materiaali</a></li>
               <li class="nav-item"><a class="nav-link {% if nm == 'material_list' %}active{% endif %}" href="{% url 'material_list' %}"><i class="bi bi-collection-fill me-2"></i>Omat materiaalit</a></li>
               <li class="nav-item"><a class="nav-link {% if nm == 'view_all_submissions' %}active{% endif %}" href="{% url 'view_all_submissions' %}"><i class="bi bi-card-checklist me-2"></i>Palautukset</a></li>
-              <li class="nav-item"><a class="nav-link {% if nm == 'teacher_student_list' %}active{% endif %}" href="{% url 'teacher_student_list' %}"><i class="bi bi-people-fill me-2"></i>Opiskelijat</a></li>
+              <li class="nav-item"><a class="nav-link {% if nm == 'teacher_student_list' %}active{% endif %}" href="{% url 'teacher_student_list' %}"><i class="bi bi-people-fill me-2"></i>Oppilaat</a></li>
             {% endif %}
             <li class="nav-item dropdown mt-3">
               <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Hei, {{ user.get_full_name|default:user.username }}!</a>
@@ -91,7 +91,7 @@
             <a href="{% url 'create_material' %}" class="nav-link {% if nm == 'create_material' %}active{% endif %}"><i class="bi bi-plus-square-fill me-2"></i>Luo materiaali</a>
             <a href="{% url 'material_list' %}" class="nav-link {% if nm == 'material_list' %}active{% endif %}"><i class="bi bi-collection-fill me-2"></i>Omat materiaalit</a>
             <a href="{% url 'view_all_submissions' %}" class="nav-link {% if nm == 'view_all_submissions' %}active{% endif %}"><i class="bi bi-card-checklist me-2"></i>Palautukset</a>
-            <a href="{% url 'teacher_student_list' %}" class="nav-link {% if nm == 'teacher_student_list' %}active{% endif %}"><i class="bi bi-people-fill me-2"></i>Opiskelijat</a>
+            <a href="{% url 'teacher_student_list' %}" class="nav-link {% if nm == 'teacher_student_list' %}active{% endif %}"><i class="bi bi-people-fill me-2"></i>Oppilaat</a>
           {% endif %}
         </nav>
         {% endwith %}

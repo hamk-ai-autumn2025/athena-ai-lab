@@ -212,6 +212,26 @@ html, body {
   }
 }
 
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  background-color: #8de8ff71;
+}
+/* Dark theme support */
+[data-bs-theme="dark"] .card-hover:hover,
+html[data-bs-theme="dark"] .card-hover:hover,
+body[data-bs-theme="dark"] .card-hover:hover,
+.dark-mode .card-hover:hover,
+[data-theme="dark"] .card-hover:hover {
+  background-color: rgba(168, 238, 255, 0.233) !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5) !important;
+}
+
 [data-bs-theme="light"] .navbar,
 [data-bs-theme="light"] .offcanvas {
   --bs-navbar-color: #000;
@@ -234,6 +254,34 @@ html, body {
 }
 [data-bs-theme="light"] .navbar .navbar-toggler-icon {
   background-image: var(--bs-navbar-toggler-icon-bg);
+}
+
+/* Korjaus luo materiaali sivun otsikkoon*/
+[data-bs-theme="dark"] .taskuope-header-title {
+  color: #c9d1d9 !important;
+}
+
+/* Korjaus materiaalien tarkastelussa oleville napeille tummalla teemalla */
+[data-bs-theme="dark"] .btn-outline-dark {
+  color: #e0e0e0 !important;
+  border-color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-dark:hover {
+  color: #212529 !important;
+  background-color: #e0e0e0 !important;
+  border-color: #e0e0e0 !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+  color: #e0e0e0 !important;
+  border-color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+  color: #212529 !important;
+  background-color: #e0e0e0 !important;
+  border-color: #e0e0e0 !important;
 }
 
 
@@ -484,8 +532,8 @@ html, body {
 
 
 
-<!-- ENHANCED STYLES FOR MATERIAL CREATION PAGE -->
-<style>
+/* ENHANCED STYLES FOR MATERIAL CREATION PAGE */
+
 /* === Layout & Spacing === */
 .material-create-container {
   max-width: 1600px;
@@ -736,6 +784,31 @@ html, body {
   color: var(--text-muted) !important;
 }
 
+/* Fix for student dashboard closing dates - the date badge */
+[data-bs-theme="light"] .badge.bg-outline {
+  color: #212529 !important; /* Dark text for light theme */
+  background-color: transparent !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-outline {
+  color: #f8f9fa !important; /* Light text for dark theme */
+  background-color: transparent !important;
+}
+
+/* Fix for student dashboard: number counts visibility in dark theme */
+[data-bs-theme="dark"] .card .display-6 {
+  color: #f8f9fa !important; /* Light text for dark theme */
+}
+
+/* Fix for text-muted in closing dates section */
+[data-bs-theme="dark"] .list-group-item .text-muted {
+  color: #adb5bd !important; /* Lighter gray for dark theme */
+}
+
+[data-bs-theme="light"] .list-group-item .text-muted {
+  color: #6c757d !important; /* Standard gray for light theme */
+}
+
 /* Kuvageneraattorin paneeli */
 :root[data-bs-theme="dark"] #ai-image-tool {
   background-color: var(--panel-bg);
@@ -969,3 +1042,34 @@ html, body {
 }
 .collapsible-body.d-none {opacity:0;}
 
+/* Kysymyskorttien korjaus visapelientarkastelussa, jotta näkyvät tumalla teemalla */
+[data-bs-theme="dark"] .card-header.bg-light {
+  background-color: var(--bs-gray-800) !important;
+  color: var(--bs-gray-100) !important;
+}
+
+[data-bs-theme="dark"] .card-header.bg-light strong {
+  color: var(--bs-gray-100) !important;
+}
+
+/* Muistipeli vastauksien korjaus muistipelin tarkastelussa tummalla teemalla */
+[data-bs-theme="dark"] .table.table-striped tbody tr {
+  color: #e0e0e0 !important; /* Softer white-gray instead of pure white */
+}
+
+[data-bs-theme="dark"] .table.table-striped td {
+  color: #e0e0e0 !important;
+}
+
+[data-bs-theme="dark"] .table thead th {
+  color: #d0d0d0 !important; /* Slightly dimmer for headers */
+}
+
+/* If the memory game uses card grid layout */
+[data-bs-theme="dark"] .card .card-body .fw-bold {
+  color: #e8e8e8 !important; /* Soft light gray instead of bright white */
+}
+
+[data-bs-theme="dark"] .card .card-body small.text-muted {
+  color: #b0b0b0 !important; /* Medium gray for less important text */
+}
