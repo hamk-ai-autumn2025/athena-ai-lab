@@ -72,9 +72,10 @@
     </div>
   </div>
 
-  <!-- Suodatin -->
-  <form method="get" class="row g-2 align-items-end p-3 rounded mb-4 border">
-    <div class="col-md-4">
+<!-- Suodatin -->
+<div style="max-width: 800px;">
+  <form method="get" class="row g-3 align-items-end p-3 rounded mb-4 border">
+    <div class="col-md">
       <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
       <select name="subject" id="subject-filter" class="form-select">
         <option value="">Kaikki aiheet</option>
@@ -85,11 +86,14 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-8 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Suodata</button>
-      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+    <div class="col-md-auto">
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Suodata</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+      </div>
     </div>
   </form>
+</div>
 
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="h5 mb-0">Lähestyvät eräpäivät</h2>

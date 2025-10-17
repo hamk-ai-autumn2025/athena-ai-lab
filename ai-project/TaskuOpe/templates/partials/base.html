@@ -25,15 +25,15 @@
 </head>
 <body>
 
-  <!-- MOBILE NAVBAR (Pysyy ennallaan, koska se on kiinteä ja asettelun ulkopuolella) -->
-  <nav class="navbar fixed-top d-lg-none navbar-dark bg-body">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
-        <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" height="30">
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+  <!-- MOBILE NAVBAR -->
+<nav class="navbar fixed-top d-lg-none navbar-dark bg-body">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+      <img src="{% static 'images/logo1.png' %}" alt="TaskuOpe Logo" class="mobile-logo">
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
       <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
         <div class="offcanvas-header">

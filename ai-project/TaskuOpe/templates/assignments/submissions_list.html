@@ -19,24 +19,27 @@
     </div>  
   </div>
 
-  <form class="row g-2 align-items-end mb-3" method="get" action=".">
-    <div class="col-12 col-md-6">
-      <label class="form-label">Haku</label>
-      <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Etsi oppilasta tai materiaalia">
-    </div>
-    <div class="col-12 col-md-3">
-      <label class="form-label">Status</label>
-      <select class="form-select" name="status">
-        <option value="" {% if not status %}selected{% endif %}>Kaikki</option>
-        <option value="SUBMITTED" {% if status == "SUBMITTED" %}selected{% endif %}>Palautettu</option>
-        <option value="GRADED" {% if status == "GRADED" %}selected{% endif %}>Arvioitu</option>
-      </select>
-    </div>
-    <div class="col-12 col-md-3 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Suodata</button>
-      <a class="btn btn-outline-secondary" href=".">Tyhjennä</a>
-    </div>
-  </form>
+  <div style="max-width: 800px;" class="mb-4">
+    <form method="get" class="row g-3 align-items-end p-3 rounded border">
+      <div class="col-md">
+        <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
+        <select name="subject" id="subject-filter" class="form-select">
+          <option value="">Kaikki aiheet</option>
+          {% for subject in subjects %}
+            <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
+              {{ subject }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-auto">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Suodata</button>
+          <a href="{% url 'material_list' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+        </div>
+      </div>
+    </form>
+  </div>
 
   <!-- Normaalit tehtävät ENSIN -->
   <section class="assignments-list mb-5">

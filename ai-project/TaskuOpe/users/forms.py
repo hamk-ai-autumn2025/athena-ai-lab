@@ -90,3 +90,18 @@ class CustomUserChangeForm(UserChangeForm):
         model = CustomUser
         # Nämä kentät näkyvät olemassa olevan käyttäjän muokkauslomakkeessa
         fields = ('username', 'email', 'first_name', 'last_name', 'role', 'grade_class', 'is_active', 'is_staff')
+
+# --- LOMAKE PROFIILIKUVALLE ---
+class ProfileImageForm(forms.ModelForm):
+    """Lomake profiilikuvan päivittämistä varten."""
+    class Meta:
+        model = CustomUser
+        fields = ['profile_image']
+        labels = {
+            # Piilotetaan erillinen otsikko, koska se on nyt osana ulkoasua
+            'profile_image': ''
+        }
+        # Lisätään widget-määritys, jotta kenttään tulee oikeat CSS-luokat
+        widgets = {
+            'profile_image': forms.FileInput(attrs={'class': 'form-control'})
+        }

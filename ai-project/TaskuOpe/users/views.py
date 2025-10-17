@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 # --- NEW: Import the custom form we created ---
-from .forms import CustomLoginForm
+from .forms import CustomLoginForm, ProfileImageForm
 
 
 class FinnishLoginView(LoginView):
@@ -63,19 +63,21 @@ def simple_logout(request):
 @login_required(login_url='kirjaudu')
 def profile_view(request):
     """
-    Näyttää sisäänkirjautuneen käyttäjän profiilisivun.
-
-    Tämä näkymä vaatii käyttäjän olevan kirjautuneena sisään.
-    Jos käyttäjä ei ole kirjautunut, hänet ohjataan 'kirjaudu'-sivulle.
+    Näyttää käyttäjän profiilin ja käsittelee profiilikuvan päivityksen.
     """
-    
-    # Haetaan käyttäjä suoraan pyynnöstä. Ei tarvitse hakea tietokannasta.
-    user = request.user
+    if request.method == 'POST':
+        # Käsitellään kuvan lataus
+        form = ProfileImageForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profiilikuva päivitetty onnistuneesti!")
+            return redirect('profile')
+    else:
+        # Näytetään tyhjä lomake
+        form = ProfileImageForm(instance=request.user)
 
-    # Välitetään käyttäjäobjekti templatelle 'user'-nimisessä kontekstimuuttujassa.
     context = {
-        'user': user
+        'user': request.user,
+        'form': form  # Välitetään lomake templatelle
     }
-
-    # Pyydetään Djangoa renderöimään 'profile.html'-sivu ja antamaan sille data.
     return render(request, 'registration/profile.html', context)

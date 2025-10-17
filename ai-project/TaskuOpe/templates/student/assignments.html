@@ -12,103 +12,85 @@
   </div>
   
   <!--Suodatin-->
-    <form method="get" class="row g-2 align-items-end p-3 rounded mb-4 border">
-    <div class="col-md-4">
-      <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
-      <select name="subject" id="subject-filter" class="form-select">
-        <option value="">Kaikki aiheet</option>
-        {% for subject in subjects %}
-          <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
-            {{ subject }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-8 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Suodata</button>
-      <a href="{% url 'student_assignments' %}" class="btn btn-outline-secondary">Tyhjennä</a>
-    </div>
-  </form>
+  <div style="max-width: 800px;" class="mb-4">
+    <form method="get" class="row g-3 align-items-end p-3 rounded border">
+      <div class="col-md">
+        <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
+        <select name="subject" id="subject-filter" class="form-select">
+          <option value="">Kaikki aiheet</option>
+          {% for subject in subjects %}
+            <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
+              {{ subject }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-auto">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Suodata</button>
+          <a href="{% url 'material_list' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+        </div>
+      </div>
+    </form>
+  </div>
 
-  {# Uudet #}
-  <section class="student-section stack-flow mb-4">
-    <h2 class="h5 mb-2">Uudet</h2>
-    <div class="student-cards">
+
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Uudet</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
       {% for a in assigned %}
-        <!-- MUUTOS TÄSSÄ: h-100-luokka lisätty -->
-        <article class="card shadow-sm student-card h-100">
-          <div class="card-body d-flex flex-column">
-
-            {% for img in a.material.images.all|slice:":1" %}
-              <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="mb-2 d-block">
-                 <img src="{{ img.thumbnail.url }}" alt="{{ img.caption|default:'Liitekuva' }}"
-                  class="img-fluid rounded border" style="max-height: 140px; object-fit: cover; width: 100%;">
-              </a>
-            {% endfor %}
-
-            <div class="d-flex justify-content-between align-items-start">
-              <h5 class="card-title mb-1">{{ a.material.title }}</h5>
-              <span class="badge bg-info text-dark">Annettu</span>
+        <div class="col">
+          <article class="card material-card h-100">
+            <div class="card-body d-flex flex-column">
+              <div class="mb-2">
+                <span class="badge bg-info text-dark">Annettu</span>
+              </div>
+              <h5 class="card-title mt-1">{{ a.material.title }}</h5>
+              <p class="card-subtitle mb-2 text-muted">
+                <i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
+              </p>
+              <p class="card-subtitle mb-3 text-muted">
+                <i class="bi bi-calendar-event me-1"></i>{{ a.due_at|date:"d.m.Y H:i"|default:"Ei määräaikaa" }}
+              </p>
+              <div class="card-actions mt-auto pt-3">
+                <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="btn btn-sm btn-primary">Aloita</a>
+              </div>
             </div>
-            <p class="small text-muted mb-2">
-              Opettaja: {{ a.assigned_by.get_full_name|default:a.assigned_by.username }} ·
-              Määräaika: {{ a.due_at|date:"d.m.Y H:i"|default:"—" }}
-              {% if a.due_at and a.due_at < now and a.status != 'SUBMITTED' and a.status != 'GRADED' %}
-                <span class="badge bg-danger ms-1">Myöhässä</span>
-              {% endif %}
-            </p>
-            {% if a.material.content %}
-              <div class="text-muted text-truncate-3 mb-3">{{ a.material.content_without_images }}</div>
-            {% endif %}
-            <div class="mt-auto d-flex gap-2">
-              <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="btn btn-sm btn-primary">Avaa</a>
-              <a href="{% url 'assignment_detail' assignment_id=a.id %}#start" class="btn btn-sm btn-outline-secondary">Aloita</a>
-            </div>
-          </div>
-        </article>
+          </article>
+        </div>
       {% empty %}
-        <div class="text-muted">Ei uusia tehtäviä.</div>
+        <div class="col-12 text-muted">Ei uusia tehtäviä.</div>
       {% endfor %}
     </div>
   </section>
 
   {# Kesken #}
-  <section class="student-section stack-flow mb-4">
-    <h2 class="h5 mb-2">Kesken</h2>
-    <div class="student-cards">
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Kesken</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
       {% for a in in_progress %}
-        <!-- MUUTOS TÄSSÄ: h-100-luokka lisätty -->
-        <article class="card shadow-sm student-card h-100">
-          <div class="card-body d-flex flex-column">
-
-            {% for img in a.material.images.all|slice:":1" %}
-              <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="mb-2 d-block">
-                <img src="{{ img.thumbnail.url }}" alt="{{ img.caption|default:'Liitekuva' }}"
-                    class="img-fluid rounded border" style="max-height: 140px; object-fit: cover; width: 100%;">
-              </a>
-            {% endfor %}
-
-            <div class="d-flex justify-content-between align-items-start">
-              <h5 class="card-title mb-1">{{ a.material.title }}</h5>
-              <span class="badge bg-warning text-dark">Kesken</span>
+        <div class="col">
+          <!-- MUUTOS: Käytetään uutta material-card-tyyliä -->
+          <article class="card material-card h-100">
+            <div class="card-body d-flex flex-column">
+                <div class="mb-2">
+                  <span class="badge bg-warning text-dark">Kesken</span>
+                </div>
+                <h5 class="card-title mt-1">{{ a.material.title }}</h5>
+                <p class="card-subtitle mb-2 text-muted">
+                  <i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
+                </p>
+                <p class="card-subtitle mb-3 text-muted">
+                  <i class="bi bi-calendar-event me-1"></i>{{ a.due_at|date:"d.m.Y H:i"|default:"Ei määräaikaa" }}
+                </p>
+                <div class="card-actions mt-auto pt-3">
+                  <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="btn btn-sm btn-primary">Jatka</a>
+                </div>
             </div>
-            <p class="small text-muted mb-2">
-              Opettaja: {{ a.assigned_by.get_full_name|default:a.assigned_by.username }} ·
-              Määräaika: {{ a.due_at|date:"d.m.Y H:i"|default:"—" }}
-              {% if a.due_at and a.due_at < now %}
-                <span class="badge bg-danger ms-1">Myöhässä</span>
-              {% endif %}
-            </p>
-            {% if a.material.content %}
-              <div class="text-muted text-truncate-3 mb-3">{{ a.material.content_without_images }}</div>
-            {% endif %}
-            <div class="mt-auto d-flex gap-2">
-              <a href="{% url 'assignment_detail' assignment_id=a.id %}" class="btn btn-sm btn-primary">Jatka</a>
-            </div>
-          </div>
-        </article>
+          </article>
+        </div>
       {% empty %}
-        <div class="text-muted">Ei keskeneräisiä tehtäviä.</div>
+        <div class="col-12 text-muted">Ei keskeneräisiä tehtäviä.</div>
       {% endfor %}
     </div>
   </section>

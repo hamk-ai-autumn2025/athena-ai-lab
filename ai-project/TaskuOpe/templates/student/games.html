@@ -12,104 +12,81 @@
   </div>
   
   <!-- Suodatin -->
-  <form method="get" class="row g-2 align-items-end p-3 rounded mb-4 border">
-    <div class="col-md-4">
-      <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
-      <select name="subject" id="subject-filter" class="form-select">
-        <option value="">Kaikki aiheet</option>
-        {% for subject in subjects %}
-          <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
-            {{ subject }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-8 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Suodata</button>
-      <a href="{% url 'student_games' %}" class="btn btn-outline-secondary">Tyhjennä</a>
-    </div>
-  </form>
+  <div style="max-width: 800px;" class="mb-4">
+    <form method="get" class="row g-3 align-items-end p-3 rounded border">
+      <div class="col-md">
+        <label for="subject-filter" class="form-label fw-bold">Suodata aiheen mukaan</label>
+        <select name="subject" id="subject-filter" class="form-select">
+          <option value="">Kaikki aiheet</option>
+          {% for subject in subjects %}
+            <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>
+              {{ subject }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-auto">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Suodata</button>
+          <a href="{% url 'material_list' %}" class="btn btn-outline-secondary">Tyhjennä</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
 
   {# Uudet pelit #}
-  <section class="student-section stack-flow mb-4">
-    <h2 class="h5 mb-2"> Uudet pelit</h2>
-    <div class="student-cards">
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Uudet pelit</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
       {% for a in assigned %}
-        <article class="card shadow-sm student-card h-100">
-          <div class="card-body d-flex flex-column">
-            <h3 class="card-title h6 mb-2">
-              <a href="{% url 'play_game' assignment_id=a.id %}" class="text-decoration-none">
-                {{ a.material.title }}
-              </a>
-            </h3>
-            <p class="card-text text-muted small mb-2">
-              <strong>Aihe:</strong> {{ a.material.subject|default:"Ei määritetty" }}
-            </p>
-            <p class="card-text text-muted small mb-2">
-              <i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
-            </p>
-            {% if a.due_at %}
-              <p class="card-text small mb-2">
-                <i class="bi bi-calendar-event me-1"></i>
-                <span {% if a.due_at < now %}class="text-danger fw-bold"{% endif %}>
-                  {{ a.due_at|date:"d.m.Y H:i" }}
-                </span>
+        <div class="col">
+          <!-- MUUTOS: Käytetään uutta material-card-tyyliä -->
+          <article class="card material-card h-100">
+            <div class="card-body d-flex flex-column">
+              <div class="mb-2">
+                <span class="badge bg-info text-dark">Uusi peli</span>
+              </div>
+              <h5 class="card-title mt-1">{{ a.material.title }}</h5>
+              <p class="card-subtitle mb-3 text-muted">
+                <i class="bi bi-tag me-1"></i>{{ a.material.subject|default:"Ei määritetty" }}
               </p>
-            {% endif %}
-            <div class="mt-auto">
-              <a href="{% url 'play_game' assignment_id=a.id %}" class="btn btn-primary btn-sm w-100">
-                Pelaa 
-              </a>
+              <div class="card-actions mt-auto pt-3">
+                <a href="{% url 'play_game' assignment_id=a.id %}" class="btn btn-sm btn-primary">Pelaa</a>
+              </div>
             </div>
-          </div>
-        </article>
-      {% empty %}
-        <div class="alert alert-info">
-          <i class="bi bi-info-circle me-2"></i>Ei uusia pelejä tällä hetkellä.
+          </article>
         </div>
+      {% empty %}
+        <div class="col-12 text-muted">Ei uusia pelejä.</div>
       {% endfor %}
     </div>
   </section>
 
-
   {# Suoritetut pelit #}
-  <section class="student-section stack-flow mb-4">
-    <h2 class="h5 mb-2"> Suoritetut pelit</h2>
-    <div class="student-cards">
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Suoritetut pelit</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
       {% for a in completed %}
-        <article class="card shadow-sm student-card h-100 border-success">
-          <div class="card-body d-flex flex-column">
-            <h3 class="card-title h6 mb-2">
-              <a href="{% url 'play_game' assignment_id=a.id %}" class="text-decoration-none">
-                {{ a.material.title }}
-              </a>
-              <span class="badge bg-success ms-2">Suoritettu</span>
-            </h3>
-            <p class="card-text text-muted small mb-2">
-              <strong>Aihe:</strong> {{ a.material.subject|default:"Ei määritetty" }}
-            </p>
-            <p class="card-text text-muted small mb-2">
-              <i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
-            </p>
-            {% with sub=a.submissions.last %}
-              {% if sub and sub.score %}
-                <p class="card-text small mb-2">
-                  <i class="bi bi-star-fill text-warning me-1"></i>
-                  <strong>Pisteet:</strong> {{ sub.score }}
-                </p>
-              {% endif %}
-            {% endwith %}
-            <div class="mt-auto">
-              <a href="{% url 'play_game' assignment_id=a.id %}" class="btn btn-success btn-sm w-100">
-                Pelaa uudelleen 
-              </a>
+        <div class="col">
+          <!-- MUUTOS: Käytetään uutta material-card-tyyliä -->
+          <article class="card material-card h-100 border-success">
+            <div class="card-body d-flex flex-column">
+              <div class="mb-2">
+                <span class="badge bg-success">Suoritettu</span>
+              </div>
+              <h5 class="card-title mt-1">{{ a.material.title }}</h5>
+              <p class="card-subtitle mb-3 text-muted">
+                <i class="bi bi-tag me-1"></i>{{ a.material.subject|default:"Ei määritetty" }}
+              </p>
+              <div class="card-actions mt-auto pt-3">
+                <a href="{% url 'play_game' assignment_id=a.id %}" class="btn btn-sm btn-outline-secondary">Pelaa uudelleen</a>
+              </div>
             </div>
-          </div>
-        </article>
-      {% empty %}
-        <div class="alert alert-secondary">
-          <i class="bi bi-info-circle me-2"></i>Et ole vielä suorittanut yhtään peliä.
+          </article>
         </div>
+      {% empty %}
+        <div class="col-12 text-muted">Ei suoritettuja pelejä.</div>
       {% endfor %}
     </div>
   </section>

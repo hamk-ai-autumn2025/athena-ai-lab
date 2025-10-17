@@ -1,55 +1,83 @@
 {% extends "partials/base.html" %}
+{% load static %}
 
 {% block title %}Oma profiili{% endblock %}
+
+{% block extra_css %}
+<style>
+  .profile-avatar-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+  }
+  .profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--bs-primary);
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
   <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-7">
-
-      <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-        <div>
-          <h1 class="h2 mb-0">Oma profiili</h1>
-        </div>
-      </div>
+    <div class="col-lg-8 col-xl-7">
 
       <div class="card shadow-sm">
-        <div class="card-body p-4">
-          
-          <div class="mb-3">
-            <h6 class="text-muted">Käyttäjätunnus</h6>
-            <p class="fs-5">{{ user.username }}</p>
+        <div class="card-body p-4 p-md-5 text-center">
+
+          <!-- Profiilikuva -->
+          <div class="profile-avatar-wrapper mb-3">
+            <img src="{% if user.profile_image %}{{ user.profile_image.url }}{% else %}{% static 'images/default_avatar.png' %}{% endif %}" 
+                 alt="Profiilikuva" 
+                 class="profile-avatar-img">
           </div>
 
-          <div class="mb-3">
-            <h6 class="text-muted">Nimi</h6>
-            <p class="fs-5">{{ user.get_full_name|default:"Nimeä ei ole asetettu" }}</p>
-          </div>
+          <!-- Nimi ja rooli -->
+          <h2 class="h3">{{ user.get_full_name|default:user.username }}</h2>
+          <span class="badge fs-6 {% if user.role == 'TEACHER' %}bg-primary{% else %}bg-info text-dark{% endif %}">
+            {% if user.role == "TEACHER" %}<i class="bi bi-briefcase-fill me-1"></i> Opettaja{% else %}<i class="bi bi-book-fill me-1"></i> Oppilas{% endif %}
+          </span>
 
-          <div class="mb-3">
-            <h6 class="text-muted">Sähköposti</h6>
-            <p class="fs-5">{{ user.email }}</p>
-          </div>
-          
-          <div class="mb-3">
-            <h6 class="text-muted">Rooli</h6>
-            <p class="fs-5">
-              {% if user.role == "TEACHER" %}
-                Opettaja
-              {% elif user.role == "STUDENT" %}
-                Oppilas
-              {% else %}
-                {{ user.role }}  <!-- Näyttää alkuperäisen arvon, jos se on jotain muuta -->
-              {% endif %}
-            </p> 
-          </div>
+          <hr class="my-4">
 
-          {% if user.role == 'STUDENT' and user.grade_class %}
+          <!-- Profiilin tiedot -->
+          <div class="profile-details">
             <div class="mb-3">
-              <h6 class="text-muted">Luokka</h6>
-              <p class="fs-5">{{ user.grade_class }}. luokka</p>
+              <h6 class="text-muted"><i class="bi bi-person-badge me-2"></i>Käyttäjätunnus</h6>
+              <p class="fw-medium mb-0">{{ user.username }}</p>
             </div>
-          {% endif %}
+            <div class="mb-3">
+              <h6 class="text-muted"><i class="bi bi-envelope me-2"></i>Sähköposti</h6>
+              <p class="fw-medium mb-0">{{ user.email|default:"Ei asetettu" }}</p>
+            </div>
+            {% if user.role == 'STUDENT' and user.grade_class %}
+            <div class="mb-3">
+              <h6 class="text-muted"><i class="bi bi-bookmark me-2"></i>Luokka</h6>
+              <p class="fw-medium mb-0">{{ user.get_grade_class_display }}</p>
+            </div>
+            {% endif %}
+          </div>
+          
+          <hr class="my-4">
+
+          <!-- Kuvan latauslomake (UUSI ASETTELU) -->
+          <div class="w-100 mx-auto" style="max-width: 400px;">
+            <h5 class="h6 mb-3">Vaihda profiilikuva</h5>
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="input-group mb-3">
+                {{ form.profile_image }}
+                <button class="btn btn-primary" type="submit">Tallenna</button>
+              </div>
+              {% if form.profile_image.errors %}
+                <div class="text-danger small mt-2">{{ form.profile_image.errors.as_text }}</div>
+              {% endif %}
+            </form>
+          </div>
 
         </div>
       </div>

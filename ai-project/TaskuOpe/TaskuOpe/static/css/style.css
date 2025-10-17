@@ -1076,3 +1076,154 @@ body[data-bs-theme="dark"] .card-hover:hover,
 [data-bs-theme="dark"] .card .card-body small.text-muted {
   color: #b0b0b0 !important; /* Medium gray for less important text */
 }
+
+/* --- OMAT MATERIAALIT SIVUN KORTTITYYLIT --- */
+.material-card {
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--card-bg-color);
+}
+
+.material-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.material-card .card-title {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.material-card .card-actions {
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Status-merkkien ("span boxit") värit */
+.badge-status-DRAFT {
+  background-color: #6c757d; /* Harmaa */
+  color: white;
+}
+.badge-status-PENDING {
+  background-color: #ffc107; /* Keltainen */
+  color: #000;
+}
+.badge-status-APPROVED {
+  background-color: #198754; /* Vihreä */
+  color: white;
+}
+.badge-status-REJECTED {
+  background-color: #dc3545; /* Punainen */
+  color: white;
+}
+
+/* === LOGON KORJAUS MOBIILISSA (YLÄPALKKI) === */
+@media (max-width: 991.98px) {
+  .navbar-brand {
+    /* Pienennetään logon ympärillä olevaa oletustyhjää tilaa */
+    padding-top: 0.10rem;
+    padding-bottom: 0.10rem;
+  }
+  
+  .mobile-logo {
+    height: 70px; /* Asetetaan haluttu logon korkeus */
+    /* Negatiiviset marginaalit "vetävät" tilaa takaisin, jolloin yläpalkki ei kasva */
+    margin-top: -10px;
+    margin-bottom: -10px;
+  }
+}
+
+/* ======================================================= */
+/* 12. MOBIILIN TIIVISTYS - VÄHEMMÄN PADDINGIA             */
+/* ======================================================= */
+
+@media (max-width: 767.98px) {
+  /* Pienennetään sivun pääsisällön reunuksia mobiilissa */
+  .page-content {
+    padding-left: 0.75rem;  /* Oletus 1.5rem */
+    padding-right: 0.75rem; /* Oletus 1.5rem */
+    padding-bottom: 1rem;   /* Oletus 1.5rem */
+  }
+
+  /* Pienennetään korttien sisäistä tilaa */
+  .card-body {
+    padding: 1rem; /* Oletus 1.25rem */
+  }
+
+  /* Tiivistetään suodatinpalkin tilaa */
+  .filter-panel {
+    padding: 1rem !important;
+  }
+}
+
+/* ======================================================= */
+/* 13. TEEMAKORJAUS: MATERIAALITYYPIN VALINTA (TUMMA)      */
+/* ======================================================= */
+
+[data-bs-theme="dark"] .taskuope-material-type-selector {
+    background: var(--card-bg-color); /* Käytetään teeman kortin taustaväriä */
+    border-color: var(--border-color);
+}
+
+[data-bs-theme="dark"] .taskuope-material-type-selector:hover {
+    background: #1c2128; /* Hieman vaaleampi tumma väri hover-tilassa */
+    border-color: #4a5563;
+}
+
+[data-bs-theme="dark"] .taskuope-material-icon,
+[data-bs-theme="dark"] .taskuope-material-text {
+    color: #8b949e; /* Vaaleanharmaa teksti */
+}
+
+[data-bs-theme="dark"] .taskuope-material-title {
+    color: var(--text-color); /* Käytetään teeman päätekstin väriä */
+}
+
+[data-bs-theme="dark"] .taskuope-material-btn {
+    background: #21262d; /* Tumma tausta painikkeille */
+    border-color: var(--border-color);
+    color: var(--text-color); /* Vaalea teksti painikkeille */
+}
+
+[data-bs-theme="dark"] .taskuope-material-btn:hover {
+    border-color: var(--accent, #0d6efd); /* Käytetään korostusväriä, jos määritelty */
+    color: var(--accent, #0d6efd);
+    background: rgba(13, 110, 253, 0.1); /* Läpikuultava korostusväri */
+}
+
+/* ======================================================= */
+/* 14. TABLETTI-RESPONSIIVISUUDEN PARANNUKSET (KORJATTU)  */
+/* ======================================================= */
+
+/* Nämä säännöt koskevat tabletteja ja pieniä läppäreitä (768px - 1199.98px) */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  
+  .page-content {
+    /* Määritellään pehmusteet erikseen, jotta emme ylikirjoita padding-top -arvoa */
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 1.5rem;
+    /* padding-top: 72px säilyy aiemmasta, yleisemmästä säännöstä */
+  }
+
+  /* Suurennetaan pääotsikoita hieman, jotta ne täyttävät tilaa paremmin */
+  .h2, h2 {
+    font-size: 1.75rem; /* Oletus 1.5rem */
+  }
+
+  /* Suurennetaan myös pienempiä väliotsikoita */
+  .h4, h4 {
+    font-size: 1.3rem; /* Oletus 1.25rem */
+  }
+
+  /* Varmistetaan, että korttien välissä on riittävästi tilaa */
+  .g-4 {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 1.5rem;
+  }
+}

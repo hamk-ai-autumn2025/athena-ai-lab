@@ -226,26 +226,37 @@ Palauta täsmälleen tässä muodossa:
 def dashboard_view(request):
     """
     Renderöi oikeanlaisen hallintapaneelin käyttäjän roolin mukaan.
-    Opettajille näytetään heidän materiaalit ja tehtävänannot.
+    Opettajille näytetään heidän materiaalit ja tehtävänannot suodatuksen jälkeen.
     Oppilaille näytetään heidän tehtäviensä tilanne.
-
-    Args:
-        request: HTTP-pyyntö.
-
-    Returns:
-        HttpResponse: Renderöity hallintapaneelin sivu.
     """
     user = request.user
 
     if user.role == 'TEACHER':
-        materials = Material.objects.filter(author=user)
+        # Hae ensin kaikki opettajan materiaalien aiheet suodatinvalikkoa varten
+        all_materials_by_author = Material.objects.filter(author=user)
+        subjects = all_materials_by_author.exclude(subject__isnull=True).exclude(subject='').values_list('subject', flat=True).distinct().order_by('subject')
+
+        selected_subject = request.GET.get('subject', '')
+        
+        # Alusta materiaalilista tyhjäksi
+        materials_qs = Material.objects.none()
+
+        # Hae materiaalit vain, jos aihe on valittu
+        if selected_subject:
+            materials_qs = all_materials_by_author.filter(subject=selected_subject)
+
         assignments = (
             Assignment.objects
             .filter(assigned_by=user)
             .select_related('material', 'student')
             .order_by('-created_at')
         )
-        context = {'materials': materials, 'assignments': assignments}
+        context = {
+            'materials': materials_qs,
+            'assignments': assignments,
+            'subjects': subjects,
+            'selected_subject': selected_subject
+        }
         return render(request, 'dashboard/teacher.html', context)
 
     elif user.role == 'STUDENT':
@@ -457,7 +468,7 @@ def material_list_view(request):
         return redirect('dashboard')
 
     selected_subject = request.GET.get('subject', '')
-    all_materials = Material.objects.filter(author=request.user).order_by('-created_at')
+    all_materials = Material.objects.filter(author=request.user).order_by('created_at')
     
     # UUSI: Erottele pelit ja normaalit materiaalit
     normal_materials = all_materials.exclude(material_type='peli')
@@ -1244,28 +1255,29 @@ def view_all_submissions_view(request):
 @login_required(login_url='kirjaudu')
 def delete_material_view(request, material_id):
     """
-    Poistaa opettajan luoman materiaalin.
-
-    Varmistaa, että materiaali kuuluu pyynnön tehneelle opettajalle.
-    Hyväksyy vain POST-pyynnöt.
-
-    Args:
-        request: HttpRequest-objekti.
-        material_id (int): Poistettavan materiaalin yksilöivä ID.
-
-    Returns:
-        HttpResponse: Uudelleenohjaus 'dashboard'-sivulle onnistuneen
-                      poiston jälkeen, tai virhesivu jos HTTP-metodi
-                      ei ole POST.
+    Poistaa opettajan luoman materiaalin ja ohjaa käyttäjän takaisin
+    sivulle, jolta poisto tehtiin.
     """
     material = get_object_or_404(Material, id=material_id, author=request.user)
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    title = material.title
-    material.delete()
-    messages.success(request, f"Materiaali '{title}' poistettu.")
-    return redirect('dashboard')
+    
+    if request.method == "POST":
+        title = material.title
+        material.delete()
+        messages.success(request, f"Materiaali '{title}' poistettu.")
 
+        # --- TÄSSÄ ON UUSI, ÄLYKÄS OHJAUS ---
+        # Haetaan URL, jolta pyyntö tehtiin.
+        referer_url = request.META.get('HTTP_REFERER')
+
+        # Jos lähtösivu on olemassa, ohjataan sinne takaisin.
+        # Muussa tapauksessa ohjataan turvallisesti etusivulle.
+        if referer_url:
+            return redirect(referer_url)
+        else:
+            return redirect('dashboard')
+    
+    # Jos pyyntö ei ole POST, ei sallita (tämä on hyvä turvatoimi)
+    return HttpResponseNotAllowed(["POST"])
 
 @login_required(login_url='kirjaudu')
 def delete_assignment_view(request, assignment_id):

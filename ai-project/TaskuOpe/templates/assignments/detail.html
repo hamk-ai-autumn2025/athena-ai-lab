@@ -75,11 +75,12 @@
                 </div>
 
                 
-              <div class="p-3 border rounded bg-light mb-4">
-  <div id="submission-response-html" class="student-response">
-    {{ submission.response|safe }}
-  </div>
-</div>
+              <!-- === TÄSSÄ ON MUUTOS: bg-light -> bg-body-tertiary === -->
+              <div class="p-3 border rounded bg-body-tertiary mb-4">
+                <div id="submission-response-html" class="student-response">
+                  {{ submission.response|safe }}
+                </div>
+              </div>
 
                 {% if submission.submitted_at %}
                   <div class="small text-muted mb-3">Lähetetty: {{ submission.submitted_at|date:"d.m.Y H:i" }}</div>
@@ -116,6 +117,7 @@
               {% endif %}
             {% endwith %}
           </div>
+
 
         {% else %}
           <!-- Muokkaustila: ASSIGNED / IN_PROGRESS -->

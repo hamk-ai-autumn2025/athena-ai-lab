@@ -22,60 +22,39 @@
     </div>
   </form>
 
-  <section class="materials-list">
+  <section>
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
       {% for a in assignments %}
       {% with sub=a.submissions.last %}
       <div class="col">
-        <!-- MUUTOS TÄSSÄ: h-100-luokka lisätty -->
-        <div class="card h-100 shadow-sm">
+        <div class="card material-card h-100">
           <div class="card-body d-flex flex-column">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-              <h5 class="card-title mb-1">{{ a.material.title }}</h5>
-              <span class="badge 
-                {% if a.status == 'GRADED' %}bg-success
-                {% elif a.status == 'SUBMITTED' %}bg-primary
-                {% else %}bg-secondary{% endif %}">
+            <div class="mb-2">
+              <span class="badge {% if a.status == 'GRADED' %}bg-success{% else %}bg-primary{% endif %}">
                 {{ a.get_status_display }}
               </span>
             </div>
-
-            <p class="card-subtitle mb-2 text-muted">
-              Opettaja: {{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
+            <h5 class="card-title mt-1">{{ a.material.title }}</h5>
+            <p class="card-subtitle mb-3 text-muted">
+              <i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name|default:a.assigned_by.username }}
             </p>
-            <p class="mb-3 small text-muted">
-              Määräaika: {{ a.due_at|date:"d.m.Y H:i"|default:"–" }}
-            </p>
-
-            <div class="mb-2">
-              <div class="small text-muted">Pisteet</div>
-              <div class="fw-medium">
-                {% if sub and sub.score is not None %}
-                  {{ sub.score|floatformat:"-2" }}{% if sub.max_score is not None %} / {{ sub.max_score|floatformat:"-2" }}{% endif %}
-                {% else %}–{% endif %}
-              </div>
-            </div>
             
-            <div class="mb-2">
-                <div class="small text-muted">Arvosana</div>
-                <div class="fw-medium">{{ sub.grade|default:"–" }}</div>
-            </div>
-
-            <div class="mb-2">
-              <div class="small text-muted">Palaute</div>
-              {% if sub and sub.feedback %}
-                <p class="text-truncate mb-0">{{ sub.feedback }}</p>
-              {% else %}
-                <span class="text-muted">–</span>
-              {% endif %}
-            </div>
-
-            <div class="mt-auto pt-3 border-top">
-              <div class="d-flex justify-content-end">
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'assignment_detail' assignment_id=a.id %}">
-                  Avaa
-                </a>
+            <!-- Arviointitiedot -->
+            <div class="small mb-3">
+              <div class="mb-2">
+                <strong class="text-muted">Pisteet:</strong> 
+                <span class="fw-bold">{{ sub.score|floatformat:"-2"|default:"-" }} / {{ sub.max_score|floatformat:"-2"|default:"-" }}</span>
               </div>
+              <div>
+                <strong class="text-muted">Arvosana:</strong> 
+                <span class="fw-bold">{{ sub.grade|default:"-" }}</span>
+              </div>
+            </div>
+
+            <div class="card-actions mt-auto pt-3">
+              <a class="btn btn-sm btn-primary" href="{% url 'assignment_detail' assignment_id=a.id %}">
+                Tarkastele palautusta
+              </a>
             </div>
           </div>
         </div>
@@ -83,9 +62,7 @@
       {% endwith %}
       {% empty %}
       <div class="col-12">
-        <div class="alert alert-secondary mb-0" role="alert">
-          Ei palautettuja tai arvioituja tehtäviä vielä.
-        </div>
+        <div class="alert alert-secondary mb-0">Ei palautettuja tai arvioituja tehtäviä.</div>
       </div>
       {% endfor %}
     </div>
