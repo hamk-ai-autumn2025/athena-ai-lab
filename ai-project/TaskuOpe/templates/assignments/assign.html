@@ -1,27 +1,162 @@
 {% extends 'partials/base.html' %}
 
 {% block title %}Anna tehtäväksi: {{ material.title }}{% endblock %}
+{% block extra_css %}
+<style>
+/* Style only the specific form elements */
+
+.visibility-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* "Anna koko luokalle" checkbox styling */
+.form-check-label.fw-semibold {
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+/* "Luokka" dropdown (select) styling */
+.form-label {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.form-select {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Info text under dropdown */
+.form-text.small {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+/* "Valitse oppilaat" section styling */
+.student-selection-box {
+    background: #ffffff;
+    border: 2px solid #e0e7ff;
+    border-radius: 0.75rem;
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.student-selection-box .form-check {
+    padding: 0.875rem 1rem;
+    margin: 0;
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.2s ease;
+}
+
+.student-selection-box .form-check:last-child {
+    border-bottom: none;
+}
+
+.student-selection-box .form-check:hover {
+    background-color: #f8fafc;
+}
+
+.student-selection-box .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+    border: 2px solid #cbd5e1;
+    cursor: pointer;
+}
+
+.student-selection-box .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.student-selection-box .form-check-label {
+    font-size: 0.95rem;
+    color: #334155;
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .form-check-label.fw-semibold,
+[data-bs-theme="dark"] .form-label {
+    color: #c9d1d9;
+}
+
+[data-bs-theme="dark"] .form-text.small {
+    background: #161b22;
+    color: #8b949e;
+}
+
+[data-bs-theme="dark"] .student-selection-box {
+    background: #161b22;
+    border-color: #30363d;
+}
+
+[data-bs-theme="dark"] .student-selection-box .form-check {
+    border-bottom-color: #21262d;
+}
+
+[data-bs-theme="dark"] .student-selection-box .form-check:hover {
+    background-color: #0d1117;
+}
+
+[data-bs-theme="dark"] .student-selection-box .form-check-label {
+    color: #c9d1d9;
+}
+
+
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-  <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <div>
-      <h1 class="h2 mb-0">Anna tehtäväksi</h1>
-      <p class="text-muted mb-0">{{ material.title }}</p>
+  <!-- Page Header with TaskuOpe styling -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom taskuope-header">
+    <div class="mb-3 mb-md-0">
+      <h1 class="h2 taskuope-header-title mb-1">
+        Anna tehtäväksi
+      </h1>
+      <p class="taskuope-header-subtitle">
+        <span class="taskuope-badge">📚 {{ material.title }}</span>
+      </p>
     </div>
-    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i> Takaisin etusivulle
+    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1">
+      <i class="bi bi-arrow-left"></i> Takaisin etusivulle
     </a>
   </div>
 
-
-  <!-- Keskitys ja kavennus -->
+  <!-- Centered content -->
   <div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-8 col-xl-6">
+    <div class="col-12 col-lg-10 col-xl-8">
 
       <div class="card shadow-sm">
-        <div class="card-body p-4">
+        <div class="card-header bg-white border-0 pb-0">
+          <h5 class="step-header step-1">Valitse oppilaat ja määräaika</h5>
+        </div>
+        <div class="card-body">
           <form method="post">
             {% csrf_token %}
 
@@ -31,48 +166,77 @@
               </div>
             {% endif %}
             
-              <div class="row g-3">
-                <div class="col-12 col-md-4">
-                  <div class="form-check mb-2">
-                    {{ form.give_to_class }} <label class="form-check-label">Anna koko luokalle</label>
+            <!-- Luokan valinta + Anna koko luokalle + info-teksti -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="class-selection-box d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 rounded">
+                  <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div>
+                      <label for="{{ form.class_number.id_for_label }}" class="form-label visibility-hidden">Luokka valinta</label> <!-- Piilotettu jätetty screenreaderille t.Mirka -->
+                      {{ form.class_number }}
+                    </div>
+                    <div class="form-check d-flex align-items-center m-0">
+                      {{ form.give_to_class }}
+                      <label class="form-check-label fw-semibold ms-2" for="{{ form.give_to_class.id_for_label }}">
+                        Anna koko luokalle
+                      </label>
+                    </div>
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label">Luokka</label>
-                    {{ form.class_number }}
-                    <div class="form-text">Jos valitset luokan, yksittäiset valinnat sivuutetaan.</div>
+                  <div class="form-text small m-0 d-flex align-items-center">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Jos valitset luokan, yksittäiset valinnat sivuutetaan.
                   </div>
                 </div>
               </div>
+            </div>
+
+
 
             <!-- Student Selection Field -->
             <div class="mb-4">
-              <label class="form-label d-block mb-2">{{ form.students.label }}</label>
-              <div class="p-3 border rounded" style="max-height: 300px; overflow-y: auto;">
-                {# The 'list-unstyled' class was added in forms.py #}
-                {# We now loop through each checkbox to wrap it for styling #}
+              <label class="form-label d-block mb-2 fw-semibold">
+                <i class="bi bi-people me-1"></i>
+                {{ form.students.label }}
+              </label>
+              <div class="student-selection-box">
                 {% for checkbox in form.students %}
                   <div class="form-check">
                     {{ checkbox.tag }}
-                    <label for="{{ checkbox.id_for_label }}" class="form-check-label">{{ checkbox.choice_label }}</label>
+                    <label for="{{ checkbox.id_for_label }}" class="form-check-label">
+                      {{ checkbox.choice_label }}
+                    </label>
                   </div>
                 {% endfor %}
               </div>
               {% if form.students.errors %}
-                <div class="text-danger small mt-1">{{ form.students.errors.as_text }}</div>
+                <div class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-triangle me-1"></i>
+                  {{ form.students.errors.as_text }}
+                </div>
               {% endif %}
             </div>
 
             <!-- Due Date Field -->
-            <div class="mb-3">
-              <label for="{{ form.due_at.id_for_label }}" class="form-label">{{ form.due_at.label }}</label>
+            <div class="mb-4">
+              <label for="{{ form.due_at.id_for_label }}" class="form-label fw-semibold">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ form.due_at.label }}
+              </label>
               {{ form.due_at }}
               {% if form.due_at.errors %}
-                <div class="text-danger small mt-1">{{ form.due_at.errors.as_text }}</div>
+                <div class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-triangle me-1"></i>
+                  {{ form.due_at.errors.as_text }}
+                </div>
               {% endif %}
             </div>
 
+            <!-- Submit Button with create.html styling -->
             <div class="d-grid mt-4">
-              <button type="submit" class="btn btn-primary">Anna tehtäväksi valituille oppilaille</button>
+              <button type="submit" class="btn btn-save-material">
+                <i class="bi bi-check-circle me-2"></i>
+                Anna tehtäväksi valituille oppilaille
+              </button>
             </div>
           </form>
         </div>
