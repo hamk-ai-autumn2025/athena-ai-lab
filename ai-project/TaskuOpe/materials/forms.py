@@ -55,6 +55,7 @@ class MaterialForm(forms.ModelForm):
         self.fields['grade_level'].choices = [('', 'Valitse luokka')] + list(grade_choices)[1:]
 
         # Lisää "Valitse materiaalin tyyppi" -vaihtoehdon pudotusvalikkoon
+
         type_choices = self.fields['material_type'].choices
         self.fields['material_type'].choices = [('', 'Valitse materiaalin tyyppi')] + list(type_choices)[1:]
 

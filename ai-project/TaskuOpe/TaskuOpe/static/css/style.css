@@ -925,24 +925,27 @@ body[data-bs-theme="dark"] .card-hover:hover,
 
 /* BADGE – säilyy korostettuna */
 .taskuope-badge {
-    background: linear-gradient(45deg, #0d6efd, #00c4ff);
-    color: white;
-    padding: 0.3rem 0.85rem;
-    border-radius: 50rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    font-family: var(--taskuope-font-sans);
-    box-shadow: 0 2px 4px rgba(0, 196, 255, 0.2);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+  background: linear-gradient(45deg, #0d6efd, #00c4ff);
+  color: white;
+  padding: 0.3rem 0.85rem;
+  border-radius: 50rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: var(--taskuope-font-sans);
+  box-shadow: 0 2px 4px rgba(0, 196, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  /* tee ei-nappi */
+  cursor: default;
+  pointer-events: none;   /* estää klikkaukset/hoverit (erityisen tärkeä jos <a>-elementin sisällä) */
+  user-select: text;      /* teksti valittavissa */
 }
 
-.taskuope-badge:hover {
-    transform: scale(1.03);
-    box-shadow: 0 4px 6px rgba(0, 196, 255, 0.3);
-    transition: all 0.2s ease;
-}
+/* poista hover-efektit */
+.taskuope-badge:hover { transform: none; box-shadow: 0 2px 4px rgba(0,196,255,0.2); transition: none; }
+
 
 /* Mobiilisovitus: otsikko ei ole liian iso pienellä näytöllä */
 @media (max-width: 576px) {

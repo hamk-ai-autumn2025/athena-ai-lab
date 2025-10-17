@@ -64,7 +64,7 @@ class Material(models.Model):
         LEARNING_MATERIAL = 'oppimateriaali', _('Oppimateriaali')
         TEST = 'testi', _('Testi')
         EXAM = 'koe', _('Koe')
-        VIDEO = 'video', _('Video')
+        #VIDEO = 'video', _('Video')
         GAME = 'peli', _('Peli')
 
     class Status(models.TextChoices):
