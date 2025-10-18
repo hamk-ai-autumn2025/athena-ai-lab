@@ -12,6 +12,7 @@ import os
 import uuid
 import base64
 import requests
+import re
 from urllib.parse import urljoin
 
 from ..models import Assignment, Submission, Material, MaterialImage

@@ -215,7 +215,6 @@
   </div>
 </div>
 
-{# Sanalaskuri-skripti säilytetty ennallaan #}
 {% if readonly and assignment.submissions.last %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -231,12 +230,14 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 {% endif %}
 
-<!-- === TTS JAVASCRIPT LISÄTTY TÄHÄN LOPPUUN === -->
+<!-- === TTS JAVASCRIPT (KORJATTU VERSIO) === -->
 <script>
-// CSRF-tokenin haku on jo olemassa autosave-skriptissä, mutta varmistetaan se täälläkin
 function getCsrfToken() {
-    const m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)'); 
-    return m ? m.pop() : '';
+    const csrfCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('csrftoken='));
+    if (csrfCookie) {
+        return csrfCookie.split('=')[1];
+    }
+    return null;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -257,16 +258,16 @@ document.addEventListener('DOMContentLoaded', () => {
         listenButton.disabled = false;
         listenIcon.className = 'bi bi-volume-up-fill me-1';
         buttonText.textContent = 'Kuuntele';
-        audio = null;
+        if (audio) {
+            audio.pause();
+            audio = null;
+        }
     }
 
     listenButton.addEventListener('click', async () => {
-        if (isLoading) return; // Estä toiminnot, kun ladataan
+        if (isLoading) return;
 
-        // Jos ääntä jo toistetaan, keskeytä se
         if (isPlaying && audio) {
-            audio.pause();
-            audio.currentTime = 0;
             resetToDefault();
             return;
         }
@@ -279,14 +280,22 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(ttsUrl, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': getCsrfToken() },
+                headers: { 
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                },
             });
 
             if (!response.ok) {
-                throw new Error('Äänen generointi epäonnistui.');
+                const errorData = await response.json().catch(() => null);
+                const errorMessage = errorData ? errorData.Virhe : `Palvelin vastasi virheellä: ${response.status}`;
+                throw new Error(errorMessage);
             }
 
             const audioBlob = await response.blob();
+            if (audioBlob.size === 0) {
+                throw new Error('Palvelin palautti tyhjän äänitiedoston. Tarkista API-avain.');
+            }
             const audioUrl = URL.createObjectURL(audioBlob);
             
             audio = new Audio(audioUrl);
@@ -309,12 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('TTS Error:', error);
-            alert('Äänen lataus epäonnistui. Yritä myöhemmin uudelleen.');
+            alert(`Äänen lataus epäonnistui. Virhe: ${error.message}`);
             resetToDefault();
         }
     });
 });
-
 </script>
 
 <!-- === TINYMCE-INTEGRAATIO LISÄTTY TÄHÄN LOPPUUN === -->
