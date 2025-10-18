@@ -4,6 +4,8 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile 
 
 import json
 import os
@@ -392,21 +394,11 @@ def assignment_autosave_view(request, assignment_id):
     return JsonResponse({"ok": True, "saved_at": timezone.now().isoformat()})
 
 
+# === TÄMÄ FUNKTIO ON KOKONAAN PÄIVITETTY ===
 @require_POST
 def generate_image_view(request):
     """
-    Generoi kuvan tekoälyllä annetun promptin perusteella ja tallentaa sen.
-
-    Hyväksyy vain POST-pyynnöt. Ottaa vastaan JSON- tai form-dataa.
-    Palauttaa generoidun kuvan URL-osoitteen.
-
-    Args:
-        request: HttpRequest-objekti, sisältäen "prompt"-parametrin.
-
-    Returns:
-        JsonResponse: JSON-objekti, joka sisältää "image_url"-kentän
-                      onnistuneen generoinnin jälkeen (HTTP 201), tai
-                      "error"-kentän virheen sattuessa (HTTP 400, 502).
+    Generoi kuvan AI:lla ja tallentaa sen suoraan pilvitallennustilaan (esim. DO Spaces).
     """
     if request.content_type and "application/json" in request.content_type:
         try:
@@ -420,24 +412,29 @@ def generate_image_view(request):
     if not prompt:
         return JsonResponse({"error": "Tyhjä prompt"}, status=400)
 
-    size_str = "1024x1024"
-    rel_dir = "ai_images"
-    os.makedirs(os.path.join(settings.MEDIA_ROOT, rel_dir), exist_ok=True)
-    filename = f"{uuid.uuid4().hex}.png"
-    rel_path = os.path.join(rel_dir, filename)
-    abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
-
     try:
-        image_bytes = generate_image_bytes(prompt=prompt, size=size_str)
+        # Generoidaan kuva kuten ennenkin
+        image_bytes = generate_image_bytes(prompt=prompt, size="1024x1024")
         if not image_bytes:
             return JsonResponse({"error": "Generointi palautti tyhjän tuloksen."}, status=502)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=502)
 
-    with open(abs_path, "wb") as f:
-        f.write(image_bytes)
+    # Määritellään tiedostonimi ja polku pilvessä
+    rel_dir = "ai_images"
+    filename = f"{uuid.uuid4().hex}.png"
+    file_path = os.path.join(rel_dir, filename)
 
-    image_url = urljoin(settings.MEDIA_URL, rel_path.replace(os.sep, "/"))
+    # 1. Kääritään kuvadata Djangon ContentFile-olioon
+    content_file = ContentFile(image_bytes, name=filename)
+
+    # 2. Tallennetaan tiedosto käyttäen Djangon oletustallennusjärjestelmää
+    #    Tuotannossa tämä on DO Spaces, paikallisesti se on `media`-kansio.
+    saved_path = default_storage.save(file_path, content_file)
+
+    # 3. Haetaan julkinen URL-osoite tallennetulle tiedostolle
+    image_url = default_storage.url(saved_path)
+
     return JsonResponse({"image_url": image_url}, status=201)
 
 def material_detail_view(request, material_id):

@@ -20,6 +20,9 @@ from ..plagiarism import build_or_update_report
 from .shared import format_game_content_for_display, render_material_content_to_html
 from TaskuOpe.ops_chunks import get_facets
 from urllib.parse import urljoin
+from django.core.files.storage import default_storage
+
+
 # --- Opettajan Dashboard ---
 @login_required(login_url='kirjaudu')
 def teacher_dashboard_view(request):
@@ -754,20 +757,8 @@ def teacher_student_list_view(request):
 @login_required
 def add_material_image_view(request, material_id):
     """
-    Käsittelee kuvan lisäämisen materiaaliin joko lataamalla tiedoston
-    tai generoimalla kuvan tekoälyllä.
-
-    Kuva lisätään materiaalin sisältöön Markdown-muodossa ja
-    tallennetaan MaterialImage-objektina.
-
-    Args:
-        request: HttpRequest-objekti.
-        material_id (int): Materiaalin yksilöivä ID, johon kuva lisätään.
-
-    Returns:
-        HttpResponse: Renderöity HTML-sivu kuvanlisäyslomakkeella tai
-                      uudelleenohjaus onnistuneen lisäyksen jälkeen.
-                      Uudelleenohjaa myös, jos käyttäjällä ei ole oikeuksia.
+    Käsittelee kuvan lisäämisen materiaaliin. Toimii sekä tiedostolatauksella
+    että AI-generoinnilla ja tallentaa tiedostot pilveen.
     """
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
@@ -780,50 +771,41 @@ def add_material_image_view(request, material_id):
             upload = form.cleaned_data.get("upload")
             prompt = (form.cleaned_data.get("gen_prompt") or "").strip()
             caption = form.cleaned_data.get("caption") or ""
-            size_fragment = form.cleaned_data.get("size")
-            alignment = form.cleaned_data.get("alignment")
+            size_fragment = form.cleaned_data.get("size", "size-md")
+            align_fragment = form.cleaned_data.get("alignment", "align-center")
             
-            def append_image_to_content(image_url: str, cap: str, size_frag: str, align_frag: str):
-                final_url = f"{image_url}#{size_frag}-{align_frag}"
-                md_img = f"![{cap or 'Kuva'}]({final_url})"
-                m.content = (m.content or "").rstrip() + f"\n\n{md_img}\n"
-                m.save(update_fields=["content"])
-
-            # Tapaus 1: Käyttäjä latasi tiedoston
+            image_to_save = None
+            
             if upload:
-                mi = MaterialImage.objects.create(material=m, image=upload, caption=caption, created_by=request.user)
-                append_image_to_content(mi.image.url, caption, size_fragment, align_fragment)
-                messages.success(request, "Ladattu kuva lisätty sisältöön.")
-                return redirect("material_detail", material_id=m.id)
-
-            # Tapaus 2: Käyttäjä generoi kuvan
-            if prompt:
+                image_to_save = upload
+            elif prompt:
                 try:
                     image_data = generate_image_bytes(prompt, size="1024x1024")
-                    if not image_data:
-                        messages.error(request, "Kuvan generointi ei palauttanut dataa (tarkista API-avain).")
+                    if image_data:
+                        image_to_save = ContentFile(image_data, name="gen.png")
                     else:
-                        mi = MaterialImage.objects.create(
-                            material=m,
-                            image=ContentFile(image_data, name="gen.png"),
-                            caption=caption,
-                            created_by=request.user,
-                        )
-                        append_image_to_content(mi.image.url, caption, size_fragment, align_fragment)
-                        messages.success(request, "Generoitu kuva lisätty sisältöön.")
-                        return redirect("material_detail", material_id=m.id)
+                        messages.error(request, "Kuvan generointi ei palauttanut dataa.")
                 except Exception as e:
                     messages.error(request, f"Kuvan generointi epäonnistui: {e}")
+            
+            if image_to_save:
+                # Luo MaterialImage-objekti ilman tallennusta, jotta voimme asettaa polun
+                mi = MaterialImage(material=m, caption=caption, created_by=request.user)
+                # Tallenna tiedosto oletustallennustilaan (Spaces)
+                mi.image.save(image_to_save.name, image_to_save, save=True)
                 
-                # Ohjataan takaisin, jos generointi epäonnistui tai ei palauttanut dataa
-                return redirect("material_add_image", material_id=m.id)
+                # Muodosta Markdown-linkki ja lisää se sisältöön
+                final_url = f"{mi.image.url}#{size_fragment}-{align_fragment}"
+                md_img = f"\n\n![{caption or 'Kuva'}]({final_url})\n"
+                m.content = (m.content or "") + md_img
+                m.save(update_fields=["content"])
+                
+                messages.success(request, "Kuva lisätty onnistuneesti sisältöön.")
+                return redirect("material_detail", material_id=m.id)
 
-    # GET-pyyntö tai virheellinen POST
-    else:
-        form = AddImageForm()
-
+    # Jos tultiin tänne asti, joko oli GET-pyyntö tai tapahtui virhe
+    form = AddImageForm()
     return render(request, "materials/add_image.html", {"material": m, "form": form})
-
 @login_required
 @require_POST
 def delete_material_image_view(request, image_id):
