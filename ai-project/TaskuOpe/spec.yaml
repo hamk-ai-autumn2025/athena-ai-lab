@@ -1,33 +1,28 @@
-# spec.yaml (KORJATTU VERSIO)
+name: taskuope # Voit vaihtaa tämän, jos haluat
 
-# Keksi sovelluksellesi uniikki nimi. Tulee osaksi URL-osoitetta.
-name: taskuope # <-- VAIHDA TÄMÄ OMAKSI, JOS HALUAT
-
-region: fra # Frankfurt, hyvä valinta Suomesta
+region: fra
 
 services:
 - name: web
-  # TÄMÄ ON KORJAUS: Viitataan nyt sinun omaan forkattuun kopioosi
   github:
     repo: JiskaLaaksovirta/athena-ai-lab
     branch: main
+  source_dir: ai-project/TaskuOpe
   
-  # Komennot, jotka ajetaan julkaisun yhteydessä
   build_command: |
     pip install -r requirements.txt
     python manage.py migrate
   run_command: gunicorn TaskuOpe.wsgi
 
-  # Ympäristömuuttujat (salaisuudet)
   envs:
   - key: SECRET_KEY
-    value: "django-insecure-87ymkrs)0(o61k&mb0q9shz)ier4zob-56-k4nt82s$i8w0olw" # <-- VAIHDA TÄMÄ OMAAN SECRET_KEY -ARVOOSI
+    value: "django-insecure-87ymkrs)0(o61k&mb0q9shz)ier4zob-56-k4nt82s$i8w0olw" # VAIHDA TÄMÄ OMAAN SECRET_KEY -ARVOOSI
   - key: DEBUG
     value: "False"
   - key: ALLOWED_HOSTS
-    value: "${APP_URL}" # Tämä muuttuja tulee automaattisesti DigitalOceanilta
+    value: "${APP_URL}"
 
-# Määritellään tietokanta
 databases:
 - name: db
-  engine: PG # PostgreSQL
+  engine: PG # TÄMÄ ON TÄRKEÄ KOHTA. Vain "PG". Ei mitään muuta.
+
