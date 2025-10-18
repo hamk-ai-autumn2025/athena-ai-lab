@@ -13,36 +13,40 @@ _MD_IMG_RE = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
 
 def render_material_content_to_html(text: str) -> str:
     """
-    Muuntaa Markdown-tekstin HTML:ksi.
+    Muuntaa Markdown-tekstin HTML:ksi ja käsittelee kuvien URL-osoitteet oikein.
     """
     if not text:
         return ""
 
     def replace_custom_image_syntax(match):
         alt_text = match.group(1)
-        url = match.group(2)
-        parsed_url = urlparse(url)
-        path = parsed_url.path
+        full_url = match.group(2)
+        
+        # --- KORJATTU LOHKO ---
+        # Poistettiin virheellinen `urlparse(url)`-rivi.
+        # Nyt käytetään vain ja ainoastaan `full_url`-muuttujaa.
+        base_url = full_url.split('#')[0]
+        parsed_url = urlparse(full_url)
         fragment = parsed_url.fragment
+        # --- KORJAUS PÄÄTTYY ---
+
         size_match = re.search(r'size-(sm|md|lg)', fragment)
         align_match = re.search(r'align-(left|center|right)', fragment)
+        
         size_class = size_match.group(0) if size_match else "size-md"
         align_class = align_match.group(0) if align_match else "align-center"
-        img_tag = f'<img src="{path}" alt="{alt_text}" class="img-fluid rounded border my-3 img-scaled {size_class}">'
+        
+        img_tag = f'<img src="{base_url}" alt="{alt_text}" class="img-fluid rounded border my-3 img-scaled {size_class}">'
+        
         return f'<div class="image-wrapper {align_class}">{img_tag}</div>'
 
     def preprocess_custom_blocks(text_content):
-        # Etsitään kaikki :::note ... ::: -lohkot
         pattern = re.compile(r':::[ ]?note\n(.*?)\n:::', re.DOTALL)
-        # Korvataan ne HTML-elementillä, jolla on oma CSS-luokka
         return pattern.sub(r'<p class="custom-block note">\1</p>', text_content)
 
-    # 1. Esikäsitellään kustomoidut kuvat
     processed_text = _MD_IMG_RE.sub(replace_custom_image_syntax, text)
-    # 2. Esikäsitellään uudet tekstityylit
     processed_text = preprocess_custom_blocks(processed_text)
     
-    # 3. Annetaan Markdown-kirjaston hoitaa loput
     html = md.markdown(processed_text, extensions=['extra'])
     return mark_safe(html)
 
