@@ -11,3 +11,8 @@ djangorestframework==3.16.0
 openai==1.108.0
 scikit-learn==1.7.2
 requests==2.32.5
+gunicorn          # Tuotantotason web-palvelin Djangolle
+psycopg2-binary   # Antaa Djangon yhdistää PostgreSQL-tietokantaan
+dj-database-url   # Helpottaa tietokantayhteyden määrittelyä
+django-environ    # Turvallinen tapa hallita salasanoja ja avaimia
+whitenoise        # Tehokas tapa tarjoilla staattisia tiedostoja (CSS, JS, kuvat)
