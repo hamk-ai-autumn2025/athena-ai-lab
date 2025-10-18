@@ -122,21 +122,23 @@ AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_URL = "kirjaudu"
 LOGIN_REDIRECT_URL = "dashboard" 
 LOGOUT_REDIRECT_URL = "kirjaudu"
-MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_LOCATION}/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# DigitalOcean Spaces -asetukset mediatiedostoille
 if not DEBUG:
     AWS_ACCESS_KEY_ID = env('DO_SPACES_ACCESS_KEY')
     AWS_SECRET_ACCESS_KEY = env('DO_SPACES_SECRET_KEY')
     AWS_STORAGE_BUCKET_NAME = env('DO_SPACES_BUCKET_NAME')
+    
+    # TÄMÄ RIVI RAKENTAA URL-OSOITTEEN AUTOMAATTISESTI
     AWS_S3_ENDPOINT_URL = f"https://{env('DO_SPACES_REGION')}.digitaloceanspaces.com"
+    
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
-    AWS_LOCATION = 'media' # Luo 'media'-kansio Spacen sisälle
+    AWS_LOCATION = 'media'
     AWS_DEFAULT_ACL = 'public-read'
 
-    # Kerrotaan Djangolle, että kaikki mediatiedostot tallennetaan Spacesiin
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",
@@ -145,3 +147,5 @@ if not DEBUG:
              "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
+    
+    MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_LOCATION}/'
