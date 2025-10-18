@@ -1227,3 +1227,17 @@ body[data-bs-theme="dark"] .card-hover:hover,
     --bs-gutter-y: 1.5rem;
   }
 }
+
+/* ======================================================= */
+/* 15. TEEMAKORJAUS: AI-VASTAUSLAATIKKO (TUMMA) - KORJATTU */
+/* ======================================================= */
+
+[data-bs-theme="dark"] .ai-reply-panel,
+[data-bs-theme="dark"] .ai-reply-panel pre {
+    background-color: var(--card-bg-color, #161b22) !important; /* Varmistetaan taustaväri */
+    color: var(--text-color, #c9d1d9) !important; /* Varmistetaan tekstin väri */
+}
+
+[data-bs-theme="dark"] .ai-reply-panel {
+    border-color: var(--border-color, #303d3d);
+}
