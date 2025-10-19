@@ -4,10 +4,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Value
 from django.http import HttpResponseNotAllowed, JsonResponse, HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.db.models.functions import Concat
 import csv
 from django.core.files.base import ContentFile
 from django.views.decorators.http import require_POST
@@ -21,7 +22,7 @@ from .shared import format_game_content_for_display, render_material_content_to_
 from TaskuOpe.ops_chunks import get_facets
 from urllib.parse import urljoin
 from django.core.files.storage import default_storage
-
+import json
 
 # --- Opettajan Dashboard ---
 @login_required(login_url='kirjaudu')
@@ -161,7 +162,7 @@ def material_list_view(request):
         return redirect('dashboard')
 
     selected_subject = request.GET.get('subject', '')
-    all_materials = Material.objects.filter(author=request.user).order_by('created_at')
+    all_materials = Material.objects.filter(author=request.user).order_by('-created_at')
     
     # UUSI: Erottele pelit ja normaalit materiaalit
     normal_materials = all_materials.exclude(material_type='peli')

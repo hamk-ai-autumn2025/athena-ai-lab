@@ -254,7 +254,7 @@ class AssignForm(forms.Form):
         """
         Alustaa AssignForm-lomakkeen.
         Asettaa 'students'-kentän querysetin sisältämään kaikki oppilaan roolin
-        omaavat käyttäjät. Mahdollisuus rajata opettajan omiin ryhmiin (kommentoitu pois).
+        omaavat käyttäjät ja määrittää, miten heidät näytetään valintalistassa.
         """
         super().__init__(*args, **kwargs)
         User = get_user_model()
@@ -262,5 +262,14 @@ class AssignForm(forms.Form):
         # Jos haluat rajata opettajan omiin ryhmiin, tee se tässä:
         # if teacher is not None:
         #     qs = qs.filter(classgroup__teacher=teacher).distinct()
-        self.fields["students"].queryset = qs.order_by("username")
+        self.fields["students"].queryset = qs.order_by("first_name", "last_name", "username")
+
+        # 🔹 Näytetään nimi + luokka, jos olemassa
+        def label_with_class(obj):
+            name = f"{obj.first_name} {obj.last_name}".strip() or obj.username
+            if obj.grade_class:
+                return f"{name} ({obj.grade_class}. lk)"
+            return name
+
+        self.fields["students"].label_from_instance = label_with_class
 

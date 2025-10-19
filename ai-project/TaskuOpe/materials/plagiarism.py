@@ -33,7 +33,7 @@ from .models import PlagiarismReport, Submission
 
 # Alusta OpenAI-asiakas
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o")
 
 # Kuinka monta sisäistä verrokkia annetaan mallille luettavaksi
 TOP_K = 3

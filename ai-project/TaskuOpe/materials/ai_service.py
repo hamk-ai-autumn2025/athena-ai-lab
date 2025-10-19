@@ -81,14 +81,13 @@ def ask_llm(prompt: str, *, user_id: int = 0) -> str:
 def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
     """
     Generoi kuvan DALL·E 3 -tekoälymallilla ja palauttaa sen PNG-muotoisena
-    binaaridatana. Jos OpenAI API-avainta ei ole asetettu, palauttaa demokuvan.
-    Käsittelee DALL·E 3:n mahdollisia vastausmuotoja (base64 tai URL).
+    binaaridatana. Jos OpenAI API -avainta ei ole asetettu, palauttaa demokuvan.
+    Käsittelee DALL·E 3:n mahdolliset vastausmuodot (base64 tai URL).
 
     Args:
         prompt (str): Kuvaus siitä, millainen kuva halutaan generoida.
-        size (str): Kuvan koko (esim. "256x256", "512x512", "1024x1024").
-                    DALL·E 2 tukee vain näitä neliökokoja. Testikäytön jälkeen vaihto Dall·E 3:een.
-                    Jätetään koodiin neliötuki, vaikka Dall·E 3 tukee muitakin kokoja.
+        size (str): Kuvan koko. DALL·E 3 tukee vain seuraavia arvoja:
+                    "1024x1024", "1024x1792" ja "1792x1024".
 
     Returns:
         bytes: Generoitu kuva PNG-binaarimuodossa.
@@ -112,14 +111,16 @@ def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
         d.multiline_text((40, 40), f"DEMO IMAGE\n{prompt[:120]}", font=font, fill=(230, 230, 230), spacing=6)
         buf = io.BytesIO(); img.save(buf, "PNG"); return buf.getvalue()
 
-    if size not in {"256x256", "512x512", "1024x1024"}:
-        raise ValueError("DALL·E 2 tukee vain neliötä: 256/512/1024")
+    #if size not in {"256x256", "512x512", "1024x1024"}: #DALL·E 3 ei tue 256x256 tai 512x512 kokoja
+    #    raise ValueError("DALL·E 2 tukee vain neliötä: 256/512/1024")
 
-    from openai import OpenAI
+    if size not in {"1024x1024", "1024x1792", "1792x1024"}:
+        raise ValueError("DALL·E 3 tukee vain kokoja: 1024x1024, 1024x1792 ja 1792x1024")
+
     client = OpenAI(api_key=api_key)
     try:
         resp = client.images.generate(
-            model="dall-e-2",
+            model="dall-e-3",  # Vaihto DALL·E 3:een
             prompt=prompt,
             size=size,
             n=1,
@@ -139,11 +140,11 @@ def generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
             r.raise_for_status()
             return r.content
 
-        # 3) Ei kumpaakaan → virhe
-        raise RuntimeError("DALL·E 2 ei palauttanut b64_json- tai url-kenttää.")
+        # 3) Ei kumpaakaan → virhe Vaihdettu oikea malli t. Mirka
+        raise RuntimeError("DALL·E 3 ei palauttanut b64_json- tai url-kenttää.")
 
     except Exception as e:
-        raise RuntimeError(f"DALL·E 2 virhe: {e}") from e
+        raise RuntimeError(f"DALL·E 3 virhe: {e}") from e
 
 #Puheen generointi OpenAI:n TTS:llä
 def generate_speech(text_to_speak: str) -> bytes | None:
