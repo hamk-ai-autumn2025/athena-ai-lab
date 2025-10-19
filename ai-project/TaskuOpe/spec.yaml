@@ -18,6 +18,7 @@ services:
   envs:
   - key: SECRET_KEY
     value: "django-insecure-87ymkrs)0(o61k&mb0q9shz)ier4zob-56-k4nt82s$i8w0olw" 
+    scope: RUN_AND_BUILD_TIME
   - key: DEBUG
     value: "False"
   - key: ALLOWED_HOSTS
