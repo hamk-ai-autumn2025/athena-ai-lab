@@ -21,6 +21,29 @@ services:
   - key: ALLOWED_HOSTS
     value: "${APP_URL}"
 
+  - key: SECRET_KEY
+    value: "${SECRET_KEY}"
+    scope: RUN_AND_BUILD_TIME # Tarvitaan 'collectstatic'-komentoa varten
+    
+  - key: DO_SPACES_ACCESS_KEY
+    value: "${DO_SPACES_ACCESS_KEY}"
+    scope: RUN_AND_BUILD_TIME
+    
+  - key: DO_SPACES_SECRET_KEY
+    value: "${DO_SPACES_SECRET_KEY}"
+    scope: RUN_AND_BUILD_TIME
+    
+  - key: DO_SPACES_BUCKET_NAME
+    value: "${DO_SPACES_BUCKET_NAME}"
+    scope: RUN_AND_BUILD_TIME
+    
+  - key: DO_SPACES_REGION
+    value: "${DO_SPACES_REGION}"
+    scope: RUN_AND_BUILD_TIME
+    
+  - key: OPENAI_API_KEY
+    value: "${OPENAI_API_KEY}"
+    scope: RUN_AND_BUILD_TIME
 databases:
 - name: db
   engine: PG # TÄMÄ ON TÄRKEÄ KOHTA. Vain "PG". Ei mitään muuta.
