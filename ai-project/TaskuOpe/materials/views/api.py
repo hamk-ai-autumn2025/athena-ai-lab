@@ -96,7 +96,7 @@ Palauta VAIN JSON: {{"pairs":[...]}}
         raise ValueError("Tuntematon pelityyppi")
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         response_format={"type": "json_object"},
         messages=[{"role": "user", "content": prompt}]
     )
@@ -164,7 +164,7 @@ Palauta täsmälleen tässä muodossa:
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             response_format={"type": "json_object"},
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7

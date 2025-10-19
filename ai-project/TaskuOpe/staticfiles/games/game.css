@@ -1,0 +1,1330 @@
+/* ============================================================
+   PELISIVU - OPTIMOITU TYYLI
+   Pelisivun täydellinen CSS-tyylit kaikille pelityypeille:
+   - Visa (Quiz game with board and hero character)
+   - Mysteerisana (Hangman-style word guessing)
+   - Muistipeli (Memory matching game)
+   
+   Toiminnallisuudet:
+   - Responsiivinen layout (mobiili → desktop)
+   - Tumma ja vaalea teema -tuki
+   - Animoidut pelielementit ja transitiot
+   - Saavutettavuusoptimointit (WCAG 2.1)
+   - Kosketus- ja hiiri-käyttöliittymät
+   ============================================================ */
+
+/* ==================== CSS-MUUTTUJAT ====================
+   Globaalit värit, mitat ja efektit.
+   Käytetään var(--muuttujan-nimi) -syntaksilla koko tiedostossa.
+   Helpottaa teemojen hallintaa ja yhtenäistä tyyliä.
+   ========================================================= */
+:root {
+  /* Taustakuvat ja kortit */
+  --bg-dark: #0a2040;              /* Tumma pääväri (peli-tausta) */
+  --bg-light: #87bbeb;             /* Vaalea pääväri */
+  --bg-card: #0e153a;              /* Korttien taustaväri (tumma) */
+  --bg-card-light: rgba(191, 231, 250, 0.815); /* Korttien taustaväri (vaalea) */
+  
+  /* Korostusvärit */
+  --accent: #3ddcff;               /* Pääaksenttiväri (napit, linkitykset) */
+  --accent-hover: #5fe4ff;         /* Hover-tila */
+  
+  /* Tekstivärit */
+  --text-light: #ffffff;           /* Valkoinen teksti */
+  --text-dark: #e1edf3;            /* Hieman himmeämpi valkoinen */
+  --text-dark-mode: #040c2e;       /* Tumma teksti vaalealle teemalle */
+  
+  /* Reunat ja rajat */
+  --border-color: rgba(61, 220, 255, 0.25);     /* Reunaviiva (tumma) */
+  --border-light: rgba(100, 149, 237, 0.3);     /* Reunaviiva (vaalea) */
+  
+  /* Muotoilu ja efektit */
+  --radius: 12px;                  /* Pyöristetyt kulmat */
+  --shadow-glow: 0 0 8px rgba(76, 221, 253, 0.3); /* Hehkuvarjo */
+  
+  /* Saavutettavuus */
+  --touch-min: 44px;               /* Minimikoko kosketuskohteille (WCAG) */
+}
+
+/* ==================== PERUSRAKENNE ====================
+   Pelisivun päätason layoutit ja säiliöt.
+   Määrittelee pääasemoinnin ja taustaefektit.
+   ======================================================= */
+
+/* Pelisivun pääsäiliö - asettaa taustan ja fontin */
+.game-page {
+  background: var(--bg-dark) !important;
+  color: var(--text-light);
+  font-family: "Poppins", sans-serif;
+}
+
+/* Sivun sisältöalue - scrollattava alue */
+.game-page .page-content {
+  position: relative;
+  background: transparent;
+  overflow-y: auto;             /* Pystysuuntainen scrollaus */
+  overflow-x: hidden;           /* Vaakasuuntainen overflow piilotettu */
+}
+
+/* ===== Mukautettu vierityspalkki (Chrome/Edge) ===== */
+.game-page .page-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.game-page .page-content::-webkit-scrollbar-track {
+  background: rgba(14, 21, 58, 0.5);
+}
+
+.game-page .page-content::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 5px;
+}
+
+.game-page .page-content::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
+}
+
+/* ===== Canvas-tausta - animoitu tausta koko sivulle ===== */
+#space-canvas {
+  position: fixed;              /* Kiinteä asemointi */
+  inset: 0;                     /* Kattaa koko viewport */
+  z-index: 0;                   /* Taustakerros */
+  pointer-events: none;         /* Ei estä klikkauksia */
+}
+
+/* Varmistetaan että sisältö on canvasin päällä */
+.game-page .main-layout-container {
+  position: relative;
+  z-index: 1;                   /* Sisältökerros canvasin päällä */
+  background: transparent;
+}
+
+/* ==================== NAVIGAATIO ====================
+   Sivupalkin ja yläreunan navigaation asetukset.
+   Responsiivinen käyttäytyminen desktop vs. mobiili.
+   ===================================================== */
+
+/* ===== Desktop-navigaatio (yli 992px) ===== */
+@media (min-width: 992px) {
+  .game-page .sidebar,
+  .game-page .main-header {
+    position: relative;
+    z-index: 10;                /* Navigaatiokerros */
+  }
+}
+
+/* ===== Mobiilinavigaatio (alle 992px) ===== */
+@media (max-width: 991.98px) {
+  /* Kiinteä ylänavigaatio */
+  .game-page .navbar.fixed-top {
+    position: fixed !important;
+    top: 0 !important;
+    z-index: 1030 !important;   /* Bootstrap-pohjainen z-index */
+  }
+  
+  /* Off-canvas sivuvalikko */
+  .game-page .offcanvas {
+    z-index: 1045 !important;   /* Yläpuolella navbar */
+  }
+  
+  /* Sisältöalue alkaa navbarin alapuolelta */
+  .game-page .page-content {
+    padding-top: 72px;
+  }
+}
+
+/* ==================== KORTIT JA TEKSTIT ====================
+   Pelisisällön kortit, otsikot ja tekstielementit.
+   Mukautuu sekä tummaan että vaaleaan teemaan.
+   =========================================================== */
+
+/* ===== Pelin ohjeet -kortti (tumma teema) ===== */
+#game-instructions-card {
+  background-color: rgba(5, 23, 63, 0.8);
+  border-color: var(--border-color);
+}
+
+/* ===== Yleiset kortit (tumma teema) ===== */
+.game-page .card {
+  background-color: rgba(14, 21, 58, 0.85);
+  border-color: var(--border-color);
+  backdrop-filter: blur(10px);  /* Taustan blur-efekti */
+}
+
+.game-page .card-body {
+  color: var(--text-light);
+}
+
+/* ===== Otsikot ja kysymysteksti ===== */
+.game-page h1, 
+.game-page h2, 
+.game-page h3,
+#question {
+  color: var(--text-dark);
+  text-shadow: var(--shadow-glow); /* Hehkuefekti tekstissä */
+}
+
+/* Pääotsikko - responsiivinen koko */
+.main-title {
+  font-size: clamp(1.5rem, 4vw, 2.5rem); /* Min 1.5rem, max 2.5rem */
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-dark);
+  text-shadow: var(--shadow-glow);
+}
+
+/* Alaotsikko */
+.main-subtitle {
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  opacity: 0.9;
+  color: var(--text-light) !important;
+}
+
+/* Kysymysteksti - pelien kysymykset */
+#question {
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 1rem !important;
+}
+
+/* Himmennetty teksti */
+.game-page .text-muted { 
+  color: var(--text-light) !important; 
+}
+
+/* ==================== VAALEA TEEMA ====================
+   Kaikki vaalean teeman (light mode) ylikirjoitukset.
+   Aktivoituu kun [data-bs-theme="light"] on asetettu.
+   ====================================================== */
+
+/* ===== Napit vaalessa teemassa ===== */
+[data-bs-theme="light"] .game-page .page-content .btn-outline-secondary,
+[data-bs-theme="light"] .game-page .page-content .btn-outline-light,
+[data-bs-theme="light"] .game-page .container-fluid .card .btn-outline-secondary,
+[data-bs-theme="light"] .game-page .container-fluid .card .btn-outline-light {
+  color: #000f29;               /* Tumma teksti */
+  text-shadow: none;
+}
+
+[data-bs-theme="light"] .game-page .btn-outline-light {
+  background-color: rgba(100, 149, 237, 0.15);
+  border: 2px solid #6495ED;
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+[data-bs-theme="light"] .game-page .btn-outline-light:hover {
+  background-color: rgba(100, 149, 237, 0.25);
+  border-color: #4169E1;
+  color: #1a1a2e;
+}
+
+/* ===== Aloituskuvan tausta vaalessa teemassa ===== */
+[data-bs-theme="light"] #start-image-container {
+  background: rgba(135, 206, 235, 0.85);
+  backdrop-filter: blur(5px);
+}
+
+/* ===== Pelin ohjeet -kortti vaalessa teemassa ===== */
+[data-bs-theme="light"] #game-instructions-card {
+  background-color: rgba(217, 239, 253, 0.95);
+  border: 2px solid rgba(182, 199, 230, 0.4);
+  color: var(--text-dark-mode);
+}
+
+[data-bs-theme="light"] #game-instructions-card h5,
+[data-bs-theme="light"] #game-instructions-card .bi {
+  color: var(--text-dark-mode);
+}
+
+/* ===== Yleiset kortit vaalessa teemassa ===== */
+[data-bs-theme="light"] .game-page .card {
+  background-color: var(--bg-card-light);
+  border-color: var(--border-light);
+  color: var(--text-dark-mode);
+}
+
+[data-bs-theme="light"] .game-page .card-body {
+  color: var(--text-dark-mode);
+}
+
+/* ===== Yleiset kortit tummassa teemassa ===== */
+[data-bs-theme="dark"] .game-page .card {
+  background-color: rgba(10, 17, 48, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+/* ===== Otsikot vaalessa teemassa ===== */
+[data-bs-theme="light"] .game-page h1,
+[data-bs-theme="light"] .game-page h2,
+[data-bs-theme="light"] .game-page h3,
+[data-bs-theme="light"] #question {
+  color: var(--text-dark-mode);
+  text-shadow: 0 0 8px rgba(100, 149, 237, 0.4);
+}
+
+[data-bs-theme="light"] .main-subtitle {
+  color: rgb(1, 19, 34) !important;
+}
+
+/* ===== Lomake-elementit vaalessa teemassa ===== */
+[data-bs-theme="light"] .game-page .form-control,
+[data-bs-theme="light"] .game-page .form-select {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: var(--text-dark-mode);
+  border-color: var(--border-light);
+}
+
+/* ===== Vastausnapit vaalessa teemassa ===== */
+[data-bs-theme="light"] .choice-btn {
+  background-color: rgba(255, 255, 255, 0.85);
+  border-color: var(--border-light);
+  color: var(--text-dark-mode);
+}
+
+[data-bs-theme="light"] .choice-btn:hover {
+  background-color: rgba(100, 149, 237, 0.2);
+  border-color: #6495ED;
+}
+
+/* ===== Muistipelin kortit vaalessa teemassa ===== */
+[data-bs-theme="light"] #mmGrid .btn {
+  background-color: rgba(100, 149, 237, 0.2);
+  border: 2px solid rgba(100, 149, 237, 0.4);
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+[data-bs-theme="light"] #mmGrid .btn:hover:not(:disabled) {
+  background-color: rgba(100, 149, 237, 0.3);
+  border-color: #77d4ff;
+  color: #000a24;
+}
+
+/* Kysymysmerkki korteissa */
+[data-bs-theme="light"] #mmGrid .btn:not(.mm-correct) {
+  color: #000a24;
+}
+
+/* ==================== NAPIT ====================
+   Kaikki nappien tyylit: ensisijaiset, toissijaiset,
+   outline-napit, hover- ja fokustilat.
+   Responsiivinen kosketusalue (min 44px).
+   =============================================== */
+
+/* ===== Yleiset nappiasetuket ===== */
+.game-page .page-content .btn,
+.game-page .container-fluid .card .btn {
+  min-height: var(--touch-min); /* WCAG-yhteensopiva kosketusalue */
+  transition: all 0.15s ease;
+}
+
+/* ===== Ensisijaiset napit (Primary) ===== */
+.game-page .page-content .btn-primary,
+.game-page .container-fluid .card .btn-primary {
+  background: var(--accent);
+  border: none;
+  color: var(--bg-dark);
+  font-weight: 700;
+}
+
+.game-page .page-content .btn-primary:hover,
+.game-page .container-fluid .card .btn-primary:hover { 
+  background: var(--accent-hover);
+  transform: translateY(-1px);  /* Hienovarainen nosto */
+  box-shadow: 0 4px 12px rgba(61, 220, 255, 0.4);
+}
+
+/* ===== Toissijaiset napit (Secondary/Outline) ===== */
+.game-page .page-content .btn-outline-secondary,
+.game-page .page-content .btn-outline-light,
+.game-page .container-fluid .card .btn-outline-secondary,
+.game-page .container-fluid .card .btn-outline-light {
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Tummennus vain vaalealle teemalle */
+html:not([data-theme="dark"]) .game-page .page-content .btn-outline-secondary,
+html:not([data-theme="dark"]) .game-page .page-content .btn-outline-light,
+html:not([data-theme="dark"]) .game-page .container-fluid .card .btn-outline-secondary,
+html:not([data-theme="dark"]) .game-page .container-fluid .card .btn-outline-light {
+  background-color: rgba(88, 102, 148, 0.45) !important;
+}
+
+.game-page .page-content .btn-outline-secondary:hover,
+.game-page .page-content .btn-outline-light:hover,
+.game-page .container-fluid .card .btn-outline-secondary:hover,
+.game-page .container-fluid .card .btn-outline-light:hover { 
+  background-color: rgba(30, 78, 90, 0.8);
+  border-color: var(--accent);
+  color: var(--text-light);
+}
+
+/* ===== Napinpainalluksen efekti ===== */
+.game-page .page-content .btn:active,
+.game-page .container-fluid .card .btn:active {
+  transform: translateY(0);     /* Palautus normaaliin */
+}
+
+/* ===== Fokusefekti (saavutettavuus) ===== */
+.game-page .page-content .btn:focus-visible,
+.game-page .container-fluid .card .btn:focus-visible { 
+  box-shadow: 0 0 0 0.25rem rgba(61, 220, 255, 0.35); 
+}
+
+/* ==================== BADGET ====================
+   Pienet informaatiomerkit (esim. pisteet, aika).
+   ================================================ */
+.game-page .badge {
+  background-color: rgba(30, 41, 90, 0.9) !important;
+  border: 1px solid var(--border-color);
+  color: var(--text-light) !important;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+/* ==================== LOMAKE-ELEMENTIT ====================
+   Syöttökentät, valintalistat ja muut lomake-elementit.
+   ========================================================== */
+.game-page .form-control,
+.game-page .form-select {
+  background-color: rgba(14, 21, 58, 0.8);
+  color: var(--text-light);
+  border-color: var(--border-color);
+  min-height: var(--touch-min);
+}
+
+/* Placeholder-teksti */
+.game-page .form-control::placeholder { 
+  color: #6a789a; 
+}
+
+/* Yleiset fokustilat */
+.game-page :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ==================== VISA-PELI ====================
+   Quiz-pelin pelilauta, pelihahmo (hero) ja pelielementit.
+   SVG-pohjainen pelilauta animoidulla hahmolla.
+   
+   Toiminnallisuudet:
+   - Dynaaminen pelilaudan piirto (SVG)
+   - Animoitu pelihahmo liikkuu ruutujen välillä
+   - Aloituskuva näytetään ennen pelin alkua
+   - Ruudut muuttuvat väriä (vierailtu, nykyinen)
+   ======================================================= */
+
+/* ===== Pelilaudan säiliö ===== */
+.game-board-container {
+  position: relative;
+  aspect-ratio: 16 / 9;         /* Kiinteä kuvasuhde */
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: visible;            /* Näyttää hero-hahmon reunojen yli */
+  border: 1px solid var(--border-color);
+  background: linear-gradient(135deg, #010722 0%, #1a2456 50%, #010722 100%);
+}
+
+/* Vaalean teeman tausta */
+[data-bs-theme="light"] .game-board-container {
+  background: linear-gradient(135deg, #64adcf 0%, #b5e2f7 50%, #64adcf 100%);
+}
+
+/* ===== SVG-pelilauta ===== */
+.board-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ===== Aloituskuvan säiliö ===== */
+/* Näytetään ennen pelin alkua, piilottaa pelilaudan */
+#start-image-container {
+  position: absolute;
+  inset: 0;                     /* Täyttää koko container */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 15, 42, 0.7);
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+/* Aloituskuva */
+#start-image {
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+/* ===== Pelihahmo (Hero) ===== */
+/* Liikkuva animoitu hahmo pelilaudalla */
+.hero {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  display: none;                /* Piilotettu oletuksena */
+  align-items: center;
+  justify-content: center;
+  z-index: 15;                  /* Pelilaudan päällä */
+  transition: all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Pomppaava liike */
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+  pointer-events: none;         /* Ei estä klikkauksia */
+  transform-origin: center center;
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* Kun hero on aktiivinen (peli käynnissä) */
+.hero.active {
+  display: flex;
+  visibility: visible;
+  opacity: 1;
+}
+
+.hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: heroFloat 2s ease-in-out infinite; /* Kellumisanimaatio */
+}
+
+/* Hero-hahmon kellumisanimaatio */
+@keyframes heroFloat {
+  0%, 100% { 
+    transform: translateY(0px) rotate(-3deg); 
+  }
+  50% { 
+    transform: translateY(-10px) rotate(3deg); 
+  }
+}
+
+/* === Responsiiviset säädöt hahmolle === */
+/*
+ * TABLETTI (768px - 991px) - HUOMATTAVASTI SUUREMPI KORJAUS
+ * Tämä on ongelma-alue. Tehdään hahmosta paljon suurempi, jotta se vastaa ruutujen kokoa.
+ */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .hero {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+/*
+ * PIENI TABLETTI (576px - 767px) - Tasapainotettu koko.
+ * Pienempi kuin isolla tabletilla, mutta isompi kuin puhelimella.
+ */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .hero {
+    width: 110px;
+    height: 110px
+  }
+}
+
+/*
+ * PUHELIN (400px - 575px) - Pienennetty koko.
+ * Aiemmin liian suuri, nyt paremmin suhteutettu.
+ */
+@media (min-width: 400px) and (max-width: 575.98px) {
+  .hero {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/*
+ * ERITTÄIN PIENI PUHELIN (< 400px) - Pienin koko.
+ * Varmistaa, että hahmo ei ole valtava kaikkein kapeimmilla näytöillä.
+ */
+@media (max-width: 399.98px) {
+  .hero {
+    width: px;
+    height: 65px;
+  }
+}
+
+/* ===== Tähtidekoraatiot pelilaudalla ===== */
+.star-decoration {
+  animation: starTwinkle 3s ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Eri viiveet tähdille */
+.star-decoration:nth-child(2n) {
+  animation-delay: 0.5s;
+}
+
+.star-decoration:nth-child(3n) {
+  animation-delay: 1s;
+}
+
+.star-decoration:nth-child(5n) {
+  animation-delay: 1.5s;
+}
+
+/* ===== Pelilaudan polku ===== */
+/* SVG-elementti: ruutujen välinen yhdistävä viiva */
+.path {
+  fill: none;
+  stroke: #4adcf0;
+  stroke-width: 16;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 10px rgb(0, 217, 255));
+}
+
+[data-bs-theme="light"] .path {
+  stroke: #44afe0e1;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 8px rgb(62, 226, 255));
+}
+
+/* ===== Pelilaudan ruudut ===== */
+/* SVG circle-elementit jokaiselle ruudulle */
+.tile-circle {
+  fill: #2a3a6e;
+  stroke: #5a7fb8;
+  stroke-width: 5;
+  transition: all 0.3s ease;
+}
+
+[data-bs-theme="light"] .tile-circle {
+  fill: #d7f0fd;
+  stroke: #31d6ffec;
+  stroke-width: 5;
+}
+
+/* Vierailtu ruutu (pelaaja on käynyt) */
+.tile-circle.visited {
+  fill: #36a05f;
+  stroke: #6ab0ff;
+  stroke-width: 5;
+}
+
+[data-bs-theme="light"] .tile-circle.visited {
+  fill: #69d492;
+  stroke: #42A5F5;
+}
+
+/* Nykyinen ruutu (pelaajan sijainti) */
+.tile-circle.current {
+  fill: #ff6b35;
+  stroke: #ffa726;
+  stroke-width: 6;
+  animation: currentGlow 1.5s ease-in-out infinite;
+}
+
+/* Nykyisen ruudun hehkuanimaatio */
+@keyframes currentGlow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 12px #ffa726);
+  }
+  50% { 
+    filter: drop-shadow(0 0 20px #ffa726);
+  }
+}
+
+/* ===== Ruutujen numerot ===== */
+/* SVG text-elementit ruutujen sisällä */
+.tile-text {
+  fill: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: "Poppins", sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+[data-bs-theme="light"] .tile-text {
+  fill: #1565C0;
+}
+
+/* ===== Maaliteksti ===== */
+/* "MAALI" -teksti viimeisessä ruudussa */
+.goal-text {
+  fill: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: "Poppins", sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+/* ===== Vastausnapit (Quiz-pelissä) ===== */
+.choice-btn {
+  background-color: rgba(15, 28, 85, 0.9);
+  border: 1px solid var(--border-color);
+  color: var(--text-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  transition: all 0.15s ease;
+}
+
+.choice-btn:hover {
+  background-color: rgba(61, 220, 255, 0.2);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.choice-btn:active { 
+  transform: scale(0.98); 
+}
+
+/* Oikea vastaus - vihreä korostus */
+.choice-btn.correct {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+/* Väärä vastaus - punainen korostus */
+.choice-btn.wrong {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+/* ==================== MYSTEERISANA (HIRSIPUU) ====================
+   Sananarvauspeli, jossa pelaaja arvaa kirjaimia.
+   Kirjainnapit himmenevät kun ne on käytetty.
+   ================================================================= */
+#hmLetters .btn {
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.5rem;
+}
+
+/* Käytetyt kirjaimet - selkeä himmennys */
+#hmLetters .btn:disabled {
+  opacity: 0.3;
+  background-color: rgba(100, 100, 100, 0.2) !important;
+  border-color: rgba(100, 100, 100, 0.3) !important;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ==================== MUISTIPELI ====================
+   Memory-matching game: parit etsitään korteista.
+   Grid-layout mukautuu näytön kokoon.
+   ==================================================== */
+
+/* ===== Muistipelin ruudukko ===== */
+#mmGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#mmGrid .btn {
+  min-height: 80px;
+  font-size: 1rem;
+  padding: 0.75rem;
+  word-wrap: break-word;
+  white-space: normal;
+  transition: all 0.2s ease;
+}
+
+#mmGrid .btn:hover:not(:disabled) {
+  transform: scale(1.05);       /* Zoomaus hover-tilassa */
+  box-shadow: 0 4px 12px rgba(61, 220, 255, 0.4);
+}
+
+/* ===== Oikea vastaus - vihreä ===== */
+#mmGrid .btn.mm-correct {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+  border-width: 3px !important;
+  color: white !important;
+  font-weight: 700;
+}
+
+/* ===== Väärä vastaus - punainen + tärinä ===== */
+#mmGrid .btn.mm-wrong {
+  background-color: rgba(220, 53, 69, 0.3) !important;
+  border-color: #dc3545 !important;
+  border-width: 3px !important;
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Tärisevä animaatio väärälle vastaukselle */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* ==================== PELIN OVERLAY ====================
+   Full-screen overlay pelin lataus- ja lopetustiloille.
+   Näytetään pisteet, viestit ja toimintanapit.
+   ======================================================= */
+
+/* ===== Pelin päällekkäisnäkymä ===== */
+.game-overlay {
+  position: fixed;
+  inset: 0;                     /* Täysi näyttö */
+  background: rgba(10, 15, 42, 0.95);
+  backdrop-filter: blur(8px);   /* Taustan blur */
+  z-index: 9999;                /* Ylimmäinen kerros */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Vaaleampi overlay vaalealle teemalle */
+html[data-bs-theme="light"] .game-overlay {
+  background: rgb(181, 226, 247);
+}
+
+html[data-bs-theme="light"] .game-overlay .overlay-title {
+  color: #1a1a2e;
+}
+
+html[data-bs-theme="light"] .game-overlay .overlay-message {
+  color: #2a2a3e;
+}
+
+/* Fade-in animaatio */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===== Overlay-sisältö ===== */
+.game-overlay-content {
+  text-align: center;
+  padding: 2.5rem;
+  max-width: 500px;
+  width: 90%;
+}
+
+/* ===== Overlay-ikoni ===== */
+.overlay-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+  animation: bounceIn 0.6s ease;
+}
+
+/* Bounce-in animaatio ikonille */
+@keyframes bounceIn {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== Overlay-otsikko ===== */
+.overlay-title {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 1rem;
+}
+
+/* ===== Overlay-viesti ===== */
+.overlay-message {
+  font-size: clamp(1rem, 2.5vw, 1.3rem);
+  color: var(--text-light);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+/* ===== Overlay-napit ===== */
+.overlay-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.overlay-buttons .btn {
+  min-width: 180px;
+  min-height: 48px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-width: 2px;
+}
+
+.overlay-buttons .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(61, 220, 255, 0.4);
+}
+
+/* ===== Ajastin ===== */
+.overlay-timer {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+
+/* ==================== RESPONSIIVISUUS ====================
+   Kaikki responsiiviset tyylit eri näyttökoille.
+   Varmistaa että pelilauta, pelihahmo ja käyttöliittymä 
+   skaalautuvat oikein kaikilla laitteilla mobiilista työpöytään.
+   
+   Breakpointit:
+   - 992px+    : Desktop (sidebar rinnakkain)
+   - 768-991px : Tablet (pinotettu layout)
+   - 547-767px : Pienet tabletit / suuret puhelimet
+   - 575px-    : Mobiili (pienin layout)
+   - 399px-    : Erittäin pienet puhelimet
+   ========================================================== */
+
+/* ===== DESKTOP - Isot näytöt (yli 992px) ===== */
+@media (min-width: 992px) {
+  /* Bootstrap custom column width */
+  .col-lg-2-4 {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+  
+  /* Ei marginaalia kortissa, kun rinnakkain */
+  #quiz-board-card .card {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* ===== SUURET NÄYTÖT - Rajoitettu korkeus (alle 1200px) ===== */
+@media (max-width: 1200px) {
+  .game-board-container {
+    max-height: 450px;
+  }
+}
+
+/* ===== TABLET - Keskikokoiset näytöt (768-991px) ===== */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .game-board-container {
+    max-height: 400px;
+    min-height: 350px;
+    aspect-ratio: 16 / 9;
+  }
+  
+  .board-svg {
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Pienempi hero-hahmo */
+  .hero {
+    width: 90px;
+    height: 90px;
+  }
+  
+  /* Pelilaudan elementit */
+  .path {
+    stroke-width: 15;
+  }
+  
+  .tile-text {
+    font-size: 22px;
+  }
+  
+  .goal-text {
+    font-size: 13px;
+  }
+  
+  /* Kortit pinotettu pystysuunnassa */
+  #quiz-board-card,
+  #quiz-card {
+    margin-bottom: 1rem;
+  }
+  
+  .game-page .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* ===== YLEISET TABLET-SÄÄDÖT (alle 991px) ===== */
+@media (max-width: 991.98px) {
+  .game-board-container {
+    max-height: 380px;
+  }
+  
+  /* Taustan hallintanappi */
+  #btnToggleBackground {
+    bottom: 12px;
+    right: 12px;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Sisältöalue alkaa navbarin alapuolelta */
+  .game-page .page-content {
+    padding-top: 72px;
+  }
+}
+
+/* ===== PIENET TABLETIT (547-767px) ===== */
+@media (min-width: 547px) and (max-width: 767.98px) {
+  .game-board-container {
+    max-height: 350px;
+    min-height: 300px;
+    aspect-ratio: 16 / 9;
+  }
+  
+  .board-svg {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .hero {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .path {
+    stroke-width: 14;
+  }
+  
+  .tile-text {
+    font-size: 20px;
+  }
+  
+  .goal-text {
+    font-size: 12px;
+  }
+}
+
+/* ===== PIENET TABLETIT JA ISOT PUHELIMET (alle 767px) ===== */
+@media (max-width: 767.98px) {
+  .game-board-container {
+    max-height: 300px;
+  }
+  
+  /* Kysymykset ja vastausvaihtoehdot */
+  #question {
+    font-size: 0.9rem;
+  }
+  
+  .choice-btn {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.8rem;
+  }
+
+  /* Pelilaudan elementit */
+  .tile-text { 
+    font-size: 20px; 
+  }
+  
+  .goal-text { 
+    font-size: 14px; 
+  }
+  
+  /* Mysteerisana (Hirsipuu) -peli */
+  #hmMasked { 
+    font-size: 1.8rem; 
+    letter-spacing: 0.12em; 
+  }
+  
+  /* Badget ja tiedot */
+  .game-page .badge { 
+    padding: 0.3rem 0.5rem; 
+    font-size: 0.75rem; 
+  }
+  
+  /* Kortit ja sisällöt */
+  #quiz-card .card-body {
+    padding: 1rem !important;
+  }
+  
+  /* Overlay (pelin päättyminen yms.) */
+  .game-overlay-content {
+    padding: 2rem 1.5rem;
+  }
+  
+  .overlay-icon {
+    font-size: 3.5rem;
+  }
+  
+  .overlay-title {
+    font-size: 2rem;
+  }
+  
+  .overlay-message {
+    font-size: 1.1rem;
+  }
+  
+  .overlay-buttons .btn {
+    min-width: 160px;
+    font-size: 1rem;
+  }
+  
+  /* Taustan hallintanappi */
+  #btnToggleBackground {
+    bottom: 10px;
+    right: 10px;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* ===== PIENET MOBIILILAITTEET (alle 575px) ===== */
+@media (max-width: 575.98px) {
+  .game-board-container {
+    max-height: 250px;
+  }
+  
+  /* Pelihahmo */
+  .hero {
+    width: 60px;
+    height: 60px;
+  }
+  
+  /* Pelilaudan elementit */
+  .path { 
+    stroke-width: 12; 
+  }
+  
+  .tile-circle { 
+    stroke-width: 3; 
+  }
+  
+  .tile-text { 
+    font-size: 18px; 
+  }
+  
+  .goal-text {
+    font-size: 11px;
+  }
+  
+  /* Kysymykset ja vastaukset */
+  #question {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+  
+  .choice-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.7rem;
+  }
+  
+  /* Mysteerisana-pelin kirjaimet */
+  #hmLetters .btn { 
+    min-width: 40px; 
+    min-height: 40px;
+    font-size: 0.85rem;
+  }
+  
+  /* Muistipeli-grid */
+  #mmGrid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.5rem;
+  }
+  
+  #mmGrid .btn { 
+    min-height: 70px;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+  }
+  
+  /* Overlay-napit pystysuunnassa */
+  .overlay-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .overlay-buttons .btn {
+    min-width: 100%;
+    width: 100%;
+  }
+  
+  /* Otsikot */
+  .main-title {
+    font-size: 1.5rem;
+  }
+  
+  .main-subtitle {
+    font-size: 0.9rem;
+  }
+}
+
+/* ===== ERITTÄIN PIENET MOBIILILAITTEET (alle 399px) ===== */
+@media (max-width: 399.98px) {
+  .game-board-container {
+    max-height: 200px;
+  }
+  
+  /* Pelihahmo */
+  .hero {
+    width: 50px;
+    height: 50px;
+  }
+  
+  /* Pelilaudan elementit */
+  .path {
+    stroke-width: 10;
+  }
+  
+  .tile-text {
+    font-size: 16px;
+  }
+  
+  /* Kysymykset */
+  #question {
+    font-size: 0.8rem;
+  }
+  
+  .choice-btn {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.6rem;
+  }
+  
+  /* Muistipeli kapeammalla gridillä */
+  #mmGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ===== MAISEMA-ORIENTAATIO MOBIILILLA ===== */
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-board-container {
+    max-height: 180px;
+  }
+  
+  .game-overlay-content {
+    padding: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .overlay-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .overlay-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .overlay-message {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* ==================== SAAVUTETTAVUUS ====================
+   WCAG 2.1 -yhteensopivuus.
+   Vähennetty liike ja parempi fokuksen näkyvyys.
+   ======================================================== */
+
+/* ===== Vähennetty liike (Reduced Motion) ===== */
+/* Käyttäjät, jotka ovat valinneet "prefers-reduced-motion" */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .hero {
+    transition: none !important;
+  }
+}
+
+/* ===== Fokuksen näkyvyys ===== */
+/* Selkeä fokusmerkkaus kaikille interaktiivisille elementeille */
+.game-page *:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ==================== TULOSTUS ====================
+   Tulostusoptimoidut tyylit.
+   Piilottaa interaktiiviset elementit ja animaatiot.
+   ================================================== */
+@media print {
+  /* Piilotetaan interaktiiviset elementit */
+  #space-canvas,
+  .hero,
+  .game-overlay,
+  #btnToggleBackground {
+    display: none !important;
+  }
+  
+  /* Yksinkertaiset värit tulostukseen */
+  .game-page .card {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Ei scrollausta tulostuksessa */
+  .game-page .page-content {
+    overflow: visible !important;
+  }
+}
+
+/* Fix game board scaling on tablet view (670px - 990px) */
+@media (min-width: 670px) and (max-width: 990px) {
+  .game-board-container {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 aspect ratio to match viewBox 1200x675 */
+    overflow: hidden;
+  }
+  
+  .board-svg {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  
+  #start-image-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 5 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+  
+  #start-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block;
+  }
+  
+  
+  #quiz-board-card {
+    position: relative;
+    overflow: visible;
+  }
+  
+  #quiz-board-card .card {
+    overflow: hidden;
+  }
+}

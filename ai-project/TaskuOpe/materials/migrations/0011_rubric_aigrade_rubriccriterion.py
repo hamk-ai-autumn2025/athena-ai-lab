@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
             name='AIGrade',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('model_name', models.CharField(default='gpt-4o-mini', max_length=100)),
+                ('model_name', models.CharField(default='gpt-4o', max_length=100)),
                 ('total_points', models.FloatField(default=0)),
                 ('details', models.JSONField(blank=True, default=dict)),
                 ('teacher_confirmed', models.BooleanField(default=False)),

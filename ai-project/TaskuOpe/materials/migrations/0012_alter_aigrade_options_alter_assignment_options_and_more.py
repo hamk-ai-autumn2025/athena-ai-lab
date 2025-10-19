@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='aigrade',
             name='model_name',
-            field=models.CharField(default='gpt-4o-mini', max_length=100, verbose_name='Mallin nimi'),
+            field=models.CharField(default='gpt-4o', max_length=100, verbose_name='Mallin nimi'),
         ),
         migrations.AlterField(
             model_name='aigrade',

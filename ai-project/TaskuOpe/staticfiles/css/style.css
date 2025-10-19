@@ -1,0 +1,1243 @@
+/* ================================================= */
+/* 1. TEEMAMÄÄRITYKSET JA MUUTTUJAT                  */
+/* ================================================= */
+
+:root {
+  --sidebar-width: 240px;
+}
+
+/* --- LIGHT THEME (DEFAULT) --- */
+[data-bs-theme="light"] {
+  --bg-color: #f8f9fa;
+  --card-bg-color: #ffffff;
+  --text-color: #212529;
+  --border-color: #dee2e6;
+  --bs-body-bg: var(--bg-color);
+  --bs-body-color: var(--text-color);
+  --bs-border-color: var(--border-color);
+  --bs-card-bg: var(--card-bg-color);
+}
+
+/* --- DARK THEME --- */
+[data-bs-theme="dark"] {
+  --bg-color: #0d1117;
+  --card-bg-color: #161b22;
+  --text-color: #c9d1d9;
+  --border-color: #303d3d;
+  --bs-body-bg: var(--bg-color);
+  --bs-body-color: var(--text-color);
+  --bs-border-color: var(--border-color);
+  --bs-card-bg: var(--card-bg-color);
+  --bs-tertiary-bg: var(--card-bg-color);
+  --bs-dropdown-bg: var(--card-bg-color);
+  --bs-dropdown-link-color: var(--text-color);
+}
+
+
+/* ======================================================= */
+/* 2. SIVUN PÄÄASETTELU (FLEXBOX)                          */
+/* ======================================================= */
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.main-layout-container {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+  background-color: var(--bs-body-bg);
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background-color: var(--card-bg-color);
+  border-right: 1px solid var(--border-color);
+  padding: 1.5rem 1rem;
+}
+
+.main-content-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-header {
+  flex-shrink: 0;
+  background-color: var(--card-bg-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+}
+
+.page-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1.5rem; 
+}
+
+@media (max-width: 991.98px) {
+  .page-content {
+    padding-top: 72px; 
+  }
+}
+
+/* ================================================= */
+/* 3. YLEISET KOMPONENTIT JA TYYLIT                  */
+/* ================================================= */
+
+.sidebar .nav-link {
+  color: var(--text-color);
+  font-weight: 500;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.4rem;
+  margin-bottom: 0.3rem;
+  transition: background 0.2s;
+}
+.sidebar .nav-link:hover {
+  background-color: color-mix(in oklab, var(--text-color) 12%, transparent);
+}
+.sidebar .nav-link.active {
+  background-color: #4a6cfd;
+  color: #fff;
+}
+.sidebar h3 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.navbar.fixed-top {
+  background-color: var(--card-bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/*Poistettu viestikehys muotoilut ja lisätty uudet mobiiliystävälliset tyylit t.Mirka*/
+.django-messages-container {
+  padding-bottom: 1rem; 
+}
+
+.message-success {
+  color: #198754; 
+}
+
+.message-danger {
+  color: #dc3545; 
+}
+
+.message-warning {
+  color: #ffc107;
+}
+
+.login-page-body {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: var(--bg-color);
+}
+.login-container {
+  width: 100%;
+  max-width: 420px;
+}
+
+
+@media (min-width: 992px) {
+  .row.align-items-stretch .card { height: 100%; }
+}
+
+/* --- Responsiiviset Toast-ilmoitukset (Lopullinen versio) ---
+ Mobiili ensin: Ilmoitukset keskitettynä alareunaan -> Tarkistettu saavutettavuus ja luettavuus t.mirka
+ Desktop: Ilmoitukset oikeassa alakulmassa, jotta ei peitä sisältöä
+*/
+/* Mobiilin oletustyylit pysyvät samoina: alareunassa keskellä */
+.custom-toast-container .toast {
+  width: 90vw;
+  max-width: 500px; 
+}
+
+/* 
+  Työpöydän tyylit: Kun näyttö on vähintään 768px leveä.
+  Tässä siirrämme ilmoitukset YLÄREUNAAN KESKELLE.
+*/
+@media (min-width: 768px) {
+  .custom-toast-container {
+    /* Nollataan mobiilin alareuna-asetus */
+    bottom: auto;
+    
+    /* Asetetaan uudet arvot yläreunaan keskelle.
+       'start-50' ja 'translate-middle-x' on jo HTML:ssä,
+       joten tarvitsee vain lisätä 'top'. */
+    top: 1.25rem; /* Hieman tilaa ylhäältä */
+  }
+
+  /* Palautetaan toastin leveys normaaliksi työpöydällä */
+  .custom-toast-container .toast {
+    width: auto;
+    max-width: 450px; /* Hieman leveämpi kuin aiemmin, sopii paremmin ylös */
+  }
+}
+
+/* ================================================= */
+/* 4. APULUOKAT & TEEMAKOHTAISET KORJAUKSET           */
+/* ================================================= */
+
+.text-truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;                 
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.student-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 768px) {
+  .student-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1200px) {
+  .student-cards {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  background-color: #8de8ff71;
+}
+/* Dark theme support */
+[data-bs-theme="dark"] .card-hover:hover,
+html[data-bs-theme="dark"] .card-hover:hover,
+body[data-bs-theme="dark"] .card-hover:hover,
+.dark-mode .card-hover:hover,
+[data-theme="dark"] .card-hover:hover {
+  background-color: rgba(168, 238, 255, 0.233) !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-bs-theme="light"] .navbar,
+[data-bs-theme="light"] .offcanvas {
+  --bs-navbar-color: #000;
+  --bs-navbar-hover-color: #000;
+  --bs-navbar-brand-color: #000;
+  --bs-navbar-brand-hover-color: #000;
+}
+[data-bs-theme="light"] .navbar .navbar-brand,
+[data-bs-theme="light"] .navbar .nav-link,
+[data-bs-theme="light"] .offcanvas .nav-link,
+[data-bs-theme="light"] .offcanvas-title {
+  color: #000 !important;
+}
+[data-bs-theme="light"] .dropdown-item {
+  color: #000 !important;
+}
+[data-bs-theme="light"] .navbar .navbar-toggler {
+  border-color: rgba(0,0,0,.25);
+  --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0,0,0,0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+[data-bs-theme="light"] .navbar .navbar-toggler-icon {
+  background-image: var(--bs-navbar-toggler-icon-bg);
+}
+
+/* Korjaus luo materiaali sivun otsikkoon*/
+[data-bs-theme="dark"] .taskuope-header-title {
+  color: #c9d1d9 !important;
+}
+
+/* Korjaus materiaalien tarkastelussa oleville napeille tummalla teemalla */
+[data-bs-theme="dark"] .btn-outline-dark {
+  color: #e0e0e0 !important;
+  border-color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-dark:hover {
+  color: #212529 !important;
+  background-color: #e0e0e0 !important;
+  border-color: #e0e0e0 !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+  color: #e0e0e0 !important;
+  border-color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+  color: #212529 !important;
+  background-color: #e0e0e0 !important;
+  border-color: #e0e0e0 !important;
+}
+
+
+/* ======================================================= */
+/* 5. SOVELLUSKOHTAISET KOMPONENTIT                        */
+/* ======================================================= */
+
+.ai-reply-panel, .ai-image-panel {
+  background: var(--card-bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+}
+.ai-image-panel .form-control,
+.ai-image-panel .form-select {
+  background: var(--bg-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+/* ======================================================= */
+/* 6. RESPONSIVE TABLE (OPETTAJAN NÄKYMÄ) - LOPULLINEN     */
+/* ======================================================= */
+
+@media (max-width: 640px) {
+  .tasks thead {
+    display: none;
+  }
+  .tasks, .tasks tbody, .tasks tr, .tasks td {
+    display: block;
+    width: 100%;
+  }
+  .tasks tr {
+    /* Nämä säännöt toimivat nyt oikein molemmissa teemoissa */
+    border: 1px solid var(--border-color); 
+    border-radius: .75rem;
+    padding: .75rem;
+    margin-bottom: 1rem;
+  }
+  .tasks td {
+    border: 0 !important;
+    padding: .5rem 0;
+  }
+  .tasks td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+    margin-bottom: .125rem;
+  }
+}
+/* ======================================================= */
+/* 7. TEEMAKORJAUKSET KOMPONENTEILLE                       */
+/* ======================================================= */
+
+/* Korjaa taulukon otsikkorivin värin tummassa teemassa */
+[data-bs-theme="dark"] .table-light {
+  --bs-table-bg: var(--card-bg-color);
+  --bs-table-color: var(--text-color);
+  --bs-table-border-color: var(--border-color);
+}
+
+/* ======================================================= */
+/* 8. SKAALAUTUVIEN KUVIEN TYYLIT (PÄIVITETTY)             */
+/* ======================================================= */
+
+/* Yleinen tyyli KAIKILLE materiaalin sisällön kuville */
+.card-body .img-scaled {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* KOKOLUOKAT TYÖPÖYTÄNÄKYMÄSSÄ */
+.img-scaled.size-sm {
+  max-width: 30%;
+}
+.img-scaled.size-md {
+  max-width: 60%;
+}
+.img-scaled.size-lg {
+  max-width: 90%;
+}
+
+/*
+  OLETUSKOKO KUVALLE, JOLLA EI OLE KOKOLUOKKAA.
+  Tämä korvaa aiemman yleisen 'max-width: 70%' -säännön.
+*/
+.card-body img:not(.img-scaled) {
+  max-width: 70%;
+  display: block;
+  margin: 1rem auto;
+}
+
+/* MOBIILISSA: Annetaan kaikkien skaalattujen kuvien täyttää koko leveys */
+@media (max-width: 767px) {
+  .img-scaled.size-sm,
+  .img-scaled.size-md,
+  .img-scaled.size-lg,
+  .card-body img:not(.img-scaled) {
+    max-width: 100%;
+  }
+}
+
+
+/* ======================================================= */
+/* 9. KUVAN SKAALAUS, SIJAINTI & INTERAKTIIVINEN EDITOR    */
+/* ======================================================= */
+
+/* --- A. Yleiset säännöt, jotka toimivat kaikkialla --- */
+
+.card-body, #markdown-preview {
+  display: flow-root;
+}
+
+.image-wrapper.align-left,
+.image-preview-wrapper.align-left {
+  float: left;
+  margin-right: 1.5rem;
+  margin-bottom: 1rem;
+  shape-outside: margin-box;
+  margin-left: calc(-1 * var(--bs-card-spacer-x));
+  margin-top: calc(-1 * var(--bs-card-spacer-y));
+}
+.image-wrapper.align-right,
+.image-preview-wrapper.align-right {
+  float: right;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  shape-outside: margin-box;
+  margin-right: calc(-1 * var(--bs-card-spacer-x));
+  margin-top: calc(-1 * var(--bs-card-spacer-y));
+}
+.image-wrapper.align-center,
+.image-preview-wrapper.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  float: none;
+  margin-bottom: 1rem;
+}
+
+.img-scaled.size-sm { max-width: 30%; }
+.img-scaled.size-md { max-width: 60%; }
+.img-scaled.size-lg { max-width: 90%; }
+
+
+/* --- B. Vain editorissa näkyvät elementit --- */
+.image-preview-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.image-preview-wrapper.align-center { display: block; }
+.image-controls {
+  position: absolute;
+  top: 1rem; left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  display: none;
+  gap: 0.25rem;
+  z-index: 10;
+}
+.image-preview-wrapper:hover .image-controls { display: flex; }
+#markdown-preview .clickable-image { cursor: pointer; }
+
+
+/* =========================================================== */
+/* === C. MOBIILIKORJAUS ASETTELULLE (LISÄTTY LOHKO)       === */
+/* =========================================================== */
+
+@media (max-width: 767.98px) {
+  /* 
+    Nollataan kaikki float- ja erikoismarginaalit mobiilissa.
+    Tämä pakottaa kuvan käyttäytymään kuin normaali, täysleveä lohko.
+  */
+  .image-wrapper.align-left,
+  .image-preview-wrapper.align-left,
+  .image-wrapper.align-right,
+  .image-preview-wrapper.align-right {
+    float: none;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 0;
+    shape-outside: none;
+  }
+  
+  /* Varmistetaan, että kaikki kuvat voivat olla täysleveitä mobiilissa */
+  .img-scaled.size-sm,
+  .img-scaled.size-md,
+  .img-scaled.size-lg {
+    max-width: 100%;
+  }
+}
+
+/* ======================================================= */
+/* 10. KUSTOMOIDUT TEKSTITYYLIT (HUOMIOLAATIKKO)         */
+/* ======================================================= */
+
+.custom-block {
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border-left: 5px solid;
+  border-radius: 0.375rem;
+}
+
+/* Huomio-tyylin värit */
+.custom-block.note {
+  background-color: rgba(var(--bs-primary-rgb), 0.1);
+  border-color: var(--bs-primary);
+}
+
+/* ======================================================= */
+/* 11. SISÄLLÖN TYPOGRAFIA JA VÄLIT                      */
+/* ======================================================= */
+
+/*
+  Määritellään oletusmarginaalit yleisimmille tekstielementeille.
+  Tämä lisää ilmaa ja parantaa luettavuutta molemmissa näkymissä.
+*/
+#markdown-preview h1, .card-body h1,
+#markdown-preview h2, .card-body h2,
+#markdown-preview h3, .card-body h3,
+#markdown-preview h4, .card-body h4,
+#markdown-preview p, .card-body p,
+#markdown-preview ul, .card-body ul,
+#markdown-preview ol, .card-body ol,
+#markdown-preview blockquote, .card-body blockquote {
+  margin-bottom: 1.25rem; /* Voit säätää tätä arvoa (esim. 1rem tai 1.5rem) */
+}
+
+/* 
+  Varmistetaan, että otsikoiden yläpuolella on myös tilaa,
+  paitsi jos se on aivan kontin ensimmäinen elementti.
+*/
+#markdown-preview h1:not(:first-child), .card-body h1:not(:first-child),
+#markdown-preview h2:not(:first-child), .card-body h2:not(:first-child),
+#markdown-preview h3:not(:first-child), .card-body h3:not(:first-child) {
+    margin-top: 2rem;
+}
+
+
+
+
+
+
+/* ENHANCED STYLES FOR MATERIAL CREATION PAGE */
+
+/* === Layout & Spacing === */
+.material-create-container {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  color: #2b2d42;
+}
+.step-header::before {
+  content: "";
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4361ee;
+  text-align: center;
+  line-height: 28px;
+  font-weight: bold;
+}
+.step-header.step-1::before { content: "1"; }
+.step-header.step-2::before { content: "2"; }
+
+/* === Cards === */
+.ai-card, .form-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s;
+}
+.ai-card:hover, .form-card:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+/* === AI Section === */
+.ai-section {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 12px;
+}
+.ai-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #334155;
+}
+
+/* AI Reply Panel */
+.ai-reply-panel {
+  background: #f0f9ff;
+  border-left: 4px solid #4361ee;
+  border-radius: 0 8px 8px 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+/* AI Buttons */
+.btn-ai-action {
+  background: #4cc9f0;
+  border-color: #4cc9f0;
+  color: #1e293b;
+  font-weight: 500;
+}
+.btn-ai-action:hover {
+  background: #38b6e8;
+  border-color: #38b6e8;
+  color: white;
+}
+
+/* Image Generator */
+.ai-image-panel {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 16px;
+}
+#ai_image_result img {
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* === Form Inputs === */
+.form-label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #334155;
+}
+.form-control, .form-select {
+  border: 1px solid #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+/* === Responsive === */
+@media (max-width: 992px) {
+  .step-header {
+    font-size: 1.1rem;
+  }
+}
+
+/* === MOBIILINÄKYMÄ: muuta kaksi saraketta yhdeksi pinoksi, mutta ryhmittele selkeästi === */
+@media (max-width: 991.98px) {
+  /* Piilota otsikot, koska ne tulevat nyt osioiden sisään */
+  .container-fluid > .row {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Vasen sarake (AI) → yläosa */
+  .col-lg-5.col-xl-4 {
+    order: 1;
+    width: 100%;
+  }
+
+  /* Oikea sarake (lomake) → alaosa */
+  .col-lg-7.col-xl-8 {
+    order: 2;
+    width: 100%;
+  }
+
+  /* Lisää selkeä otsikko AI-osiolle mobiilissa */
+  .col-lg-5.col-xl-4 .card-header h5::before {
+    content: "1. ";
+    font-weight: bold;
+  }
+
+  /* Lisää selkeä otsikko lomakeosiolle mobiilissa */
+  .col-lg-7.col-xl-8 .card-header h5::before {
+    content: "2. ";
+    font-weight: bold;
+  }
+
+  /* Tee kortit täysilevyisiksi ja anna niille enemmän hengitystilaa */
+  .col-lg-5.col-xl-4 .card,
+  .col-lg-7.col-xl-8 .card {
+    border-radius: 16px !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08) !important;
+  }
+
+  /* Vähennä sisäistä tiivistä mobiilissa */
+  .card-body {
+    padding: 1.25rem !important;
+  }
+
+  /* Tee tallennusnappi huomattavaksi */
+  #save-material-button {
+    font-size: 1.1rem;
+    padding: 12px;
+  }
+}
+
+/* === Valinnainen: lisää hieman ylämarginaalia mobiilin alkuun === */
+@media (max-width: 991.98px) {
+  .container-fluid {
+    padding-top: 1rem;
+  }
+}
+
+/* Näytä numerobadge normaalisti (sinulla tämä on jo jossain),
+   tärkeää on vain että piilotus toimii kun .no-step on päällä */
+.step-header.no-step::before {
+  content: none !important;
+  display: none !important;
+}
+
+
+.btn-save-material {
+  background: linear-gradient(135deg, #4361ee, #3a0ca3);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-save-material:hover {
+  background: linear-gradient(135deg, #3a56e0, #2d0a8c);
+  box-shadow: 0 6px 16px rgba(67, 97, 238, 0.45);
+  transform: translateY(-2px);
+}
+
+.btn-save-material:active {
+  transform: translateY(0);
+}
+
+.btn-save-material:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.3);
+}
+
+
+/* Bootstrap 5.3 teemat: tämä palauttaa headerin taustan teeman mukaiseksi */
+:root[data-bs-theme="dark"] .card-header.bg-white {
+  background-color: var(--bs-card-bg) !important;
+  color: var(--bs-body-color) !important;
+}
+
+:root[data-bs-theme="dark"] .card-header .step-header {
+  color: #fff !important;
+}
+
+
+
+/* ==== DARK THEME FIXES ==== */
+:root[data-bs-theme="dark"] {
+  /* kortit ja reunat */
+  --card-bg: #0f1216;
+  --card-border: #2a2f3a;
+  --panel-bg: #11151b;
+  --panel-border: #2a2f3a;
+  --text-strong: #ffffff;
+  --text-body: #e6e6e6;
+  --text-muted: #b9c0cc;
+}
+
+/* Korttien header/otsikot */
+:root[data-bs-theme="dark"] .card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+:root[data-bs-theme="dark"] .card-header {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+:root[data-bs-theme="dark"] .card-header .step-header,
+:root[data-bs-theme="dark"] .card-body h6,
+:root[data-bs-theme="dark"] .card-body label,
+:root[data-bs-theme="dark"] .form-label {
+  color: var(--text-strong) !important;
+}
+:root[data-bs-theme="dark"] .text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Fix for student dashboard closing dates - the date badge */
+[data-bs-theme="light"] .badge.bg-outline {
+  color: #212529 !important; /* Dark text for light theme */
+  background-color: transparent !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-outline {
+  color: #f8f9fa !important; /* Light text for dark theme */
+  background-color: transparent !important;
+}
+
+/* Fix for student dashboard: number counts visibility in dark theme */
+[data-bs-theme="dark"] .card .display-6 {
+  color: #f8f9fa !important; /* Light text for dark theme */
+}
+
+/* Fix for text-muted in closing dates section */
+[data-bs-theme="dark"] .list-group-item .text-muted {
+  color: #adb5bd !important; /* Lighter gray for dark theme */
+}
+
+[data-bs-theme="light"] .list-group-item .text-muted {
+  color: #6c757d !important; /* Standard gray for light theme */
+}
+
+/* Kuvageneraattorin paneeli */
+:root[data-bs-theme="dark"] #ai-image-tool {
+  background-color: var(--panel-bg);
+  border-color: var(--panel-border);
+}
+:root[data-bs-theme="dark"] #ai-image-tool h6,
+:root[data-bs-theme="dark"] #ai-image-tool label {
+  color: var(--text-strong) !important;
+}
+
+/* ===== EasyMDE / CodeMirror dark ===== */
+:root[data-bs-theme="dark"] .EasyMDEContainer {
+  background: var(--panel-bg);
+  border-color: var(--panel-border);
+}
+
+/* Editorin tekstialue */
+:root[data-bs-theme="dark"] .EasyMDEContainer .CodeMirror {
+  background: var(--panel-bg) !important;
+  color: var(--text-body) !important;
+  border-color: var(--panel-border) !important;
+}
+:root[data-bs-theme="dark"] .EasyMDEContainer .CodeMirror-cursor {
+  border-left: 1px solid var(--text-body) !important;
+}
+:root[data-bs-theme="dark"] .EasyMDEContainer .CodeMirror-placeholder {
+  color: #9aa5b1 !important; /* placeholder vaaleaksi */
+}
+
+/* Syntax-värit (kevyt tummateema) */
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-header      { color: #9bd1ff !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-strong      { color: var(--text-strong) !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-em          { color: var(--text-body) !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-link        { color: #7ab7ff !important; }
+:root[data-bs-theme="dark"] .cm-s-easymde .cm-quote       { color: #9aa5b1 !important; }
+
+/* Toolbar */
+:root[data-bs-theme="dark"] .editor-toolbar {
+  background: var(--panel-bg) !important;
+  border-color: var(--panel-border) !important;
+}
+:root[data-bs-theme="dark"] .editor-toolbar a {
+  color: var(--text-body) !important;
+}
+:root[data-bs-theme="dark"] .editor-toolbar a:hover {
+  background: #1b2028 !important;
+}
+:root[data-bs-theme="dark"] .editor-toolbar i.separator {
+  border-color: var(--panel-border) !important;
+}
+
+/* Esikatselu (preview + side-by-side) */
+:root[data-bs-theme="dark"] .editor-preview,
+:root[data-bs-theme="dark"] .editor-preview-side {
+  background: var(--panel-bg) !important;
+  color: var(--text-body) !important;
+}
+:root[data-bs-theme="dark"] .editor-preview h1,
+:root[data-bs-theme="dark"] .editor-preview h2,
+:root[data-bs-theme="dark"] .editor-preview h3,
+:root[data-bs-theme="dark"] .editor-preview-side h1,
+:root[data-bs-theme="dark"] .editor-preview-side h2,
+:root[data-bs-theme="dark"] .editor-preview-side h3 {
+  color: var(--text-strong) !important;
+}
+:root[data-bs-theme="dark"] .editor-preview a,
+:root[data-bs-theme="dark"] .editor-preview-side a {
+  color: #82b1ff !important;
+}
+
+/* HR-kontrastia */
+:root[data-bs-theme="dark"] hr {
+  border-color: var(--panel-border);
+}
+
+/* Form control placeholder vaaleaksi */
+:root[data-bs-theme="dark"] .form-control::placeholder,
+:root[data-bs-theme="dark"] textarea::placeholder {
+  color: #9aa5b1;
+}
+
+
+/* === TASKUOPE CREATE HEADER STYLE === */
+
+:root {
+    --taskuope-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.taskuope-header {
+    border-color: #e0e7ff !important;
+    padding-bottom: 1.25rem;
+}
+
+/* PÄÄOTSIKKO – isompi, tummempi, parempi kontrasti */
+.taskuope-header-title {
+    color: #0f172a; /* Tumma harmaa (ei täysin musta → pehmeämpi silmille) */
+    font-family: var(--taskuope-font-sans);
+    font-weight: 600;
+    font-size: 2.5rem; /* Isompi kuin oletus-h2 (1.5rem) */
+    line-height: 1.2;
+    margin: 1;
+}
+
+/* ALATEKSTI – nyt isompi ja tummempi kuin "text-muted" */
+.taskuope-header-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.35rem;
+    font-family: var(--taskuope-font-sans);
+    font-size: 1rem; /* Aiemmin "small" = ~0.875rem → nyt selkeämpi */
+    color: #475569; /* Tummempi kuin Bootstrapin oletus-text-muted (#6c757d) */
+}
+
+/* BADGE – säilyy korostettuna */
+.taskuope-badge {
+  background: linear-gradient(45deg, #0d6efd, #00c4ff);
+  color: white;
+  padding: 0.3rem 0.85rem;
+  border-radius: 50rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: var(--taskuope-font-sans);
+  box-shadow: 0 2px 4px rgba(0, 196, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  /* tee ei-nappi */
+  cursor: default;
+  pointer-events: none;   /* estää klikkaukset/hoverit (erityisen tärkeä jos <a>-elementin sisällä) */
+  user-select: text;      /* teksti valittavissa */
+}
+
+/* poista hover-efektit */
+.taskuope-badge:hover { transform: none; box-shadow: 0 2px 4px rgba(0,196,255,0.2); transition: none; }
+
+
+/* Mobiilisovitus: otsikko ei ole liian iso pienellä näytöllä */
+@media (max-width: 576px) {
+    .taskuope-header-title {
+        font-size: 1.5rem;
+    }
+    .taskuope-header-subtitle {
+        font-size: 0.95rem;
+    }
+}
+
+
+/* === MATERIAALITYYPIN VALINTA - OHJAAVA LAATIKKO === */
+.taskuope-material-type-selector {
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.taskuope-material-type-selector:hover {
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.taskuope-material-icon {
+    font-size: 2.25rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.taskuope-material-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.taskuope-material-text {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.taskuope-material-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.taskuope-material-btn {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.taskuope-material-btn:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.15);
+}
+
+.taskuope-material-btn:active {
+    transform: translateY(0);
+}
+
+/* Yksinkertainen "dropdown"-otsikko */
+.collapsible-header {
+  display:flex; align-items:center; gap:.5rem;
+  cursor:pointer; user-select:none;
+  font-weight:600;
+}
+.collapsible-header .caret {
+  transition: transform .18s ease;
+  font-size: .95rem;
+}
+.collapsible-header[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+
+/* pehmeä sisään/ulos -efekti (valinnainen) */
+.collapsible-body {
+  transition: opacity .18s ease;
+}
+.collapsible-body.d-none {opacity:0;}
+
+/* Kysymyskorttien korjaus visapelientarkastelussa, jotta näkyvät tumalla teemalla */
+[data-bs-theme="dark"] .card-header.bg-light {
+  background-color: var(--bs-gray-800) !important;
+  color: var(--bs-gray-100) !important;
+}
+
+[data-bs-theme="dark"] .card-header.bg-light strong {
+  color: var(--bs-gray-100) !important;
+}
+
+/* Muistipeli vastauksien korjaus muistipelin tarkastelussa tummalla teemalla */
+[data-bs-theme="dark"] .table.table-striped tbody tr {
+  color: #e0e0e0 !important; /* Softer white-gray instead of pure white */
+}
+
+[data-bs-theme="dark"] .table.table-striped td {
+  color: #e0e0e0 !important;
+}
+
+[data-bs-theme="dark"] .table thead th {
+  color: #d0d0d0 !important; /* Slightly dimmer for headers */
+}
+
+/* If the memory game uses card grid layout */
+[data-bs-theme="dark"] .card .card-body .fw-bold {
+  color: #e8e8e8 !important; /* Soft light gray instead of bright white */
+}
+
+[data-bs-theme="dark"] .card .card-body small.text-muted {
+  color: #b0b0b0 !important; /* Medium gray for less important text */
+}
+
+/* --- OMAT MATERIAALIT SIVUN KORTTITYYLIT --- */
+.material-card {
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--card-bg-color);
+}
+
+.material-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.material-card .card-title {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.material-card .card-actions {
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Status-merkkien ("span boxit") värit */
+.badge-status-DRAFT {
+  background-color: #6c757d; /* Harmaa */
+  color: white;
+}
+.badge-status-PENDING {
+  background-color: #ffc107; /* Keltainen */
+  color: #000;
+}
+.badge-status-APPROVED {
+  background-color: #198754; /* Vihreä */
+  color: white;
+}
+.badge-status-REJECTED {
+  background-color: #dc3545; /* Punainen */
+  color: white;
+}
+
+/* === LOGON KORJAUS MOBIILISSA (YLÄPALKKI) === */
+@media (max-width: 991.98px) {
+  .navbar-brand {
+    /* Pienennetään logon ympärillä olevaa oletustyhjää tilaa */
+    padding-top: 0.10rem;
+    padding-bottom: 0.10rem;
+  }
+  
+  .mobile-logo {
+    height: 70px; /* Asetetaan haluttu logon korkeus */
+    /* Negatiiviset marginaalit "vetävät" tilaa takaisin, jolloin yläpalkki ei kasva */
+    margin-top: -10px;
+    margin-bottom: -10px;
+  }
+}
+
+/* ======================================================= */
+/* 12. MOBIILIN TIIVISTYS - VÄHEMMÄN PADDINGIA             */
+/* ======================================================= */
+
+@media (max-width: 767.98px) {
+  /* Pienennetään sivun pääsisällön reunuksia mobiilissa */
+  .page-content {
+    padding-left: 0.75rem;  /* Oletus 1.5rem */
+    padding-right: 0.75rem; /* Oletus 1.5rem */
+    padding-bottom: 1rem;   /* Oletus 1.5rem */
+  }
+
+  /* Pienennetään korttien sisäistä tilaa */
+  .card-body {
+    padding: 1rem; /* Oletus 1.25rem */
+  }
+
+  /* Tiivistetään suodatinpalkin tilaa */
+  .filter-panel {
+    padding: 1rem !important;
+  }
+}
+
+/* ======================================================= */
+/* 13. TEEMAKORJAUS: MATERIAALITYYPIN VALINTA (TUMMA)      */
+/* ======================================================= */
+
+[data-bs-theme="dark"] .taskuope-material-type-selector {
+    background: var(--card-bg-color); /* Käytetään teeman kortin taustaväriä */
+    border-color: var(--border-color);
+}
+
+[data-bs-theme="dark"] .taskuope-material-type-selector:hover {
+    background: #1c2128; /* Hieman vaaleampi tumma väri hover-tilassa */
+    border-color: #4a5563;
+}
+
+[data-bs-theme="dark"] .taskuope-material-icon,
+[data-bs-theme="dark"] .taskuope-material-text {
+    color: #8b949e; /* Vaaleanharmaa teksti */
+}
+
+[data-bs-theme="dark"] .taskuope-material-title {
+    color: var(--text-color); /* Käytetään teeman päätekstin väriä */
+}
+
+[data-bs-theme="dark"] .taskuope-material-btn {
+    background: #21262d; /* Tumma tausta painikkeille */
+    border-color: var(--border-color);
+    color: var(--text-color); /* Vaalea teksti painikkeille */
+}
+
+[data-bs-theme="dark"] .taskuope-material-btn:hover {
+    border-color: var(--accent, #0d6efd); /* Käytetään korostusväriä, jos määritelty */
+    color: var(--accent, #0d6efd);
+    background: rgba(13, 110, 253, 0.1); /* Läpikuultava korostusväri */
+}
+
+/* ======================================================= */
+/* 14. TABLETTI-RESPONSIIVISUUDEN PARANNUKSET (KORJATTU)  */
+/* ======================================================= */
+
+/* Nämä säännöt koskevat tabletteja ja pieniä läppäreitä (768px - 1199.98px) */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  
+  .page-content {
+    /* Määritellään pehmusteet erikseen, jotta emme ylikirjoita padding-top -arvoa */
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 1.5rem;
+    /* padding-top: 72px säilyy aiemmasta, yleisemmästä säännöstä */
+  }
+
+  /* Suurennetaan pääotsikoita hieman, jotta ne täyttävät tilaa paremmin */
+  .h2, h2 {
+    font-size: 1.75rem; /* Oletus 1.5rem */
+  }
+
+  /* Suurennetaan myös pienempiä väliotsikoita */
+  .h4, h4 {
+    font-size: 1.3rem; /* Oletus 1.25rem */
+  }
+
+  /* Varmistetaan, että korttien välissä on riittävästi tilaa */
+  .g-4 {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 1.5rem;
+  }
+}
+
+/* ======================================================= */
+/* 15. TEEMAKORJAUS: AI-VASTAUSLAATIKKO (TUMMA) - KORJATTU */
+/* ======================================================= */
+
+[data-bs-theme="dark"] .ai-reply-panel,
+[data-bs-theme="dark"] .ai-reply-panel pre {
+    background-color: var(--card-bg-color, #161b22) !important; /* Varmistetaan taustaväri */
+    color: var(--text-color, #c9d1d9) !important; /* Varmistetaan tekstin väri */
+}
+
+[data-bs-theme="dark"] .ai-reply-panel {
+    border-color: var(--border-color, #303d3d);
+}

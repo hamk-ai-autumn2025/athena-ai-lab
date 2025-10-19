@@ -434,7 +434,7 @@ class AIGrade(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name='ai_grade', verbose_name=_("Palautus"))
     rubric = models.ForeignKey(Rubric, on_delete=models.SET_NULL, null=True, verbose_name=_("Kriteeristö"))
-    model_name = models.CharField(max_length=100, default="gpt-4o-mini", verbose_name=_("Mallin nimi"))
+    model_name = models.CharField(max_length=100, default="gpt-4o", verbose_name=_("Mallin nimi"))
     total_points = models.FloatField(default=0, verbose_name=_("Yhteispisteet"))
     details = models.JSONField(
         default=dict,

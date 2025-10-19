@@ -58,7 +58,7 @@ def ask_llm(prompt: str, *, user_id: int = 0) -> str:
     try:
         client = OpenAI(api_key=api_key)
         resp = client.chat.completions.create(  # virallinen Chat Completions -kutsu
-            model="gpt-4o-mini",               # voit vaihtaa esim. "gpt-4o"
+            model="gpt-4o",               # voit vaihtaa esim. "gpt-4o"
             messages=[
                 {"role": "system", "content": SYSTEM_FIN},
                 {"role": "user", "content": prompt},
