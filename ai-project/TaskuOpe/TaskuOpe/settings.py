@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import environ
 
-#Alusta environ
+#Alusta ympäristömuuttujien käsittely
 env = environ.Env(
     DEBUG=(bool, False),
 )
@@ -124,6 +124,7 @@ LOGIN_URL = "kirjaudu"
 LOGIN_REDIRECT_URL = "dashboard" 
 LOGOUT_REDIRECT_URL = "kirjaudu"
 MEDIA_ROOT = BASE_DIR / 'media'
+#MEDIA_URL = '/media/' #Lisäsin tämän kun halusin saada admin.py toimimaan lokaalissa -Mirka
 
 # DigitalOcean Spaces -asetukset mediatiedostoille
 if not DEBUG:
