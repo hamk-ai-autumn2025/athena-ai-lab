@@ -83,7 +83,7 @@ def get_and_summarize_article(article_data):
 # --- Streamlit Web App Interface ---
 st.set_page_config(page_title="News Search & Summarizer", layout="wide")
 
-st.title("📰 AI-Powered News Search & Summarizer")
+st.title("AI-Powered News Search & Summarizer")
 st.markdown("Enter a topic and select a time period to get the latest news summarized for you.")
 
 search_term = st.text_input("Enter a search term or category (e.g., 'Artificial Intelligence', 'Ukraine'):", "Technology")
