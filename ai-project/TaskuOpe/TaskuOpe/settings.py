@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'materials.apps.MaterialsConfig',
 
-    'imagekit'
+    'imagekit',
+    'storages',
 ]
 
 MIDDLEWARE = [
