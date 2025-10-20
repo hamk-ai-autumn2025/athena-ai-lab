@@ -195,12 +195,13 @@ class AddImageForm(forms.Form):
 
     upload = forms.ImageField(required=False, label="Lataa kuva")
     gen_prompt = forms.CharField(
-        required=False, 
+        required=False,
         label="Kuvaile generoitu kuva",
-        max_length=1000, 
-        widget=forms.Textarea(attrs={'rows': 3})
+        max_length=1000,
+        # POISTA 'style': '...' TÄSTÄ RIVISTÄ
+        widget=forms.Textarea(attrs={'rows': 3, 'style': 'width: 10%;'})
     )
-    caption = forms.CharField(required=False, max_length=255, label="Kuvateksti")
+    caption = forms.CharField(required=False, max_length=500, label="Kuvateksti") # Korjattu: lenght -> max_length
     
     size = forms.ChoiceField(
         choices=IMAGE_SIZES, # <-- Nyt tämä toimii
