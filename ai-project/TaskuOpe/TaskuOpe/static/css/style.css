@@ -135,12 +135,16 @@ html, body {
   color: #ffc107;
 }
 
+/* style.css */
 .login-page-body {
-  display: grid;
-  place-items: center;
+  display: flex;             /* 1. Vaihda grid -> flex */
+  flex-direction: column;    /* 2. Aseta lapset pystysuoraan pinoon */
+  align-items: center;       /* 3. Keskitä vaaka-akselilla (kuten 'center' place-items:ssa) */
+  justify-content: flex-start; /* 4. Kohdista pystyakselilla yläreunaan (kuten 'start' place-items:ssa) */
   min-height: 100vh;
   padding: 2rem;
   background-color: var(--bg-color);
+  overflow-y: auto;          /* 5. Salli pystysuuntainen vieritys tarvittaessa */
 }
 .login-container {
   width: 100%;
@@ -838,6 +842,11 @@ body[data-bs-theme="dark"] .card-hover:hover,
   color: #9aa5b1 !important; /* placeholder vaaleaksi */
 }
 
+:root[data-bs-theme="dark"] .editor-toolbar button.active { /* MUUTA TÄMÄ */
+  background: #388bfd !important; /* Käytä esim. sinistä korostusväriä */
+  color: #ffffff !important;      /* Varmista, että ikoni on valkoinen */
+}
+
 /* Syntax-värit (kevyt tummateema) */
 :root[data-bs-theme="dark"] .cm-s-easymde .cm-header      { color: #9bd1ff !important; }
 :root[data-bs-theme="dark"] .cm-s-easymde .cm-strong      { color: var(--text-strong) !important; }
@@ -1147,7 +1156,7 @@ body[data-bs-theme="dark"] .card-hover:hover,
   .page-content {
     padding-left: 0.75rem;  /* Oletus 1.5rem */
     padding-right: 0.75rem; /* Oletus 1.5rem */
-    padding-bottom: 1rem;   /* Oletus 1.5rem */
+    padding-bottom: 5rem;   /* TURVA-ALUE MOBIILIN ALAPALKILLE */   /* Oletus 1.5rem */
   }
 
   /* Pienennetään korttien sisäistä tilaa */

@@ -395,48 +395,90 @@ def assignment_autosave_view(request, assignment_id):
     return JsonResponse({"ok": True, "saved_at": timezone.now().isoformat()})
 
 
-# === TÄMÄ FUNKTIO ON KOKONAAN PÄIVITETTY ===
+# materials/views/api.py
+
 @require_POST
 def generate_image_view(request):
     """
-    Generoi kuvan AI:lla ja tallentaa sen suoraan pilvitallennustilaan (esim. DO Spaces).
+    Käsittelee kuvapyynnöt AJAX:lla, tehostetulla lokituksella.
     """
-    if request.content_type and "application/json" in request.content_type:
-        try:
-            payload = json.loads((request.body or b"").decode("utf-8") or "{}")
-        except json.JSONDecodeError:
-            payload = {}
+    print("\n--- generate_image_view CALLED ---")
+    print(f"Request Method: {request.method}")
+    print(f"Content-Type: {request.content_type}")
+    print(f"request.POST: {request.POST}")
+    print(f"request.FILES: {request.FILES}")
+
+    uploaded_file = request.FILES.get('image_upload')
+
+    if uploaded_file:
+        print(">>> FILE UPLOAD PATH <<<")
+        # --- VAIHTOEHTO 1: Käyttäjä latasi tiedoston ---
+        print(f"Uploaded file detected: {uploaded_file.name}, type: {uploaded_file.content_type}, size: {uploaded_file.size}")
+
+        if not uploaded_file.content_type.startswith('image/'):
+            print("ERROR: Uploaded file is not an image.")
+            return JsonResponse({"error": "Vain kuvatiedostot sallitaan."}, status=400)
+
+        rel_dir = "uploaded_images"
+        filename = f"{uuid.uuid4().hex[:8]}_{uploaded_file.name}"
+        file_path = os.path.join(rel_dir, filename)
+        print(f"Saving file to path: {file_path}")
+
     else:
-        payload = request.POST
+        print(">>> AI GENERATION PATH (or error) <<<")
+        # --- VAIHTOEHTO 2: Käyttäjä generoi AI:lla ---
+        prompt = ""
+        payload = {} # Initialize payload
+        if request.content_type and "application/json" in request.content_type:
+            try:
+                payload = json.loads((request.body or b"").decode("utf-8") or "{}")
+                prompt = (payload.get("prompt") or "").strip()
+                print(f"Prompt found in JSON body: '{prompt}'")
+            except json.JSONDecodeError:
+                print("JSON body detected but failed to parse.")
+                pass
 
-    prompt = (payload.get("prompt") or "").strip()
-    if not prompt:
-        return JsonResponse({"error": "Tyhjä prompt"}, status=400)
+        if not prompt:
+             prompt = (request.POST.get("prompt") or "").strip()
+             if prompt:
+                 print(f"Prompt found in POST data: '{prompt}'")
 
+        if not prompt:
+            print("ERROR: No file uploaded AND prompt is empty.")
+            return JsonResponse({"error": "Tyhjä prompt tai ei ladattua tiedostoa."}, status=400)
+
+        # Prompt was found, proceed with AI generation
+        print("Proceeding with AI generation...")
+        try:
+            size = payload.get("size", "1024x1024")
+            print(f"Generating image with prompt: '{prompt}', size: {size}")
+            image_bytes = generate_image_bytes(prompt=prompt, size=size)
+            if not image_bytes:
+                print("ERROR: AI generation returned empty result.")
+                return JsonResponse({"error": "Generointi palautti tyhjän tuloksen."}, status=502)
+        except Exception as e:
+            print(f"ERROR: AI generation failed: {e}")
+            return JsonResponse({"error": str(e)}, status=502)
+
+        rel_dir = "ai_images"
+        filename = f"{uuid.uuid4().hex}.png"
+        file_path = os.path.join(rel_dir, filename)
+        uploaded_file = ContentFile(image_bytes, name=filename)
+        print(f"AI image generated, saving to path: {file_path}")
+
+    # --- YHTEINEN TALLENNUSLOGIIKKA ---
     try:
-        # Generoidaan kuva kuten ennenkin
-        image_bytes = generate_image_bytes(prompt=prompt, size="1024x1024")
-        if not image_bytes:
-            return JsonResponse({"error": "Generointi palautti tyhjän tuloksen."}, status=502)
+        print("Attempting to save file...")
+        saved_path = default_storage.save(file_path, uploaded_file)
+        image_url = default_storage.url(saved_path)
+        print(f"File saved successfully! URL: {image_url}")
+        return JsonResponse({"image_url": image_url}, status=201)
+
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=502)
-
-    # Määritellään tiedostonimi ja polku pilvessä
-    rel_dir = "ai_images"
-    filename = f"{uuid.uuid4().hex}.png"
-    file_path = os.path.join(rel_dir, filename)
-
-    # 1. Kääritään kuvadata Djangon ContentFile-olioon
-    content_file = ContentFile(image_bytes, name=filename)
-
-    # 2. Tallennetaan tiedosto käyttäen Djangon oletustallennusjärjestelmää
-    #    Tuotannossa tämä on DO Spaces, paikallisesti se on `media`-kansio.
-    saved_path = default_storage.save(file_path, content_file)
-
-    # 3. Haetaan julkinen URL-osoite tallennetulle tiedostolle
-    image_url = default_storage.url(saved_path)
-
-    return JsonResponse({"image_url": image_url}, status=201)
+        print(f"ERROR: File saving failed: {e}")
+        return JsonResponse({"error": f"Tallennus epäonnistui: {str(e)}"}, status=500)
+    finally:
+        print("--- generate_image_view END ---")
 
 def material_detail_view(request, material_id):
     """

@@ -23,6 +23,8 @@ from TaskuOpe.ops_chunks import get_facets
 from urllib.parse import urljoin
 from django.core.files.storage import default_storage
 import json
+import os
+import uuid
 
 # --- Opettajan Dashboard ---
 @login_required(login_url='kirjaudu')
@@ -33,27 +35,40 @@ def teacher_dashboard_view(request):
     hänen materiaaleistaan ja tehtävänannoistaan.
     """
     user = request.user
+    # Hae kaikki opettajan materiaalit pohjaksi
     materials_qs = Material.objects.filter(author=user)
+    
+    # Hae kaikki uniikit aiheet suodatinvalikkoa varten
     subjects = materials_qs.exclude(subject__isnull=True).exclude(subject='').values_list('subject', flat=True).distinct().order_by('subject')
 
     selected_subject = request.GET.get('subject', '')
     
+    # --- KORJATTU LOHKO (PALAUTETTU ALKUPERÄISEKSI) ---
+    # Alustetaan lista oletuksena tyhjäksi.
     materials_to_display = Material.objects.none()
+    
     if selected_subject:
+        # Täytetään lista VAIN, jos aihe on valittu.
         materials_to_display = materials_qs.filter(subject=selected_subject)
+    # --- KORJAUS PÄÄTTYY ---
 
+    # Hae annetut tehtävät
     assignments = (
         Assignment.objects
         .filter(assigned_by=user)
         .select_related('material', 'student')
         .order_by('-created_at')
     )
+    
+    # Kokoa konteksti templatelle
     context = {
         'materials': materials_to_display,
         'assignments': assignments,
         'subjects': subjects,
         'selected_subject': selected_subject
     }
+    
+    # Palauta renderöity sivu
     return render(request, 'dashboard/teacher.html', context)
 
 
@@ -138,11 +153,13 @@ def create_material_view(request):
         
     else: # GET-pyyntö
         form = MaterialForm()
-
+    
     return render(request, 'materials/create.html', {
-        'form': form, 'ai_prompt': '', 'ai_reply': None,
+        'form': form,
+        'ai_prompt': '',
+        'ai_reply': None,
         'ops_vals': {'use_ops': False, 'ops_subject': '', 'ops_grade': ''},
-        'ops_facets': ops_facets
+        'ops_facets': ops_facets,
     })
 
 @login_required(login_url='kirjaudu')
@@ -215,7 +232,7 @@ def edit_material_view(request, material_id):
     else:
         form = MaterialForm(instance=m)
 
-    return render(request, "materials/edit.html", {"material": m, "form": form})
+    return render(request, "materials/edit.html", {"material": m, "form": form,})
 
 # --- Deletion ---
 @login_required(login_url='kirjaudu')
@@ -777,7 +794,7 @@ def teacher_student_list_view(request):
 def add_material_image_view(request, material_id):
     """
     Käsittelee kuvan lisäämisen materiaaliin. Toimii sekä tiedostolatauksella
-    että AI-generoinnilla ja tallentaa tiedostot pilveen.
+    että AI-generoinnilla ja tallentaa tiedostot johdonmukaisiin kansioihin.
     """
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
@@ -794,24 +811,39 @@ def add_material_image_view(request, material_id):
             align_fragment = form.cleaned_data.get("alignment", "align-center")
             
             image_to_save = None
+            filename = ""
+            rel_dir = ""
             
             if upload:
+                # VAIHTOEHTO 1: Käyttäjä latasi tiedoston
                 image_to_save = upload
+                rel_dir = "uploaded_images" # Asetetaan kansio
+                # Luodaan uniikki tiedostonimi
+                filename = f"{uuid.uuid4().hex[:8]}_{image_to_save.name}"
+            
             elif prompt:
+                # VAIHTOEHTO 2: Käyttäjä generoi AI:lla
                 try:
                     image_data = generate_image_bytes(prompt, size="1024x1024")
                     if image_data:
                         image_to_save = ContentFile(image_data, name="gen.png")
+                        rel_dir = "ai_images" # Asetetaan kansio
+                        filename = f"{uuid.uuid4().hex}.png"
                     else:
                         messages.error(request, "Kuvan generointi ei palauttanut dataa.")
                 except Exception as e:
                     messages.error(request, f"Kuvan generointi epäonnistui: {e}")
             
             if image_to_save:
-                # Luo MaterialImage-objekti ilman tallennusta, jotta voimme asettaa polun
+                # Rakenna koko polku tiedostolle
+                file_path = os.path.join(rel_dir, filename)
+
+                # Luo MaterialImage-objekti
                 mi = MaterialImage(material=m, caption=caption, created_by=request.user)
-                # Tallenna tiedosto oletustallennustilaan (Spaces)
-                mi.image.save(image_to_save.name, image_to_save, save=True)
+                
+                # Tallenna tiedosto määritellyllä polulla oletustallennustilaan (Spaces)
+                # Tämä ohittaa "upload_to"-asetuksen modelista.
+                mi.image.save(file_path, image_to_save, save=True)
                 
                 # Muodosta Markdown-linkki ja lisää se sisältöön
                 final_url = f"{mi.image.url}#{size_fragment}-{align_fragment}"
@@ -820,11 +852,21 @@ def add_material_image_view(request, material_id):
                 m.save(update_fields=["content"])
                 
                 messages.success(request, "Kuva lisätty onnistuneesti sisältöön.")
+                # Ohjaa material_detail-sivulle, EI edit-sivulle
                 return redirect("material_detail", material_id=m.id)
+            else:
+                # Jos image_to_save on None, mutta lomake oli validi
+                # (tämä tapahtuu, jos prompt annettiin mutta generointi epäonnistui)
+                if prompt and not image_to_save:
+                    # Ei tarvitse tehdä mitään, virheviesti näytettiin jo
+                    pass
+                else:
+                    messages.error(request, "Kuvaa ei voitu tallentaa. Joko lataus tai generointi epäonnistui.")
 
     # Jos tultiin tänne asti, joko oli GET-pyyntö tai tapahtui virhe
     form = AddImageForm()
     return render(request, "materials/add_image.html", {"material": m, "form": form})
+
 @login_required
 @require_POST
 def delete_material_image_view(request, image_id):

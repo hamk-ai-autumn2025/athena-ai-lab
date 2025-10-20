@@ -137,7 +137,7 @@ html, body {
 
 .login-page-body {
   display: grid;
-  place-items: start center;
+  place-items: center;
   min-height: 100vh;
   padding: 2rem;
   background-color: var(--bg-color);

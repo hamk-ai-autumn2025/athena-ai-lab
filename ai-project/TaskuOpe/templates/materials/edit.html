@@ -21,9 +21,7 @@
     <div class="card-body">
       {% csrf_token %}
 
-      <!-- MUUTETTU ASETTELU: Molemmat sarakkeet ovat nyt täysleveitä -->
       <div class="row g-3">
-        <!-- Editori -->
         <div class="col-12">
           <h6 class="text-muted">Materiaalin sisältö</h6>
           {% for field in form %}{% if field.name == 'content' %}
@@ -33,15 +31,13 @@
           {% else %}<div class="visually-hidden">{{ field }}</div>{% endif %}{% endfor %}
         </div>
 
-        <!-- Esikatselu editorin alapuolella -->
         <div class="col-12 mt-4">
           <h6 class="text-muted">Esikatselu (siirrä kursori kuvan päälle muokataksesi kuvan asettelua ja kokoa)</h6>
           <div id="markdown-preview" class="p-3 border rounded" style="min-height: 400px; overflow-y: auto;">
-            <!-- Esikatselu renderöidään tähän -->
-          </div>
+            </div>
         </div>
       </div>
-      
+
       <div class="mt-4">
         <button type="submit" class="btn btn-primary">Tallenna muutokset</button>
       </div>
@@ -49,14 +45,61 @@
   </form>
 </div>
 
+<div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-labelledby="imageGalleryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageGalleryModalLabel">Valitse kuva galleriasta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulje"></button>
+      </div>
+      <div class="modal-body">
+        {% if images %}
+          <div class="row row-cols-2 row-cols-md-3 g-3" id="modal-image-gallery">
+            {% for img in images %}
+            <div class="col">
+              <div class="card h-100 gallery-image-card" style="cursor: pointer;"
+                   data-image-url="{{ img.image.url }}"
+                   data-image-caption="{{ img.caption|default:'Kuva' }}">
+                <img src="{{ img.thumbnail.url }}" class="card-img-top" alt="{{ img.caption|default:'Galleriakuva' }}" style="height: 150px; object-fit: cover;">
+                <div class="card-body p-2">
+                  <p class="card-text small mb-0 text-truncate" title="{{ img.caption|default:'Ei kuvatekstiä' }}">
+                    {{ img.caption|default:'Ei kuvatekstiä' }}
+                  </p>
+                  <div class="mt-2 d-flex gap-1">
+                     <select class="form-select form-select-sm gallery-image-size">
+                       <option value="size-md" selected>Keskikoko</option>
+                       <option value="size-sm">Pieni</option>
+                       <option value="size-lg">Suuri</option>
+                     </select>
+                     <select class="form-select form-select-sm gallery-image-align">
+                       <option value="align-center" selected>Keskitetty</option>
+                       <option value="align-left">Vasen</option>
+                       <option value="align-right">Oikea</option>
+                     </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted">Tähän materiaaliin ei ole vielä liitetty kuvia galleriaan.</p>
+          <p><a href="{% url 'material_add_image' material_id=material.id %}" target="_blank">Lisää kuvia uudessa välilehdessä <i class="bi bi-box-arrow-up-right"></i></a></p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-<!-- KIRJASTOT -->
 <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
 
+<script>
 document.addEventListener('DOMContentLoaded', () => {
-  // === OSA 1: Alustetaan EasyMDE-editori ILMAN sen omaa esikatselua ===
+  // === OSA 1: Alustetaan EasyMDE-editori ===
   const easyMDE = new EasyMDE({
       element: document.getElementById('content-editor'),
       spellChecker: false,
@@ -72,14 +115,22 @@ document.addEventListener('DOMContentLoaded', () => {
             className: "fa fa-underline",
             title: "Alleviivaa",
         },
-        "heading", "|", 
+        "heading", "|",
         "quote", "unordered-list", "ordered-list", "|",
-        "link", 
+        "link",
         {
             name: "insertImage",
-            action: () => window.open("{% url 'material_detail' material_id=material.id %}", "_blank"),
+            action: function showImageGallery() { // Muutettu toiminto
+                var imageModal = document.getElementById('imageGalleryModal');
+                if (imageModal) {
+                    var modal = new bootstrap.Modal(imageModal);
+                    modal.show();
+                } else {
+                    alert("Kuvagallerian modaalia ei löytynyt!");
+                }
+            },
             className: "fa fa-image",
-            title: "Lisää kuva galleriasta (avaa uusi välilehti)",
+            title: "Lisää kuva galleriasta", // Päivitetty title
         },
         "|",
         {
@@ -89,30 +140,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedText = cm.getSelection();
                 cm.replaceSelection(`\n:::note\n${selectedText}\n:::\n`);
             },
-            className: "fa fa-exclamation-circle", // Käytetään huutomerkki-ikonia
+            className: "fa fa-exclamation-circle",
             title: "Luo huomiolaatikko",
         },
-        "|", // Erotin
+        "|",
         "guide"
       ],
-      maxHeight: "500px", 
+      maxHeight: "500px",
       minHeight: "400px",
   });
+  // Tehdään editorista globaali, jotta modaali voi käyttää sitä
+  window.easyMDE = easyMDE;
 
-  // === OSA 2: Tuodaan takaisin OMA interaktiivinen esikatselumme ===
+  // === OSA 2: Oma interaktiivinen esikatselu ===
   const preview = document.getElementById('markdown-preview');
   const SIZES = ['size-md', 'size-lg', 'size-sm'];
 
   function updatePreview() {
     if (!preview) return;
-    
+
     let markdownText = easyMDE.value();
-    
+
     const notePattern = /:::[ ]?note\n(.*?)\n:::/gs;
     markdownText = markdownText.replace(notePattern, (match, content) => {
-        // Muunnetaan lohkon SISÄLTÖ ensin Markdownista HTML:ksi
         const innerHtml = marked.parse(content.trim(), { breaks: true });
-        // Palautetaan koko lohko omalla HTML-rakenteellaan
         return `<div class="custom-block note">${innerHtml}</div>`;
     });
 
@@ -130,15 +181,32 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" class="btn btn-sm btn-secondary" data-align="align-center" title="Keskitä"><i class="bi bi-align-center"></i></button>
         <button type="button" class="btn btn-sm btn-secondary" data-align="align-right" title="Aseta oikealle"><i class="bi bi-align-end"></i></button>
       `;
-      img.parentNode.insertBefore(wrapper, img);
-      wrapper.appendChild(controls);
-      wrapper.appendChild(img);
-      const url = new URL(img.src, window.location.origin);
-      const fragment = url.hash.substring(1);
-      const sizeClass = (fragment.match(/size-(sm|md|lg)/) || ['size-md'])[0];
-      const alignClass = (fragment.match(/align-(left|center|right)/) || ['align-center'])[0];
-      wrapper.classList.add(alignClass);
-      img.classList.add('img-fluid', 'rounded', 'border', 'my-3', 'img-scaled', sizeClass, 'clickable-image');
+      // Varmistetaan, että img.parentNode on olemassa ennen insertBefore-kutsua
+      if (img.parentNode) {
+        img.parentNode.insertBefore(wrapper, img);
+        wrapper.appendChild(controls);
+        wrapper.appendChild(img); // Siirrä kuva wrapperin sisään
+      } else {
+        // Jos parentNode puuttuu (harvinainen tilanne), lisää wrapper suoraan esikatseluun
+        wrapper.appendChild(controls);
+        wrapper.appendChild(img);
+        preview.appendChild(wrapper); // Fallback: lisää wrapper esikatselun loppuun
+      }
+
+      // Lue ja aseta luokat URL-fragmentista
+      try {
+        const url = new URL(img.src, window.location.origin);
+        const fragment = url.hash.substring(1);
+        const sizeClass = (fragment.match(/size-(sm|md|lg)/) || ['size-md'])[0];
+        const alignClass = (fragment.match(/align-(left|center|right)/) || ['align-center'])[0];
+        wrapper.classList.add(alignClass);
+        img.classList.add('img-fluid', 'rounded', 'border', 'my-3', 'img-scaled', sizeClass, 'clickable-image');
+      } catch (e) {
+        console.error("Error parsing image URL or fragment:", img.src, e);
+        // Aseta oletusluokat, jos URL on virheellinen
+        wrapper.classList.add('align-center');
+        img.classList.add('img-fluid', 'rounded', 'border', 'my-3', 'img-scaled', 'size-md', 'clickable-image');
+      }
     });
   }
 
@@ -150,22 +218,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const wrapper = (img || alignButton).closest('.image-preview-wrapper');
     const imageToModify = wrapper.querySelector('img');
+    if (!imageToModify) return; // Varmistus
+
     const imageIndex = parseInt(imageToModify.dataset.imageIndex, 10);
     const markdownImages = easyMDE.value().match(/!\[.*?\]\([^)]+\)/g) || [];
     const oldMarkdown = markdownImages[imageIndex];
     if (!oldMarkdown) return;
 
-    const oldUrl = oldMarkdown.match(/\(([^)]+)\)/)[1];
+    const urlMatch = oldMarkdown.match(/\(([^)]+)\)/);
+    if (!urlMatch || !urlMatch[1]) return; // Varmistus
+    const oldUrl = urlMatch[1];
+
     const oldFragment = (oldUrl.split('#')[1] || '');
     let currentSize = (oldFragment.match(/size-(sm|md|lg)/) || ['size-md'])[0];
     let currentAlign = (oldFragment.match(/align-(left|center|right)/) || ['align-center'])[0];
 
-    if (img) {
+    if (img) { // Jos klikattiin kuvaa -> vaihda koko
       const nextIndex = (SIZES.indexOf(currentSize) + 1) % SIZES.length;
       currentSize = SIZES[nextIndex];
     }
-    
-    if (alignButton) {
+
+    if (alignButton) { // Jos klikattiin tasausnappia -> vaihda tasaus
       currentAlign = alignButton.dataset.align;
     }
 
@@ -173,23 +246,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const baseUrl = oldUrl.split('#')[0];
     const newUrl = `${baseUrl}#${newFragment}`;
     const newMarkdown = oldMarkdown.replace(oldUrl, newUrl);
-    
+
     const currentVal = easyMDE.value();
     easyMDE.value(currentVal.replace(oldMarkdown, newMarkdown));
   }
 
   // === OSA 3: Yhdistetään EasyMDE ja esikatselu ===
-  
-  // Kuunnellaan, kun EasyMDE:n sisältö muuttuu, ja päivitetään oma esikatselumme
   easyMDE.codemirror.on("change", updatePreview);
-  
-  // Kuunnellaan klikkauksia omassa esikatselussamme
   preview.addEventListener('click', handlePreviewClick);
-
-  // Päivitetään esikatselu kerran heti alussa
-  updatePreview();
+  updatePreview(); // Ensimmäinen päivitys
 });
-
-
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const modalElement = document.getElementById('imageGalleryModal');
+  const galleryContainer = document.getElementById('modal-image-gallery');
+
+  if (modalElement && galleryContainer) {
+    const modal = new bootstrap.Modal(modalElement);
+
+    galleryContainer.addEventListener('click', (event) => {
+      const card = event.target.closest('.gallery-image-card');
+      if (!card) return;
+
+      const imageUrl = card.dataset.imageUrl;
+      const caption = card.dataset.imageCaption || 'Kuva';
+      const sizeSelect = card.querySelector('.gallery-image-size');
+      const alignSelect = card.querySelector('.gallery-image-align');
+      const sizeFragment = sizeSelect ? sizeSelect.value : 'size-md';
+      const alignFragment = alignSelect ? alignSelect.value : 'align-center';
+
+      if (imageUrl && window.easyMDE) {
+        const finalUrl = `${imageUrl}#${sizeFragment}-${alignFragment}`;
+        const markdownImage = `\n\n![${caption}](${finalUrl})\n`;
+        const currentContent = window.easyMDE.value();
+        window.easyMDE.value(currentContent + markdownImage);
+        modal.hide();
+        window.easyMDE.codemirror.focus();
+        window.easyMDE.codemirror.setCursor(window.easyMDE.codemirror.lineCount(), 0);
+      }
+    });
+  }
+});
+</script>
+
 {% endblock %}
