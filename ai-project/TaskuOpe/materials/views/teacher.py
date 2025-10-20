@@ -570,6 +570,7 @@ def view_all_submissions_view(request):
 
     q = (request.GET.get("q") or "").strip()
     st = request.GET.get("status")  # SUBMITTED | GRADED | None
+    selected_subject = (request.GET.get("subject") or "").strip()
 
     base = (Assignment.objects
             .filter(assigned_by=request.user)
@@ -587,6 +588,21 @@ def view_all_submissions_view(request):
             Q(student__last_name__icontains=q)
         )
 
+        # --- AIHE-suodatus (dropdownin valinta) ---
+    if selected_subject:
+        base = base.filter(material__subject=selected_subject)
+
+        # --- Dropdownin AIHEET (rakennetaan kaikista opettajan tehtävistä, ei vain suodatetusta) ---
+    subjects = (
+        Assignment.objects
+        .filter(assigned_by=request.user)
+        .exclude(material__subject__isnull=True)
+        .exclude(material__subject__exact="")
+        .values_list('material__subject', flat=True)
+        .distinct()
+        .order_by('material__subject')
+    )
+
     # UUSI: Erottele pelit ja normaalit tehtävät
     normal_assignments = base.exclude(material__material_type='peli')
     game_assignments = base.filter(material__material_type='peli')
@@ -602,6 +618,8 @@ def view_all_submissions_view(request):
         'games': games_list,  # Pelit (ei sivutusta)
         'q': q,
         'status': st or "",
+        'subjects': subjects,           # <-- dropdown täyttyy näillä
+        'selected_subject': selected_subject,  # <-- valinta säilyy
     })
 
 @login_required(login_url='kirjaudu')

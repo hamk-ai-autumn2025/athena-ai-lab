@@ -41,107 +41,130 @@
     </form>
   </div>
 
-  <!-- Normaalit tehtävät ENSIN -->
+  <!-- Tehtävät (collapse-laatikko kuten pelit) -->
   <section class="assignments-list mb-5">
-    <h5 class="mb-3">Tehtävät</h5>
-    
-    {% if assignments %}
-    <div class="table-responsive">
-      <table class="table table-hover align-middle tasks">
-        <thead class="table-light">
-          <tr>
-            <th scope="col">Oppilas</th>
-            <th scope="col">Materiaali</th>
-            <th scope="col">Määräaika</th>
-            <th scope="col">Tila</th>
-            <th scope="col">Toiminnot</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for assignment in assignments %}
-          <tr>
-            <td data-label="Oppilas">{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
-            <td data-label="Materiaali">{{ assignment.material.title }}</td>
-            <td data-label="Määräaika">{{ assignment.due_at|date:"d.m.Y H:i"|default:"—" }}</td>
-            <td data-label="Tila">
-              <span class="badge 
-                {% if assignment.status == 'GRADED' %}bg-success
-                {% elif assignment.status == 'SUBMITTED' %}bg-primary
-                {% elif assignment.status == 'IN_PROGRESS' %}bg-warning
-                {% else %}bg-secondary{% endif %}">
-                {{ assignment.get_status_display }}
-              </span>
-            </td>
-            <td data-label="Toiminnot">
-              {% if assignment.status in 'SUBMITTED,GRADED' %}
-                {% with sub=assignment.submissions.last %}
-                  {% if sub %}
-                    <a href="{% url 'grade_submission' submission_id=sub.id %}" 
-                       class="btn btn-sm btn-outline-primary">
-                      <i class="bi bi-pencil-square me-1"></i> Arvioi
-                    </a>
-                  {% endif %}
-                {% endwith %}
-              {% else %}
-                <span class="text-muted small">Ei palautusta</span>
+    <div class="card border-secondary">
+      <div class="card-header bg-secondary bg-opacity-10">
+        <button class="btn btn-link w-100 text-start text-decoration-none p-0"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#assignmentsCollapse"
+                aria-expanded="false"
+                aria-controls="assignmentsCollapse">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              Tehtävät
+              <span class="badge bg-secondary ms-2">{{ assignments|length }}</span>
+            </h5>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+        </button>
+      </div>
+
+      <div class="collapse" id="assignmentsCollapse">
+        <div class="card-body p-0">
+
+          {% if assignments %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle tasks">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">Oppilas</th>
+                  <th scope="col">Materiaali</th>
+                  <th scope="col">Määräaika</th>
+                  <th scope="col">Tila</th>
+                  <th scope="col">Toiminnot</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for assignment in assignments %}
+                <tr>
+                  <td data-label="Oppilas">{{ assignment.student.get_full_name|default:assignment.student.username }}</td>
+                  <td data-label="Materiaali">{{ assignment.material.title }}</td>
+                  <td data-label="Määräaika">{{ assignment.due_at|date:"d.m.Y H:i"|default:"—" }}</td>
+                  <td data-label="Tila">
+                    <span class="badge 
+                      {% if assignment.status == 'GRADED' %}bg-success
+                      {% elif assignment.status == 'SUBMITTED' %}bg-primary
+                      {% elif assignment.status == 'IN_PROGRESS' %}bg-warning
+                      {% else %}bg-secondary{% endif %}">
+                      {{ assignment.get_status_display }}
+                    </span>
+                  </td>
+                  <td data-label="Toiminnot">
+                    {% if assignment.status in 'SUBMITTED,GRADED' %}
+                      {% with sub=assignment.submissions.last %}
+                        {% if sub %}
+                          <a href="{% url 'grade_submission' submission_id=sub.id %}" 
+                             class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil-square me-1"></i> Arvioi
+                          </a>
+                        {% endif %}
+                      {% endwith %}
+                    {% else %}
+                      <span class="text-muted small">Ei palautusta</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Sivutus -->
+          {% if assignments.has_other_pages %}
+          <nav aria-label="Sivunumerot" class="border-top">
+            <ul class="pagination justify-content-center my-3">
+              {% if assignments.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                    Ensimmäinen
+                  </a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" 
+                     href="?page={{ assignments.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                    Edellinen
+                  </a>
+                </li>
               {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+
+              <li class="page-item active">
+                <span class="page-link">Sivu {{ assignments.number }} / {{ assignments.paginator.num_pages }}</span>
+              </li>
+
+              {% if assignments.has_next %}
+                <li class="page-item">
+                  <a class="page-link" 
+                     href="?page={{ assignments.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                    Seuraava
+                  </a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" 
+                     href="?page={{ assignments.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                    Viimeinen
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+
+          {% else %}
+          <div class="alert alert-secondary m-3" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            {% if q %}
+              Ei tehtäviä hakuehdoilla "{{ q }}".
+            {% else %}
+              Ei tehtäviä näytettäväksi.
+            {% endif %}
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
     </div>
-
-    <!-- Sivutus -->
-    {% if assignments.has_other_pages %}
-    <nav aria-label="Sivunumerot">
-      <ul class="pagination justify-content-center">
-        {% if assignments.has_previous %}
-          <li class="page-item">
-            <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
-              Ensimmäinen
-            </a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" 
-               href="?page={{ assignments.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
-              Edellinen
-            </a>
-          </li>
-        {% endif %}
-
-        <li class="page-item active">
-          <span class="page-link">Sivu {{ assignments.number }} / {{ assignments.paginator.num_pages }}</span>
-        </li>
-
-        {% if assignments.has_next %}
-          <li class="page-item">
-            <a class="page-link" 
-               href="?page={{ assignments.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
-              Seuraava
-            </a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" 
-               href="?page={{ assignments.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
-              Viimeinen
-            </a>
-          </li>
-        {% endif %}
-      </ul>
-    </nav>
-    {% endif %}
-
-    {% else %}
-    <div class="alert alert-secondary" role="alert">
-      <i class="bi bi-info-circle me-2"></i>
-      {% if q %}
-        Ei tehtäviä hakuehdoilla "{{ q }}".
-      {% else %}
-        Ei tehtäviä näytettäväksi.
-      {% endif %}
-    </div>
-    {% endif %}
   </section>
 
   <!-- Pelit VIIMEISENÄ (collapse-laatikko) -->
