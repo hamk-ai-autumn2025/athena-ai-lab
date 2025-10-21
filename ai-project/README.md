@@ -6,6 +6,10 @@ This repository contains the **TaskuOpe** application, developed as part of the 
 
 ---
 
+## Petri Kuittinen - published ip in moodle and kayttajat.txt testusers provided via email
+
+---
+
 ## Setup Instructions
 
 1. **Create and activate a virtual environment**
@@ -45,7 +49,6 @@ To test the application, follow these steps:
    ```
    Then go to [http://localhost:8000/admin/](http://localhost:8000/admin/) and log in with the superuser account.
 
-3. Petri Kuittinen - published ip and kayttajat.txt testusers provided via email
 
 ---
 
