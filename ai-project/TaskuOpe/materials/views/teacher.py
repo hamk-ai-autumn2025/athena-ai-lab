@@ -799,7 +799,19 @@ def add_material_image_view(request, material_id):
     """
     Handles adding an image to a material, either via file upload or AI generation.
     Sets the ACL to public-read in production for permanent URLs.
+    
+    This function has been fixed to:
+    1. Correctly handle the client-side generated image (in `upload` field).
+    2. Read the dynamic AI image size from request.POST.
+    3. Bypass strict form validation errors when a client-generated image is present.
     """
+    from django.conf import settings
+    # Ensure boto3 is available globally if needed, though usually imported at the top
+    try:
+        import boto3
+    except ImportError:
+        boto3 = None 
+
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
         messages.error(request, "Ei oikeutta.")
@@ -807,33 +819,57 @@ def add_material_image_view(request, material_id):
 
     if request.method == "POST":
         form = AddImageForm(request.POST, request.FILES)
-        if form.is_valid():
-            upload = form.cleaned_data.get("upload")
-            prompt = (form.cleaned_data.get("gen_prompt") or "").strip()
-            caption = form.cleaned_data.get("caption") or ""
-            size_fragment = form.cleaned_data.get("size", "size-md")
-            align_fragment = form.cleaned_data.get("alignment", "align-center")
+
+        # Determine if a client-side generated image is likely present
+        is_client_generated = request.FILES.get('upload') and request.POST.get('gen_prompt') and request.FILES.get('upload').name == 'generated.png'
+        
+        # We proceed if the form is valid OR if we detect a client-generated image
+        if form.is_valid() or is_client_generated:
+            
+            # --- Safely retrieve all necessary data ---
+            if form.is_valid():
+                upload = form.cleaned_data.get("upload")
+                prompt = (form.cleaned_data.get("gen_prompt") or "").strip()
+                caption = form.cleaned_data.get("caption") or ""
+                size_fragment = form.cleaned_data.get("size", "size-md")
+                align_fragment = form.cleaned_data.get("alignment", "align-center")
+            else: # Form was invalid, but we have a client-generated image
+                upload = request.FILES.get("upload") 
+                prompt = (request.POST.get("gen_prompt") or "").strip()
+                caption = (request.POST.get("caption") or "").strip()
+                size_fragment = request.POST.get("size", "size-md")
+                align_fragment = request.POST.get("alignment", "align-center")
+
+            # Get the dynamic AI size (always from POST, as it's not part of AddImageForm fields)
+            ai_image_size = request.POST.get("ai_image_size", "1024x1024")
+            if ai_image_size not in {"1024x1024", "1024x1792", "1792x1024"}:
+                ai_image_size = "1024x1024" # Sanity check
 
             image_to_save = None
             filename = ""
             rel_dir = ""
-            file_path = "" # Initialize file_path
+            file_path = "" 
 
             if upload:
-                # OPTION 1: User uploaded a file
+                # OPTION 1: File upload (manual upload or client-generated)
                 image_to_save = upload
-                rel_dir = "uploaded_images"
-                filename = f"{uuid.uuid4().hex[:8]}_{image_to_save.name}"
+                # Set directory and unique filename
+                if upload.name == 'generated.png':
+                    rel_dir = "ai_images"
+                    filename = f"{uuid.uuid4().hex}.png"
+                else:
+                    rel_dir = "uploaded_images"
+                    filename = f"{uuid.uuid4().hex[:8]}_{image_to_save.name}"
+                    
                 file_path = os.path.join(rel_dir, filename)
-                print(f"File upload selected. Target path: {file_path}")
+                print(f"File/AI upload selected. Target path: {file_path}")
 
             elif prompt:
-                # OPTION 2: User generates with AI
-                print(f"AI generation selected. Prompt: '{prompt}'")
+                # OPTION 2: Server-side AI generation fallback
+                print(f"AI generation selected (server-side fallback). Prompt: '{prompt}', Size: '{ai_image_size}'")
                 try:
-                    # Ensure DALL-E 3 compatible size (default 1024x1024)
-                    # Could add size selection from form here if needed
-                    image_data = generate_image_bytes(prompt, size="1024x1024")
+                    # Assume generate_image_bytes is globally available
+                    image_data = generate_image_bytes(prompt, size=ai_image_size) 
                     if image_data:
                         image_to_save = ContentFile(image_data, name="gen.png")
                         rel_dir = "ai_images"
@@ -848,89 +884,76 @@ def add_material_image_view(request, material_id):
                     print(f"ERROR: AI generation failed: {e}")
 
             if image_to_save and file_path:
-                # Create MaterialImage object without saving to DB first
+                # Common saving logic
                 mi = MaterialImage(material=m, caption=caption, created_by=request.user)
 
                 try:
-                    print(f"Attempting to save image to relative path: {file_path}")
-                    # 1. Save the image file via the model field's storage mechanism
-                    #    Provide the full desired path/key directly to save()
-                    #    save=False prevents saving the model instance to DB yet
                     mi.image.save(file_path, image_to_save, save=False)
-                    object_key = mi.image.name # Get the actual key/path assigned by storage
-                    print(f"Image saved to storage (pre-commit), effective key/name: {object_key}")
-
-                    # 2. Set ACL to public-read ONLY in production (DEBUG=False) and if boto3 is available
+                    object_key = mi.image.name
+                    
+                    # --- Correct calculation of acl_key ---
+                    aws_location = getattr(settings, 'AWS_LOCATION', '').strip('/')
+                    if aws_location and not object_key.startswith(aws_location + '/'):
+                        acl_key = f"{aws_location}/{object_key}"
+                    else:
+                        acl_key = object_key
+                    # --- End Correct calculation ---
+                    
+                    # Start of the ACL block
                     if not settings.DEBUG and boto3:
-                        print(f"Attempting to set ACL to public-read for {object_key}...")
-                        try:
-                            # Initialize S3 client using credentials from settings
-                            s3_client = boto3.client('s3',
-                                                     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                                                     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                                                     endpoint_url=settings.AWS_S3_ENDPOINT_URL,
-                                                     region_name=settings.DO_SPACES_REGION) # Use region from settings
-
-                            # --- Optional: Check if prefix is missing (might not be needed if mi.image.name is correct) ---
-                            expected_prefix = settings.AWS_LOCATION + '/' if hasattr(settings, 'AWS_LOCATION') and settings.AWS_LOCATION else ''
-                            if expected_prefix and not object_key.startswith(expected_prefix):
-                                 print(f"WARNING: Object key '{object_key}' might be missing expected prefix '{expected_prefix}'. ACL setting might fail.")
-                            # --- Check ends ---
-
-                            # Set the ACL for the object using the key from the model field
-                            s3_client.put_object_acl(Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                                                       Key=object_key,
-                                                       ACL='public-read')
-                            print(f"Successfully set ACL public-read for: {object_key}")
-                        except Exception as e:
-                            # Log the error but continue; URL might still work as pre-signed
-                            print(f"WARNING: Failed to set ACL public-read for {object_key}: {e}. URL might be temporary.")
-                    elif not settings.DEBUG and not boto3:
-                         print("WARNING: boto3 library not found. Cannot set public-read ACL. URL might be temporary.")
-
-                    # 3. Now save the MaterialImage model instance to the database
+                        # Initialize S3 client (safe settings access)
+                        s3_client = boto3.client('s3',
+                                                 aws_access_key_id=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
+                                                 aws_secret_access_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
+                                                 endpoint_url=getattr(settings, 'AWS_S3_ENDPOINT_URL', None),
+                                                 region_name=getattr(settings, 'DO_SPACES_REGION', None))
+                        
+                        s3_client.put_object_acl(Bucket=getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'DUMMY_BUCKET'),
+                                                   Key=acl_key,  # <-- CRITICAL FIX: USE acl_key INSTEAD OF object_key
+                                                   ACL='public-read')
+                    
                     mi.save()
-                    print("MaterialImage object saved to database.")
-
-                    # 4. Get the URL from the model field (should now be permanent if ACL was set)
                     image_url = mi.image.url
-                    print(f"Generated URL from model field: {image_url}") # Check URL format in logs
 
-                    # 5. Construct Markdown and update material content
-                    final_url = f"{image_url}#{size_fragment}-{align_fragment}"
-                    md_img = f"\n\n![{caption or 'Kuva'}]({final_url})\n"
+                    # Construct Markdown
+                    size_fragment_short = size_fragment.replace('size-', 'size-') 
+                    align_fragment_short = align_fragment.replace('align-', 'align-')
+                    final_url = f"{image_url}#{size_fragment_short}-{align_fragment_short}" 
+                    
+                    # Determine default caption
+                    is_ai_generated_check = 'generated' in image_to_save.name or 'ai_images' in rel_dir
+                    default_caption = 'Generoitu kuva' if is_ai_generated_check else 'Kuva'
+                    md_img = f"\n\n![{caption or default_caption}]({final_url})\n" 
+                    
+                    # Append to material content
                     m.content = (m.content or "")
                     if m.content and not m.content.endswith("\n"):
-                        m.content += "\n" # Ensure newline before image
+                        m.content += "\n" 
                     m.content += md_img
                     m.save(update_fields=["content"])
-                    print("Markdown added to material content and saved.")
 
                     messages.success(request, "Kuva lisätty onnistuneesti sisältöön.")
                     return redirect("material_detail", material_id=m.id)
 
                 except Exception as e:
-                     # Catch errors during storage save or ACL setting
-                     print(f"ERROR saving MaterialImage file or setting ACL: {e}")
-                     messages.error(request, f"Kuvan tallennus epäonnistui: {e}")
-                     # Stay on the page in case of error
+                    print(f"ERROR saving MaterialImage file or setting ACL: {e}")
+                    messages.error(request, f"Kuvan tallennus epäonnistui: {e}")
 
             else:
-                # Handle cases where image_to_save is None but form was valid
                 if prompt and not image_to_save:
-                    pass # Error message was already shown during AI generation failure
+                    pass 
                 elif not upload and not prompt:
-                     messages.error(request, "Valitse ladattava tiedosto tai anna generointikehote.")
-                else: # Other unexpected case
+                    messages.error(request, "Valitse ladattava tiedosto tai anna generointikehote.")
+                else: 
                     messages.error(request, "Kuvaa ei voitu tallentaa.")
 
-        else: # Form not valid
-             messages.error(request, "Lomakkeessa oli virheitä. Tarkista tiedot.")
+        else: # Form not valid AND not client-generated
+            messages.error(request, "Lomakkeessa oli virheitä. Tarkista tiedot.")
 
     # GET request or if POST resulted in an error (stay on page)
-    form = AddImageForm() # Show blank or invalid form again
+    form = AddImageForm() 
     return render(request, "materials/add_image.html", {"material": m, "form": form})
-    
+
 @login_required
 @require_POST
 def delete_material_image_view(request, image_id):

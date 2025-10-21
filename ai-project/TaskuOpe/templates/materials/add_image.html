@@ -1,18 +1,12 @@
-{# templates/materials/add_image.html #}
 {% extends 'partials/base.html' %}
 {% block title %}Lisää kuva{% endblock %}
 {% block content %}
 <div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <h1 class="h2 mb-0">Lisää kuva materiaaliin</h1>
-    <a href="{% url 'material_detail' material_id=material.id %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i> Takaisin materiaaliin
-    </a>
-  </div>
-
-    <form id="addImgForm" method="post" enctype="multipart/form-data" class="card shadow-sm">
+  <form id="addImgForm" method="post" enctype="multipart/form-data" class="card shadow-sm">
       <div class="card-body p-4">
         {% csrf_token %}
+        <input type="hidden" name="ai_image_size" id="id_ai_image_size" value="1024x1024">
+        {# ^^^ LISÄTTY PIILOKENTTÄ KUVAN KOON VÄLITTÄMISEKSI PALVELIMELLE ^^^ #}
 
         <h5 class="card-title mb-4 border-bottom pb-2">
           Materiaali: <span class="fw-normal">{{ material.title }}</span>
@@ -22,7 +16,6 @@
           <div class="alert alert-danger">{{ form.non_field_errors }}</div>
         {% endif %}
 
-          <!-- OSA 1: Kuvan lataus -->
           <div class="mb-3">
             <label for="{{ form.upload.id_for_label }}" class="form-label fw-bold">{{ form.upload.label }}</label>
             {{ form.upload }}
@@ -31,8 +24,7 @@
 
           <div class="text-center my-3 text-muted">— tai —</div>
 
-          <!-- OSA 2: Kuvan generointi -->
-      <div class="mb-3"> <label for="{{ form.gen_prompt.id_for_label }}" class="form-label fw-bold">{{ form.gen_prompt.label }}</label>
+          <div class="mb-3"> <label for="{{ form.gen_prompt.id_for_label }}" class="form-label fw-bold">{{ form.gen_prompt.label }}</label>
         {{ form.gen_prompt }}
       </div>
 
@@ -50,22 +42,6 @@
           
           <hr class="my-4">
 
-          <!-- OSA 3: Yhteiset asetukset -->
-          <div class="mb-3">
-            <label for="{{ form.caption.id_for_label }}" class="form-label">{{ form.caption.label }}</label>
-            {{ form.caption }}
-          </div>
-          
-          <div class="mb-4">
-            <label for="{{ form.size.id_for_label }}" class="form-label">{{ form.size.label }}</label>
-            {{ form.size }}
-          </div>
-
-          <div class="mb-4">
-            <label for="{{ form.alignment.id_for_label }}" class="form-label">{{ form.alignment.label }}</label>
-            {{ form.alignment }} 
-          </div>
-          
           <div class="d-grid">
             <button type="submit" class="btn btn-primary">Tallenna ja lisää kuva sisältöön</button>
           </div>
@@ -76,7 +52,6 @@
   </div>
 </div>
 
-<!-- Kuvageneroinnin skripti pysyy täysin ennallaan -->
 <script>
 (function(){
   const form = document.getElementById('addImgForm');
@@ -86,15 +61,24 @@
   const genPreview = document.getElementById('genPreview');
   const fileInput = form.querySelector('input[type="file"][name$="upload"]');
   const promptInput = form.querySelector('textarea[name$="gen_prompt"]'); // Korjattu valitsin
+  const hiddenSizeInput = document.getElementById('id_ai_image_size'); // LISÄTTY: Uusi piilokenttä
 
   function getCsrfToken() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
     return m ? m[1] : '';
   }
+  
+  // LISÄTTY: Päivitä piilokenttä koon vaihtuessa
+  genSize?.addEventListener('change', () => {
+    if(hiddenSizeInput) hiddenSizeInput.value = genSize.value;
+  });
 
   genBtn?.addEventListener('click', async () => {
     const prompt = (promptInput?.value || '').trim();
     const size = genSize.value;
+    
+    // LISÄTTY: Varmista, että piilokenttä on asetettu ennen AJAX-kutsua
+    if(hiddenSizeInput) hiddenSizeInput.value = size;
 
     genMsg.textContent = 'Generoidaan…';
     genPreview.classList.add('d-none');
@@ -106,6 +90,8 @@
     }
 
     try {
+      // TÄMÄ AJAX-KUTSU ON JO OIKEIN: Se lähettää 'prompt' ja 'size' JSON-payloadissa
+      // generate_image_view käsittelee tämän koon (kuten create.html:n tapauksessa)
       const res = await fetch("{% url 'generate_image' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
@@ -122,11 +108,15 @@
         return;
       }
 
+      // KUTSUN JÄLKEEN: Asynkroninen lataus takaisin blobiksi ja asetetaan fileInputiin.
+      // TÄMÄ ON TÄRKEÄ: Näin saadaan public-read ACL:n asettama kuva käyttöön.
       const url = data.image_url + `?t=${Date.now()}`;
       genPreview.src = url;
       genPreview.classList.remove('d-none');
       genMsg.textContent = data.placeholder ? 'Näytetään placeholder (API-avain puuttuu/virhe).' : 'Kuva valmis.';
 
+      // Tämä lataus ja asetus tiedostoksi mahdollistaa kuvan esikatselun ja sen,
+      // että kuva lähetetään seuraavassa lomakkeen lähetyksessä 'upload' kentässä.
       const imgRes = await fetch(url);
       const blob = await imgRes.blob();
       const file = new File([blob], 'generated.png', { type: blob.type || 'image/png' });
@@ -138,6 +128,10 @@
       genMsg.textContent = `Kutsu epäonnistui: ${e}`;
     }
   });
+  
+  // LISÄTTY: Varmista, että initial value on asetettu latauksen yhteydessä
+  if (hiddenSizeInput && genSize) hiddenSizeInput.value = genSize.value;
+
 })();
 </script>
 {% endblock %}
