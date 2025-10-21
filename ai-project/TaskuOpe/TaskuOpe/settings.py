@@ -95,7 +95,7 @@ DATABASES = {
 # Lisää SSL-vaatimus VAIN, jos käytössä on PostgreSQL (eli DATABASE_URL löytyi)
 if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
     DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
-..
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
