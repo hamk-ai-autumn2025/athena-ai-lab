@@ -86,11 +86,12 @@ WSGI_APPLICATION = 'TaskuOpe.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    # Lue DATABASE_URL ympäristömuuttujasta (käytetään tuotannossa).
+    # Jos DATABASE_URL ei löydy, käytä oletuksena paikallista sqlite-tietokantaa.
+    'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
 }
+
+DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 
 # Password validation
