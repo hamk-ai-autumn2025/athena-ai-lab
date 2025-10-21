@@ -4,6 +4,10 @@ Built by Mirka Romppanen using Gemini 2.5 Pro (temperature set to 2), according 
 
 This is a Python-based GUI tool for logging and tracking working hours in an AI project. The application uses Tkinter for the graphical user interface, and stores data in separate `.csv` files for each team member. A management dashboard shows team and subject summaries, including visualizations.
 
+## NOTE!
+
+Visual date selection has bugs -> Please add date manually
+
 ## Update for Version 2
 
 This is Version 2 of the AI Project Hour Tracker, with several improvements:
