@@ -132,16 +132,15 @@ if not DEBUG:
     AWS_ACCESS_KEY_ID = env('DO_SPACES_ACCESS_KEY')
     AWS_SECRET_ACCESS_KEY = env('DO_SPACES_SECRET_KEY')
     AWS_STORAGE_BUCKET_NAME = env('DO_SPACES_BUCKET_NAME')
-    
-    # TÄMÄ RIVI RAKENTAA URL-OSOITTEEN AUTOMAATTISESTI
-    AWS_S3_ENDPOINT_URL = f"https://{env('DO_SPACES_REGION')}.digitaloceanspaces.com"
-    
+    DO_SPACES_REGION = env('DO_SPACES_REGION') # Lue region muuttujaan
+    AWS_S3_ENDPOINT_URL = f"https://{DO_SPACES_REGION}.digitaloceanspaces.com" # Käytä muuttujaa
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
     AWS_LOCATION = 'media'
-    AWS_DEFAULT_ACL = 'public-read'
-
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",

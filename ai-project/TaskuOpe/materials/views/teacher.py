@@ -25,6 +25,8 @@ from django.core.files.storage import default_storage
 import json
 import os
 import uuid
+from django.conf import settings
+import boto3
 
 # --- Opettajan Dashboard ---
 @login_required(login_url='kirjaudu')
@@ -790,11 +792,13 @@ def teacher_student_list_view(request):
 
     return render(request, 'materials/teacher_student_list.html', context)
 
+
+
 @login_required
 def add_material_image_view(request, material_id):
     """
-    Käsittelee kuvan lisäämisen materiaaliin. Toimii sekä tiedostolatauksella
-    että AI-generoinnilla ja tallentaa tiedostot johdonmukaisiin kansioihin.
+    Handles adding an image to a material, either via file upload or AI generation.
+    Sets the ACL to public-read in production for permanent URLs.
     """
     m = get_object_or_404(Material, pk=material_id)
     if request.user.role != "TEACHER" or m.author_id != request.user.id:
@@ -809,64 +813,124 @@ def add_material_image_view(request, material_id):
             caption = form.cleaned_data.get("caption") or ""
             size_fragment = form.cleaned_data.get("size", "size-md")
             align_fragment = form.cleaned_data.get("alignment", "align-center")
-            
+
             image_to_save = None
             filename = ""
             rel_dir = ""
-            
+            file_path = "" # Initialize file_path
+
             if upload:
-                # VAIHTOEHTO 1: Käyttäjä latasi tiedoston
+                # OPTION 1: User uploaded a file
                 image_to_save = upload
-                rel_dir = "uploaded_images" # Asetetaan kansio
-                # Luodaan uniikki tiedostonimi
+                rel_dir = "uploaded_images"
                 filename = f"{uuid.uuid4().hex[:8]}_{image_to_save.name}"
-            
+                file_path = os.path.join(rel_dir, filename)
+                print(f"File upload selected. Target path: {file_path}")
+
             elif prompt:
-                # VAIHTOEHTO 2: Käyttäjä generoi AI:lla
+                # OPTION 2: User generates with AI
+                print(f"AI generation selected. Prompt: '{prompt}'")
                 try:
+                    # Ensure DALL-E 3 compatible size (default 1024x1024)
+                    # Could add size selection from form here if needed
                     image_data = generate_image_bytes(prompt, size="1024x1024")
                     if image_data:
                         image_to_save = ContentFile(image_data, name="gen.png")
-                        rel_dir = "ai_images" # Asetetaan kansio
+                        rel_dir = "ai_images"
                         filename = f"{uuid.uuid4().hex}.png"
+                        file_path = os.path.join(rel_dir, filename)
+                        print(f"AI image generated. Target path: {file_path}")
                     else:
                         messages.error(request, "Kuvan generointi ei palauttanut dataa.")
+                        print("ERROR: AI generation returned empty data.")
                 except Exception as e:
                     messages.error(request, f"Kuvan generointi epäonnistui: {e}")
-            
-            if image_to_save:
-                # Rakenna koko polku tiedostolle
-                file_path = os.path.join(rel_dir, filename)
+                    print(f"ERROR: AI generation failed: {e}")
 
-                # Luo MaterialImage-objekti
+            if image_to_save and file_path:
+                # Create MaterialImage object without saving to DB first
                 mi = MaterialImage(material=m, caption=caption, created_by=request.user)
-                
-                # Tallenna tiedosto määritellyllä polulla oletustallennustilaan (Spaces)
-                # Tämä ohittaa "upload_to"-asetuksen modelista.
-                mi.image.save(file_path, image_to_save, save=True)
-                
-                # Muodosta Markdown-linkki ja lisää se sisältöön
-                final_url = f"{mi.image.url}#{size_fragment}-{align_fragment}"
-                md_img = f"\n\n![{caption or 'Kuva'}]({final_url})\n"
-                m.content = (m.content or "") + md_img
-                m.save(update_fields=["content"])
-                
-                messages.success(request, "Kuva lisätty onnistuneesti sisältöön.")
-                # Ohjaa material_detail-sivulle, EI edit-sivulle
-                return redirect("material_detail", material_id=m.id)
+
+                try:
+                    print(f"Attempting to save image to relative path: {file_path}")
+                    # 1. Save the image file via the model field's storage mechanism
+                    #    Provide the full desired path/key directly to save()
+                    #    save=False prevents saving the model instance to DB yet
+                    mi.image.save(file_path, image_to_save, save=False)
+                    object_key = mi.image.name # Get the actual key/path assigned by storage
+                    print(f"Image saved to storage (pre-commit), effective key/name: {object_key}")
+
+                    # 2. Set ACL to public-read ONLY in production (DEBUG=False) and if boto3 is available
+                    if not settings.DEBUG and boto3:
+                        print(f"Attempting to set ACL to public-read for {object_key}...")
+                        try:
+                            # Initialize S3 client using credentials from settings
+                            s3_client = boto3.client('s3',
+                                                     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                                                     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                                                     endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+                                                     region_name=settings.DO_SPACES_REGION) # Use region from settings
+
+                            # --- Optional: Check if prefix is missing (might not be needed if mi.image.name is correct) ---
+                            expected_prefix = settings.AWS_LOCATION + '/' if hasattr(settings, 'AWS_LOCATION') and settings.AWS_LOCATION else ''
+                            if expected_prefix and not object_key.startswith(expected_prefix):
+                                 print(f"WARNING: Object key '{object_key}' might be missing expected prefix '{expected_prefix}'. ACL setting might fail.")
+                            # --- Check ends ---
+
+                            # Set the ACL for the object using the key from the model field
+                            s3_client.put_object_acl(Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                                                       Key=object_key,
+                                                       ACL='public-read')
+                            print(f"Successfully set ACL public-read for: {object_key}")
+                        except Exception as e:
+                            # Log the error but continue; URL might still work as pre-signed
+                            print(f"WARNING: Failed to set ACL public-read for {object_key}: {e}. URL might be temporary.")
+                    elif not settings.DEBUG and not boto3:
+                         print("WARNING: boto3 library not found. Cannot set public-read ACL. URL might be temporary.")
+
+                    # 3. Now save the MaterialImage model instance to the database
+                    mi.save()
+                    print("MaterialImage object saved to database.")
+
+                    # 4. Get the URL from the model field (should now be permanent if ACL was set)
+                    image_url = mi.image.url
+                    print(f"Generated URL from model field: {image_url}") # Check URL format in logs
+
+                    # 5. Construct Markdown and update material content
+                    final_url = f"{image_url}#{size_fragment}-{align_fragment}"
+                    md_img = f"\n\n![{caption or 'Kuva'}]({final_url})\n"
+                    m.content = (m.content or "")
+                    if m.content and not m.content.endswith("\n"):
+                        m.content += "\n" # Ensure newline before image
+                    m.content += md_img
+                    m.save(update_fields=["content"])
+                    print("Markdown added to material content and saved.")
+
+                    messages.success(request, "Kuva lisätty onnistuneesti sisältöön.")
+                    return redirect("material_detail", material_id=m.id)
+
+                except Exception as e:
+                     # Catch errors during storage save or ACL setting
+                     print(f"ERROR saving MaterialImage file or setting ACL: {e}")
+                     messages.error(request, f"Kuvan tallennus epäonnistui: {e}")
+                     # Stay on the page in case of error
+
             else:
-                # Jos image_to_save on None, mutta lomake oli validi
-                # (tämä tapahtuu, jos prompt annettiin mutta generointi epäonnistui)
+                # Handle cases where image_to_save is None but form was valid
                 if prompt and not image_to_save:
-                    # Ei tarvitse tehdä mitään, virheviesti näytettiin jo
-                    pass
-                else:
-                    messages.error(request, "Kuvaa ei voitu tallentaa. Joko lataus tai generointi epäonnistui.")
+                    pass # Error message was already shown during AI generation failure
+                elif not upload and not prompt:
+                     messages.error(request, "Valitse ladattava tiedosto tai anna generointikehote.")
+                else: # Other unexpected case
+                    messages.error(request, "Kuvaa ei voitu tallentaa.")
 
-    # Jos tultiin tänne asti, joko oli GET-pyyntö tai tapahtui virhe
-    form = AddImageForm()
+        else: # Form not valid
+             messages.error(request, "Lomakkeessa oli virheitä. Tarkista tiedot.")
+
+    # GET request or if POST resulted in an error (stay on page)
+    form = AddImageForm() # Show blank or invalid form again
     return render(request, "materials/add_image.html", {"material": m, "form": form})
-
+    
 @login_required
 @require_POST
 def delete_material_image_view(request, image_id):

@@ -3,7 +3,8 @@ from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.conf import settings
+from django.conf import settings # Tuo Django-asetukset
+import boto3 # Tuo AWS SDK
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile 
 
@@ -400,7 +401,8 @@ def assignment_autosave_view(request, assignment_id):
 @require_POST
 def generate_image_view(request):
     """
-    Käsittelee kuvapyynnöt AJAX:lla, tehostetulla lokituksella.
+    Handles image requests via AJAX. Sets ACL to public-read in production
+    to ensure permanent URLs. Includes enhanced logging.
     """
     print("\n--- generate_image_view CALLED ---")
     print(f"Request Method: {request.method}")
@@ -409,10 +411,14 @@ def generate_image_view(request):
     print(f"request.FILES: {request.FILES}")
 
     uploaded_file = request.FILES.get('image_upload')
+    rel_dir = "" # Initialize rel_dir
+    filename = "" # Initialize filename
+    file_path = "" # Initialize file_path
+    payload = {} # Initialize payload outside the AI block
 
     if uploaded_file:
         print(">>> FILE UPLOAD PATH <<<")
-        # --- VAIHTOEHTO 1: Käyttäjä latasi tiedoston ---
+        # --- OPTION 1: User uploaded a file ---
         print(f"Uploaded file detected: {uploaded_file.name}, type: {uploaded_file.content_type}, size: {uploaded_file.size}")
 
         if not uploaded_file.content_type.startswith('image/'):
@@ -422,13 +428,13 @@ def generate_image_view(request):
         rel_dir = "uploaded_images"
         filename = f"{uuid.uuid4().hex[:8]}_{uploaded_file.name}"
         file_path = os.path.join(rel_dir, filename)
-        print(f"Saving file to path: {file_path}")
+        print(f"Target save path: {file_path}")
 
     else:
         print(">>> AI GENERATION PATH (or error) <<<")
-        # --- VAIHTOEHTO 2: Käyttäjä generoi AI:lla ---
+        # --- OPTION 2: User generates with AI ---
         prompt = ""
-        payload = {} # Initialize payload
+        # payload = {} # Defined earlier
         if request.content_type and "application/json" in request.content_type:
             try:
                 payload = json.loads((request.body or b"").decode("utf-8") or "{}")
@@ -450,9 +456,16 @@ def generate_image_view(request):
         # Prompt was found, proceed with AI generation
         print("Proceeding with AI generation...")
         try:
+            # Get size from payload, default to 1024x1024 if not specified
             size = payload.get("size", "1024x1024")
+            # Ensure size is valid for DALL-E 3
+            if size not in {"1024x1024", "1024x1792", "1792x1024"}:
+                 # Try to map old values if necessary
+                 size_map = {"square": "1024x1024", "landscape": "1792x1024", "portrait": "1024x1792"}
+                 size = size_map.get(size, "1024x1024") # Default to square if mapping fails
+
             print(f"Generating image with prompt: '{prompt}', size: {size}")
-            image_bytes = generate_image_bytes(prompt=prompt, size=size)
+            image_bytes = generate_image_bytes(prompt=prompt, size=size) # Use the validated/mapped size
             if not image_bytes:
                 print("ERROR: AI generation returned empty result.")
                 return JsonResponse({"error": "Generointi palautti tyhjän tuloksen."}, status=502)
@@ -463,19 +476,61 @@ def generate_image_view(request):
         rel_dir = "ai_images"
         filename = f"{uuid.uuid4().hex}.png"
         file_path = os.path.join(rel_dir, filename)
-        uploaded_file = ContentFile(image_bytes, name=filename)
-        print(f"AI image generated, saving to path: {file_path}")
+        uploaded_file = ContentFile(image_bytes, name=filename) # Wrap bytes
+        print(f"AI image generated, target save path: {file_path}")
 
-    # --- YHTEINEN TALLENNUSLOGIIKKA ---
+    # --- COMMON SAVING LOGIC ---
+    if not uploaded_file or not file_path:
+         print("ERROR: No file object available for saving.")
+         return JsonResponse({"error": "Tiedostoa tallennukseen ei löytynyt."}, status=500)
+
     try:
-        print("Attempting to save file...")
+        print(f"Attempting to save file to: {file_path}")
+        # 1. Save the file using default storage
         saved_path = default_storage.save(file_path, uploaded_file)
+        print(f"File saved initially, returned path/key: {saved_path}")
+
+        # 2. Set ACL to public-read ONLY in production (DEBUG=False) and if boto3 is available
+        if not settings.DEBUG and boto3: # IF starts here
+            print("Attempting to set ACL to public-read...")
+            try:
+                # Initialize S3 client using credentials from settings
+                s3_client = boto3.client('s3',
+                                         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                                         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                                         endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+                                         region_name=settings.DO_SPACES_REGION)
+
+                # Determine the correct object key
+                object_key = saved_path
+                if hasattr(settings, 'AWS_LOCATION') and settings.AWS_LOCATION and not saved_path.startswith(settings.AWS_LOCATION + '/'):
+                        object_key = f"{settings.AWS_LOCATION}/{saved_path}"
+                        print(f"Prepending AWS_LOCATION. Corrected Key for ACL: {object_key}")
+                else:
+                        print(f"Using returned path as Key for ACL: {object_key}")
+
+                # Set the ACL
+                s3_client.put_object_acl(Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                                           Key=object_key,
+                                           ACL='public-read')
+                print(f"Successfully set ACL public-read for: {object_key}")
+            except Exception as e:
+                print(f"WARNING: Failed to set ACL public-read for {object_key}: {e}. URL might be temporary.")
+        # --- THIS IS THE CORRECTED INDENTATION ---
+        elif not settings.DEBUG and not boto3:
+             # This aligns with the 'if not settings.DEBUG and boto3:' block
+             print("WARNING: boto3 library not found. Cannot set public-read ACL. URL might be temporary.")
+        # --- END OF CORRECTED INDENTATION ---
+
+        # 3. Get the URL (should be permanent if ACL was set)
         image_url = default_storage.url(saved_path)
-        print(f"File saved successfully! URL: {image_url}")
+        print(f"Generated URL: {image_url}") # Check the logs for this URL format
+
+        # 4. Return the URL in JSON response
         return JsonResponse({"image_url": image_url}, status=201)
 
     except Exception as e:
-        print(f"ERROR: File saving failed: {e}")
+        print(f"ERROR: File saving process failed: {e}")
         return JsonResponse({"error": f"Tallennus epäonnistui: {str(e)}"}, status=500)
     finally:
         print("--- generate_image_view END ---")
