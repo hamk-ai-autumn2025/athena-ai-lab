@@ -143,7 +143,7 @@ if not DEBUG:
         'CacheControl': 'max-age=86400',
     }
     AWS_LOCATION = 'media'
-    AWS_DEFAULT_ACL = public-read
+    AWS_DEFAULT_ACL = 'public-read'
     AWS_QUERYSTRING_AUTH = False
     
     STORAGES = {
