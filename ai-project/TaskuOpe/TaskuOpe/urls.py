@@ -1,46 +1,25 @@
-"""
-Määrittelee projektin pää-URL-reitityksen.
-
-Tämä moduuli sisältää URL-polut Django-hallinnolle, käyttäjän
-sisään- ja uloskirjautumiselle sekä muiden sovellusten, kuten
-'materials', URL-reititysten sisällyttämiselle.
-"""
-
+# TaskuOpe/TaskuOpe/urls.py
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-
-# Tuodaan näkymät, joita käytetään suoraan tässä URL-konfiguraatiossa.
 from users.views import FinnishLoginView, simple_logout
+# Tuo dashboard-näkymä materials-sovelluksesta
+from materials.views import main as materials_main_views # Tai mistä dashboard_view tuleekaan
 
 urlpatterns = [
-    # Hallintapaneelin URL-polku
     path("admin/", admin.site.urls),
+    path("kirjaudu-ulos/", simple_logout, name="kirjaudu_ulos"),
+    path("kirjaudu/", FinnishLoginView.as_view(), name="kirjaudu"),
 
-    # Uloskirjautumis-URL
-    # Käyttää 'simple_logout'-näkymää käyttäjän uloskirjaamiseen.
-    path(
-        "kirjaudu-ulos/",
-        simple_logout,
-        name="kirjaudu_ulos",
-    ),
+    # Asetetaan dashboard juuripolkuun
+    path("", materials_main_views.dashboard_view, name="dashboard"),
 
-    # Sisäänkirjautumis-URL
-    # Käyttää FinnishLoginView:ta sisäänkirjautumissivuna.
-    path(
-        "kirjaudu/",
-        FinnishLoginView.as_view(),
-        name="kirjaudu",
-    ),
+    # Sisällytetään materials-sovelluksen URLit esim. /app/-polun alle
+    # TAI voit sisällyttää sen ilman polkua, jos materials/urls.py:ssä ei ole ristiriitoja
+    path("", include("materials.urls")), # Kokeile tätä ensin, jos dashboard on ainoa juuripolku materialsissa
 
-    # Sisällyttää 'materials'-sovelluksen URL-reititykset.
-    # Kaikki polut, jotka eivät vastaa edellisiä, ohjataan 'materials'-sovellukselle.
-    path("", include("materials.urls")),
 ]
 
-# Kehitysympäristön tiedostojen tarjoilu
-# Jos DEBUG-tila on päällä, lisätään URL-kaavoihin reitit
-# median (esim. käyttäjien lataamien kuvien) tarjoiluun.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -16,10 +16,16 @@
           <div class="alert alert-danger">{{ form.non_field_errors }}</div>
         {% endif %}
 
-          <div class="mb-3">
+      <div class="mb-3">
             <label for="{{ form.upload.id_for_label }}" class="form-label fw-bold">{{ form.upload.label }}</label>
-            {{ form.upload }}
-            <div class="form-text">Voit myös generoida kuvan alla, jolloin se täytetään tähän kenttään automaattisesti.</div>
+            {{ form.upload }} {# TÄMÄ ON TIEDOSTOKENTTÄ #}
+            {# === LISÄTTY ESKATSELUALUE === #}
+            <div class="mt-2">
+              <img id="uploadPreview" src="#" alt="Ladatun kuvan esikatselu" class="img-fluid rounded border d-none" style="max-height: 200px;">
+              <small id="uploadPreviewMsg" class="form-text d-none text-muted">Ladatun kuvan esikatselu.</small>
+            </div>
+            {# === LISÄYS PÄÄTTYY === #}
+            <div class="form-text mt-1">Voit myös generoida kuvan alla, jolloin se täytetään tähän kenttään automaattisesti.</div>
           </div>
 
           <div class="text-center my-3 text-muted">— tai —</div>
@@ -54,35 +60,45 @@
 
 <script>
 (function(){
+  // --- ELEMENTIT ---
   const form = document.getElementById('addImgForm');
   const genBtn = document.getElementById('genBtn');
   const genSize = document.getElementById('genSize');
-  const genMsg  = document.getElementById('genMsg');
-  const genPreview = document.getElementById('genPreview');
-  const fileInput = form.querySelector('input[type="file"][name$="upload"]');
-  const promptInput = form.querySelector('textarea[name$="gen_prompt"]'); // Korjattu valitsin
-  const hiddenSizeInput = document.getElementById('id_ai_image_size'); // LISÄTTY: Uusi piilokenttä
+  const genMsg = document.getElementById('genMsg');
+  const genPreview = document.getElementById('genPreview'); // Esikatselu generoidulle kuvalle
+  const fileInput = form.querySelector('input[type="file"][name$="upload"]'); // Tiedoston valintakenttä
+  const previewImage = document.getElementById('uploadPreview'); // Esikatselu ladatulle kuvalle
+  const previewMsg = document.getElementById('uploadPreviewMsg');
+  const promptInput = form.querySelector('textarea[name$="gen_prompt"]');
+  const hiddenSizeInput = document.getElementById('id_ai_image_size');
 
+  // --- APUFUNKTIOT ---
   function getCsrfToken() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
     return m ? m[1] : '';
   }
-  
-  // LISÄTTY: Päivitä piilokenttä koon vaihtuessa
+
+  // --- TAPAHTUMANKUUNTELIJAT ---
+
+  // 1. Päivitä piilokenttä koon vaihtuessa (AI-generointia varten)
   genSize?.addEventListener('change', () => {
-    if(hiddenSizeInput) hiddenSizeInput.value = genSize.value;
+    if (hiddenSizeInput) hiddenSizeInput.value = genSize.value;
   });
 
+  // 2. AI-kuvan generointi napin painalluksesta
   genBtn?.addEventListener('click', async () => {
     const prompt = (promptInput?.value || '').trim();
     const size = genSize.value;
-    
-    // LISÄTTY: Varmista, että piilokenttä on asetettu ennen AJAX-kutsua
-    if(hiddenSizeInput) hiddenSizeInput.value = size;
 
+    // Aseta piilokenttä
+    if (hiddenSizeInput) hiddenSizeInput.value = size;
+
+    // Tyhjennä vanhat esikatselut ja viestit
     genMsg.textContent = 'Generoidaan…';
     genPreview.classList.add('d-none');
-    genPreview.src = ''; // Korjattu, ettei vanha kuva näy hetkeä
+    genPreview.src = '';
+    previewImage?.classList.add('d-none'); // Piilota myös paikallinen esikatselu
+    previewMsg?.classList.add('d-none');
 
     if (!prompt) {
       genMsg.textContent = 'Anna generointikehote.';
@@ -90,8 +106,7 @@
     }
 
     try {
-      // TÄMÄ AJAX-KUTSU ON JO OIKEIN: Se lähettää 'prompt' ja 'size' JSON-payloadissa
-      // generate_image_view käsittelee tämän koon (kuten create.html:n tapauksessa)
+      // Lähetä pyyntö kuvan generoinnista
       const res = await fetch("{% url 'generate_image' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
@@ -100,38 +115,69 @@
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        genMsg.textContent = data.error || `Virhe (${res.status}).`;
-        return;
+        throw new Error(data.error || `Virhe (${res.status}).`);
       }
       if (!data.image_url) {
-        genMsg.textContent = 'Paluu ei sisältänyt image_url-kenttää.';
-        return;
+        throw new Error('Paluu ei sisältänyt image_url-kenttää.');
       }
 
-      // KUTSUN JÄLKEEN: Asynkroninen lataus takaisin blobiksi ja asetetaan fileInputiin.
-      // TÄMÄ ON TÄRKEÄ: Näin saadaan public-read ACL:n asettama kuva käyttöön.
-      const url = data.image_url + `?t=${Date.now()}`;
+      // Lataa generoitu kuva ja aseta se fileInputiin
+      const url = data.image_url + `?t=${Date.now()}`; // Lisää aikaleima välimuistin ohittamiseksi
+
+      // Näytä generoitu kuva sen omassa esikatselussa
       genPreview.src = url;
       genPreview.classList.remove('d-none');
       genMsg.textContent = data.placeholder ? 'Näytetään placeholder (API-avain puuttuu/virhe).' : 'Kuva valmis.';
 
-      // Tämä lataus ja asetus tiedostoksi mahdollistaa kuvan esikatselun ja sen,
-      // että kuva lähetetään seuraavassa lomakkeen lähetyksessä 'upload' kentässä.
+      // Muunna URL File-objektiksi ja aseta se fileInput-kenttään
       const imgRes = await fetch(url);
+      if (!imgRes.ok) throw new Error(`Kuvan ${url} lataus epäonnistui (${imgRes.status})`);
       const blob = await imgRes.blob();
       const file = new File([blob], 'generated.png', { type: blob.type || 'image/png' });
       const dt = new DataTransfer();
       dt.items.add(file);
-      fileInput.files = dt.files;
+      if (fileInput) fileInput.files = dt.files;
 
     } catch (e) {
-      genMsg.textContent = `Kutsu epäonnistui: ${e}`;
+      genMsg.textContent = `Kutsu epäonnistui: ${e.message}`;
+      // Nollaa fileInput virhetilanteessa
+      if (fileInput) fileInput.value = '';
     }
   });
-  
-  // LISÄTTY: Varmista, että initial value on asetettu latauksen yhteydessä
-  if (hiddenSizeInput && genSize) hiddenSizeInput.value = genSize.value;
 
-})();
+  // 3. Paikallisen tiedoston esikatselu
+  if (fileInput && previewImage && previewMsg) {
+    fileInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+
+      // Tyhjennä AI-generoinnin esikatselu, jos käyttäjä valitsee tiedoston
+      genPreview?.classList.add('d-none');
+      if(genMsg) genMsg.textContent = '';
+
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          previewImage.src = e.target.result;
+          previewImage.classList.remove('d-none'); // Näytä kuva
+          previewMsg.classList.remove('d-none');   // Näytä viesti
+        }
+        reader.readAsDataURL(file); // Lue tiedosto Data URL:na
+      } else {
+        // Jos tiedosto ei ole kuva tai valinta peruttiin
+        previewImage.src = '#';
+        previewImage.classList.add('d-none'); // Piilota kuva
+        previewMsg.classList.add('d-none');   // Piilota viesti
+      }
+    });
+  }
+
+  // --- ALUSTUS ---
+  // Varmista, että piilokentän arvo on asetettu sivun latautuessa
+  if (hiddenSizeInput && genSize) {
+     hiddenSizeInput.value = genSize.value;
+  }
+
+})(); // Itse-suorittuva funktio päättyy
 </script>
 {% endblock %}

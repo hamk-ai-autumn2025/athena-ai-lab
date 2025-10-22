@@ -119,18 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
         "quote", "unordered-list", "ordered-list", "|",
         "link",
         {
+            // --- TÄMÄ ON MUUTETTU TOIMINTO ---
             name: "insertImage",
-            action: function showImageGallery() { // Muutettu toiminto
-                var imageModal = document.getElementById('imageGalleryModal');
-                if (imageModal) {
-                    var modal = new bootstrap.Modal(imageModal);
-                    modal.show();
-                } else {
-                    alert("Kuvagallerian modaalia ei löytynyt!");
-                }
+            action: function navigateToAddImage() {
+                // Ohjaa käyttäjä add_image-sivulle nykyisen materiaalin ID:llä
+                window.location.href = "{% url 'material_add_image' material_id=material.id %}";
             },
-            className: "fa fa-image",
-            title: "Lisää kuva galleriasta", // Päivitetty title
+            className: "fa fa-plus-square", // Vaihdettu ikoni paremmin sopivaksi
+            title: "Lisää uusi kuva", // Päivitetty title
+            // --- MUUTOS PÄÄTTYY ---
         },
         "|",
         {
@@ -260,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const modalElement = document.getElementById('imageGalleryModal');
+  //const modalElement = document.getElementById('imageGalleryModal');
   const galleryContainer = document.getElementById('modal-image-gallery');
 
   if (modalElement && galleryContainer) {

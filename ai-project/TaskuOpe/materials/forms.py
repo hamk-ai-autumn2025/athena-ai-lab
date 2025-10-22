@@ -198,14 +198,13 @@ class AddImageForm(forms.Form):
         required=False,
         label="Kuvaile generoitu kuva",
         max_length=1000,
-        # POISTA 'style': '...' TÄSTÄ RIVISTÄ
-        widget=forms.Textarea(attrs={'rows': 3, 'style': 'width: 10%;'})
+        widget=forms.Textarea(attrs={'rows': 3, 'style': 'width: 100%;'})
     )
     caption = forms.CharField(required=False, max_length=500, label="Kuvateksti") # Korjattu: lenght -> max_length
     
     size = forms.ChoiceField(
-        choices=IMAGE_SIZES, # <-- Nyt tämä toimii
-        required=True,
+        choices=IMAGE_SIZES, 
+        required=False,
         label="Kuvan koko sisällössä",
         initial='size-md',
         widget=forms.Select(attrs={'class': 'form-select'})
@@ -213,7 +212,7 @@ class AddImageForm(forms.Form):
 
     alignment = forms.ChoiceField(
         choices=ALIGN_CHOICES,
-        required=True,
+        required=False,
         label="Kuvan sijainti",
         initial='align-center',
         widget=forms.Select(attrs={'class': 'form-select'})

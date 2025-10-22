@@ -11,8 +11,7 @@ urlpatterns = [
     # Dashboard
     path("", views.dashboard_view, name='dashboard'),
 
-    #Profiili
-    path('profile/', user_views.profile_view, name='profile'),
+    path('profiili/', user_views.profile_view, name='profile'), # HUOM: Käytä oikeaa URLia
 
     # Yleiset
     path("palautukset/", views.view_all_submissions_view, name="view_all_submissions"),
@@ -50,14 +49,11 @@ urlpatterns = [
 
     # Oppilaan näkymät
     path("oppilas/tehtavat/", views.student_assignments_view, name="student_assignments"),
-    path("oppilas/palautukset/", views.student_grades_view, name="student_grades"),
+    path("oppilas/palautukset/", views.view_all_submissions_view, name="all_submissions_list"), 
     path("oppilas/pelit/", views.student_games_view, name="student_games"),
 
     # Automaattitallennus
     path("assignment/<uuid:assignment_id>/autosave/", views.assignment_autosave_view, name="assignment_autosave"),
-
-    # CSV-vienti
-    path("palautukset/export.csv", views.export_submissions_csv_view, name="export_submissions_csv"),
 
     path("materials/images/<int:image_id>/delete/", views.delete_material_image_view,  name="material_image_delete"),
  

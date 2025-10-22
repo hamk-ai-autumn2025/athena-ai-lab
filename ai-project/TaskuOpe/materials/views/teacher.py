@@ -933,7 +933,7 @@ def add_material_image_view(request, material_id):
                     m.save(update_fields=["content"])
 
                     messages.success(request, "Kuva lisätty onnistuneesti sisältöön.")
-                    return redirect("material_detail", material_id=m.id)
+                    return redirect("material_edit", material_id=m.id)
 
                 except Exception as e:
                     print(f"ERROR saving MaterialImage file or setting ACL: {e}")

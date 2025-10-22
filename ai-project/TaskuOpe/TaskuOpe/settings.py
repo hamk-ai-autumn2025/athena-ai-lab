@@ -129,7 +129,8 @@ LOGIN_URL = "kirjaudu"
 LOGIN_REDIRECT_URL = "dashboard" 
 LOGOUT_REDIRECT_URL = "kirjaudu"
 MEDIA_ROOT = BASE_DIR / 'media'
-#MEDIA_URL = '/media/' #Lisäsin tämän kun halusin saada admin.py toimimaan lokaalissa -Mirka
+MEDIA_URL = '/media/'
+
 
 # DigitalOcean Spaces -asetukset mediatiedostoille
 if not DEBUG:
@@ -142,7 +143,7 @@ if not DEBUG:
         'CacheControl': 'max-age=86400',
     }
     AWS_LOCATION = 'media'
-    AWS_DEFAULT_ACL = None
+    AWS_DEFAULT_ACL = public-read
     AWS_QUERYSTRING_AUTH = False
     
     STORAGES = {
